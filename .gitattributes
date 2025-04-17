@@ -1,0 +1,4 @@
+pipeline-r/references/*.fa filter=lfs diff=lfs merge=lfs -text
+pipeline-r/references/*.fasta filter=lfs diff=lfs merge=lfs -text
+pipeline-r/references/*.fa.gz filter=lfs diff=lfs merge=lfs -text
+pipeline-r/references/*.fasta.gz filter=lfs diff=lfs merge=lfs -text
