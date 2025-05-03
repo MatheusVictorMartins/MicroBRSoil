@@ -19,7 +19,7 @@
 
     Ass.: Matheus(non-regular-bootstrapuser-sorry)
     -->
-    
+
     <!--===================================================================================================================================-->
     <!--BOOTSTRAP CDN CSS IMPORT *USE IF YOU NEED IT; **COMMENT THE BOOTSTRAP LOCAL CSS IMPORT BELOW BEFORE USE CDN-->
     <!--<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-SgOJa3DmI69IUzQ2PVdRZhwQ+dy64/BUtbMJw1MZ8t5HZApcHrRKUc4W0kG879m7" crossorigin="anonymous">-->
@@ -33,19 +33,28 @@
     <link rel="stylesheet" href="../css/footer.css">
     <link rel="stylesheet" href="../css/reset.css">
     <link rel="stylesheet" href="../css/left_menu.css">
+    <!--FONT IMPORT-->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="menu_ui">
         <header id="main_header">
+          <a href="./">
             <img src="/assets/logo/microBR_logo2DB_white.png"
             alt="Logo branca da MicroBRSoil"
             id="header_logo">
+          </a>
         </header>
         <span id="left_menu">
-
+          <button onclick="ButtonGoTo('./')" type="button" class="btn btn-outline-light btn-left-menu">HOME</button>
+          <button onclick="ButtonGoTo('./')" type="button" class="btn btn-outline-light btn-left-menu">SEARCH</button>
+          <button onclick="ButtonGoTo('./')" type="button" class="btn btn-outline-light btn-left-menu">TAXON SEARCH</button>
         </span>
     </div>
 
+    <script src="../js/button.js"></script>
     <!--===================================================================================================================================-->
     <!--BOOTSTRAP CDN JAVASCRIPT IMPORT *USE IF YOU NEED IT; **COMMENT THE "BOOTSTRAP LOCAL JAVASCRIPT IMPORT" BELOW BEFORE USE CDN-->
     <!--

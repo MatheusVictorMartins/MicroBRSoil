@@ -4,9 +4,27 @@
     height: 100vh;
     background-color: #3C6960;
     flex-direction: column;
+    
+    font-family:"Inter", sans-serif;
 }
 
 .button_left_menu{
     text-decoration: none;
     
+}
+
+.btn-left-menu{
+    /*MAIN*/
+    padding: 1.5rem 1.5rem;
+    /*DECORATION*/
+    border: none;
+    border-radius: 0;
+    /*TEXT*/
+    text-align: left;
+    font-weight: 500;
+    font-size: 1.125rem;
+}
+
+.btn-left-menu:hover{
+    font-weight: 500;
 }
