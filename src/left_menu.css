@@ -1,0 +1,12 @@
+#left_menu{
+    display: flex;
+    width: 15vw;
+    height: 100vh;
+    background-color: #3C6960;
+    flex-direction: column;
+}
+
+.button_left_menu{
+    text-decoration: none;
+    
+}

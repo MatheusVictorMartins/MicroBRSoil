@@ -1,0 +1,13 @@
+header{
+    display: block;
+    padding: .625rem 3.125rem;
+    width: 100%;
+    position: sticky;
+    background-color: #2B373D;
+}
+
+#header_logo{
+    display: flex;
+    width: 14.4375rem;
+    height: 5.0625rem;
+}
