@@ -18,7 +18,6 @@ CREATE TABLE IF NOT EXISTS microbrsoil_db.users (
     user_id SERIAL PRIMARY KEY,
     user_email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL, --senha após operação de hash (pgsql tem operações de hash logo não precisa de bcrypt)
-    salt VARCHAR(255) NOT NULL, --valore aleatório adicionado a operação de hash, gerado pelo pgsql
     role_id INTEGER NOT NULL, --cargo
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_login_at TIMESTAMP,
@@ -32,7 +31,6 @@ CREATE TABLE IF NOT EXISTS microbrsoil_db.users (
 CREATE TABLE IF NOT EXISTS microbrsoil_db.plant_data(
     plant_id SERIAL PRIMARY KEY, --id unico
     owner_id INTEGER NOT NULL, --uploader do arquivo
-    dna_sequence TEXT NOT NULL, --sequecia
     x_coord VARCHAR(255) NOT NULL, --coordenadas para mapa
     y_coord VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
