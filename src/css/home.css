@@ -1,0 +1,36 @@
+#home{
+    display: flex;
+    flex-direction: row;
+    gap: 2.6vw;
+}
+#dashboard{
+    margin-top: 5.25vh;
+}
+.welcome-message{
+    font-size: 2rem;
+    margin-bottom: 3.125rem;
+}
+
+.dashboard-table{
+    display: flex;
+    justify-content: center;
+    width: 78.125vw;
+    box-shadow: 0 0 1.5rem #CFCFCF;
+    border-radius: 1.25rem;
+}
+.dashboard-actions{
+    width: 78.125vw;
+    border-bottom: solid #2B373D .0625rem;
+    margin-bottom: 1.5625rem;
+}
+.btn-upload{
+    margin-left: auto;
+    color: #2B373D;
+    border-color: #2B373D;
+    display: flex;
+    align-items: center;
+    margin-bottom: .9375rem;
+}
+.btn-upload:hover{
+    background-color: #2B373D;
+}

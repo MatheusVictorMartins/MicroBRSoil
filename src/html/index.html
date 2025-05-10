@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -32,27 +32,103 @@
     <link rel="stylesheet" href="../css/header.css">
     <link rel="stylesheet" href="../css/footer.css">
     <link rel="stylesheet" href="../css/reset.css">
+    <link rel="stylesheet" href="../css/home.css">
     <link rel="stylesheet" href="../css/left_menu.css">
     <!--FONT IMPORT-->
+    <!--INTER-->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap" rel="stylesheet">
-</head>
+    <!--TIENNE-->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tienne:wght@400;700;900&display=swap" rel="stylesheet">
+    <!--ICONS IMPORT-->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:wght@300" rel="stylesheet" />
+
+  </head>
 <body>
-    <div class="menu_ui">
-        <header id="main_header">
-          <a href="./">
-            <img src="/assets/logo/microBR_logo2DB_white.png"
-            alt="Logo branca da MicroBRSoil"
-            id="header_logo">
-          </a>
-        </header>
-        <span id="left_menu">
-          <button onclick="ButtonGoTo('./')" type="button" class="btn btn-outline-light btn-left-menu">HOME</button>
-          <button onclick="ButtonGoTo('./')" type="button" class="btn btn-outline-light btn-left-menu">SEARCH</button>
-          <button onclick="ButtonGoTo('./')" type="button" class="btn btn-outline-light btn-left-menu">TAXON SEARCH</button>
-        </span>
-    </div>
+  <header id="main_header">
+    <a href="./">
+      <img src="/assets/logo/microBR_logo2DB_white.png"
+        alt="Logo branca da MicroBRSoil"
+        id="header_logo">
+      </a>
+  </header>
+  <div id="home">
+    <span id="left_menu">
+      <button onclick="ButtonGoTo('./')" type="button" class="btn btn-outline-light btn-left-menu"><span class="material-symbols-rounded btn_left_menu_icon">home</span>HOME</button>
+      <button onclick="ButtonGoTo('./')" type="button" class="btn btn-outline-light btn-left-menu"><span class="material-symbols-rounded btn_left_menu_icon">search</span>TAXON SEARCH</button>
+      <button onclick="ButtonGoTo('./')" type="button" class="btn btn-outline-light btn-left-menu"><span class="material-symbols-rounded btn_left_menu_icon">genetics</span>SEQUENCE SEARCH</button>
+      <button onclick="ButtonGoTo('./')" type="button" class="btn btn-outline-light btn-left-menu"><span class="material-symbols-rounded btn_left_menu_icon">public</span>GEOSEARCH</button>
+      <button onclick="ButtonGoTo('./')" type="button" class="btn btn-outline-light btn-left-menu"><span class="material-symbols-rounded btn_left_menu_icon">download</span>DATA DOWNLOAD</button>
+      <button onclick="ButtonGoTo('./')" type="button" id="btn-left-menu-help" class="btn btn-outline-light btn-left-menu"><span class="material-symbols-rounded btn_left_menu_icon">help</span>HELP</button>
+      <button onclick="ButtonGoTo('./')" type="button" id="btn-left-menu-logout" class="btn btn-outline-light btn-left-menu"><span class="material-symbols-rounded">door_open</span>LOGOUT</button>
+    </span>
+    <span id="dashboard">
+      <h1 class="title welcome-message main-title">WELCOME USER</h1>
+      <div class="dashboard-actions">
+        <button type="button" class="btn btn-outline-primary btn-upload"><span class="material-symbols-rounded btn_left_menu_icon">upload_file</span>UPLOAD</button>
+      </div>
+      <div class="dashboard-table table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">ID</th>
+              <th scope="col">MATERIAL</th>
+              <th scope="col">PROJECT NAME</th>
+              <th scope="col">LOCATION</th>
+              <th scope="col">CREATION DATE</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">00000</th>
+              <td>Water</td>
+              <td>Subsurface mine microbial mat metagenome</td>
+              <td>Japan</td>
+              <td>2015-06-19</td>
+            </tr>
+            <tr>
+              <th scope="row">00001</th>
+              <td>Soil; Water</td>
+              <td>Rice rhizosphere metagenome</td>
+              <td>Japan</td>
+              <td>2016-07-25</td>
+            </tr>
+            <tr class="table-row">
+              <th scope="row">00002</th>
+              <td>Soil; Water</td>
+              <td>Metagenomic analysis of rice shoot-associated bacteria</td>
+              <td>United States of America</td>
+              <td>2016-07-25</td>
+            </tr>
+            <tr>
+              <th scope="row">00003</th>
+              <td>Soil</td>
+              <td>Metagenomic analysis of rice shoot-associated bacteria</td>
+              <td>United States of America</td>
+              <td>2016-10-06</td>
+            </tr>
+            <tr>
+              <th scope="row">00004</th>
+              <td>Soil</td>
+              <td>Dynamics of the gene pool of soil microbiota disturbed by chemical pollution</td>
+              <td>United States of America</td>
+              <td>2016-10-06</td>
+            </tr>
+            <tr>
+              <th scope="row">00005</th>
+              <td>Water</td>
+              <td>Dynamics of the gene pool of soil microbiota disturbed by chemical pollution</td>
+              <td>Japan</td>
+              <td>2017-03-23</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </span>
+  </div>
 
     <script src="../js/button.js"></script>
     <!--===================================================================================================================================-->
