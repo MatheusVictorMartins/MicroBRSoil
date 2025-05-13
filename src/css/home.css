@@ -3,8 +3,12 @@
     flex-direction: row;
     gap: 2.6vw;
 }
+.layout{
+    display: flex;
+}
 #dashboard{
     margin-top: 5.25vh;
+    margin-left: 5.25vh;
 }
 .welcome-message{
     font-size: 2rem;

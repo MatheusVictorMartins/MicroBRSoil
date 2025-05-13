@@ -1,5 +1,4 @@
 header{
-    display: flex;
     padding: .625rem 1.25rem;
     width: 100%;
     height: 10.47vh;
@@ -9,8 +8,12 @@ header{
     align-items: center;
 }
 
-#header-logo{
+.header-content{
     display: flex;
+
+    align-items: center;
+}
+#header-logo{
     width: 12.03125%;
     height: 8.48vh;
 }
