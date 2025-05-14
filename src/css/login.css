@@ -1,0 +1,118 @@
+.login-layout{
+    display: flex;
+}
+.left-side{
+    position: relative;
+    top: 0;
+    left: 0;
+}
+.login-decoration{
+    position: relative;
+    top: 0;
+    left: 0;
+    height: 100vh;
+}
+.white-reduced-logo{
+    position: absolute;
+    top: 4.375rem;
+    left: 3.125rem;
+
+    width: 12%;
+    height: auto;
+}
+.right-side{
+    margin-left: 10vw;
+    margin-top: 7.33vh;
+    justify-content: center;
+}
+.normal-logo{
+    width: 20vw;
+    height: auto;
+
+    justify-self: center;
+
+}
+.login-welcome-message{
+    margin-top: 3.125rem;
+    margin-bottom: 1.5625rem;
+
+    text-align: center;
+    font-size: 3rem;
+}
+.login-form{
+    display: flex;
+    flex-direction: column;
+}
+.text-input-label{
+    font-family: "Inter", sans-serif;
+    font-weight: 600;
+    font-size: 1.5rem;
+}
+.text-input{
+    border: .0625rem solid;
+    border-radius: 1.25rem;
+    border-color: #2B373D;
+    width: 36.3125rem;
+    height: 5rem;
+
+    margin-top: 1.5625rem;
+    margin-bottom: 2.5rem;
+
+    padding-left: 1.5625rem;
+
+    background-color: #F8FFFA;
+
+    font-family: "Inter",sans-serif;
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: #2B373D;
+}
+
+.text-input::placeholder{
+    font-family: "Inter", sans-serif;
+    font-weight: 500;
+    font-size: 1.25rem;
+    color: rgba(43,55,61, 0.6);
+}
+
+.text-input:focus{
+    border: none;
+    outline-offset: 0px;
+}
+
+
+
+.btn-lg{
+
+    display: flex;
+    align-items: center;
+    text-align: center;
+    justify-content: center;
+    background-color: #2A8A4C;
+    border: none;
+    border-radius: 1.25rem;
+
+    color: #E8FFF0;
+
+    width: 100%;
+    height: 5rem;
+
+    font-family: "Inter", sans-serif;
+    font-size: 2rem;
+    font-weight: 600;
+
+    margin-top: 2.5rem;
+
+}
+
+.btn-login-icon{
+    font-size: 2.4375rem !important;
+    margin-right: .3125rem;
+}
+
+
+.btn-lg:hover{
+    background-color: #93E44D;
+    border: none;
+    color: #fff;
+}

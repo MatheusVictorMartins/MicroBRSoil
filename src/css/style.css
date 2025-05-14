@@ -6,3 +6,6 @@ h1, .main-title{
     font-family: "Tienne", serif;
     font-weight: 700;
 }
+.layout{
+    display: flex;
+}
