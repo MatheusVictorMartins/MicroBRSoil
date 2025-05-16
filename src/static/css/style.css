@@ -1,0 +1,23 @@
+body{
+    background-color: #F8FFFA;
+}
+
+h1, .main-title{
+    font-family: "Tienne", serif;
+    font-weight: 700;
+}
+.layout{
+    display: flex;
+}
+
+.basic-frame{
+    display: flex;
+
+    box-shadow: 0 0 1.5rem #CFCFCF;
+    border-radius: 1.25rem;
+    padding: 1.3242rem;
+}
+
+.main-content{
+    padding: 5.25vh 0% 0% 5.25vh;
+}
