@@ -14,14 +14,13 @@
     <link rel="stylesheet" href="../css/bootstrap.min.css">
     <!--===================================================================================================================================-->
     <!--#endregion-->
-    
-     <!--LOCAL CSS IMPORT-->
+    <!--LOCAL CSS IMPORT-->
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/header.css">
     <link rel="stylesheet" href="../css/footer.css">
     <link rel="stylesheet" href="../css/reset.css">
     <link rel="stylesheet" href="../css/left_menu.css">
-    <link rel="stylesheet" href="../css/login.css">
+    <link rel="stylesheet" href="../css/geosearch.css">
     <!--FONT IMPORT-->
     <!--INTER-->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -34,37 +33,27 @@
     <!--ICONS IMPORT-->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:wght@300" rel="stylesheet" />
 </head>
-
 <body>
-    
-        <main class="login-main-content">
-            <div class="login-layout">
-                <span class="left-side">
-                    <img src="../../assets/figures/login_decoration.png" alt="" class="login-decoration">
-                    <img src="../../assets/logo/microBR_logo_white_reduced.png" alt="" class="white-reduced-logo">
-                </span>
-                <span class="right-side">
-                    <img src="../../assets/logo/microBR_logo2DB.png" alt="" class="normal-logo">
-                    <h1 class="login-welcome-message">WELCOME BACK</h1>
-                    <form action="/auth/login" class="login-form">
-                        <label for="user" class="text-input-label">USER</label>
-                        <input type="text" name="user" id="user" class="text-input" placeholder="USER">
-                        <label for="tpassword" class="text-input-label">PASSWORD</label>
-                        <input type="password" name="tpassword" id="tpassword" class="text-input" placeholder="PASSWORD">
-                    </form>
-                    <button typer="button" class="btn-dont-know-pass">Don't know your password?</button>
-                    <button type="button" class="btn btn-primary btn-lg"><span class="material-symbols-rounded btn-login-icon">login</span>LOG IN</button>
-
-                </span>
+    <!--HEADER PLACEHOLDER-->
+    <div id="header-placeholder"></div>
+    <!--#region LAYOUT-->
+    <div class="layout">
+    <!--LEFT MENU PLACEHOLDER-->
+        <div id="leftmenu-placeholder"></div>
+    <!--#region MAIN -->
+        <main class="main-content"> 
+            <h1 class="main-title">GEOSEARCH</h1> 
+            <div class="basic-frame">
+                <img src="../../assets/figures/world.svg" alt="">
             </div>
         </main>
-    <!--#region TRANSLATE WRAPPER-->
-        <!--<div class="gtranslate_wrapper"></div>
-        <script>window.gtranslateSettings = {"default_language":"en","languages":["en","fr","de", "pt", "it","es"],"wrapper_selector":".gtranslate_wrapper","switcher_horizontal_position":"left","switcher_vertical_position":"bottom","alt_flags":{"en":"usa","pt":"brazil"}}</script>
-        <script src="https://cdn.gtranslate.net/widgets/latest/float.js" defer></script>.-->
+    </div>
+
+    <!--#region HEADER INCLUDE-->
+    <script src="../js/include_elements.js"></script>
     <!--#endregion-->
     <!--#region BOOTSTRAP JS LINK-->
-        <script src="../js/button.js"></script>
+    <script src="../js/button.js"></script>
     <!--===================================================================================================================================-->
     <!--BOOTSTRAP CDN JAVASCRIPT IMPORT *USE IF YOU NEED IT; **COMMENT THE "BOOTSTRAP LOCAL JAVASCRIPT IMPORT" BELOW BEFORE USE CDN-->
     <!--
@@ -72,7 +61,7 @@
     -->
 
     <!--BOOSTRAP MINIMAL LOCAL JAVASCRIPT IMPORT-->
-        <script src="../js/bootstrap.bundle.min.js"></script>
+    <script src="../js/bootstrap.bundle.min.js"></script>
     <!--===================================================================================================================================-->
     <!--#endregion-->
 </body>

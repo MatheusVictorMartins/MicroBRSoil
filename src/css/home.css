@@ -4,33 +4,56 @@
     gap: 2.6vw;
 }
 
-#dashboard{
-    margin-top: 5.25vh;
-    margin-left: 5.25vh;
-}
-.welcome-message{
-    font-size: 2rem;
+
+.home-title-row{
+    display: flex;
+    flex-direction: row;
     margin-bottom: 3.125rem;
 }
 
+.welcome-message{
+    margin-left: auto;
+}
+
 .dashboard-table{
-    display: flex;
+    padding-top: 0;
+    max-height: 41.9vh;
+
     justify-content: center;
     width: 78.125vw;
-    box-shadow: 0 0 1.5rem #CFCFCF;
-    border-radius: 1.25rem;
+
+    overflow-x: auto;
+    overflow-y: auto;
+
+    position: relative;
 }
+
+.dashboard-table table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+}
+
+.dashboard-table thead th{
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding-top: 1.3242rem;
+}
+
 .dashboard-actions{
     display: flex;
     width: 78.125vw;
     border-bottom: solid #2B373D .0625rem;
     margin-bottom: 1.5625rem;
 }
+
 .btn-actions{
     display: flex;
     margin-bottom: .9375rem;
     align-items: center;
 }
+
 .btn-filters{
     border: 0;
     color: #2B373D;
@@ -39,9 +62,11 @@
 .btn-filters:hover{
     background-color: #2B373D;
 }
+
 .btn-filters:active{
     background-color: #2B373D;
 }
+
 .btn-filters:not(:disabled):active{
     background-color: #3C6960
 }
@@ -52,12 +77,15 @@
     border-color: #2B373D;
     display: flex;
 }
+
 .btn-upload:hover{
     background-color: #2B373D;
 }
+
 .btn-upload:not(:disabled):active{
     background-color: #3C6960;
 }
+
 .filters-dropdown{
     display: grid;
     grid-template-columns: auto auto auto;
@@ -69,9 +97,8 @@
     align-content: center;
     margin-bottom: 5.24vh;
     background-color: #ffffff;
-    border-radius: 1.25rem;
-    box-shadow: 0 0 1.5rem #CFCFCF;
 }
+
 .filter-item:focus{
     box-shadow:  0px 0px 3px rgba(60,105,96,0.5) inset, 0px 0px 6px rgba(60,105,96,1);
     border-color: #3C6960;

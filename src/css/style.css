@@ -9,3 +9,15 @@ h1, .main-title{
 .layout{
     display: flex;
 }
+
+.basic-frame{
+    display: flex;
+
+    box-shadow: 0 0 1.5rem #CFCFCF;
+    border-radius: 1.25rem;
+    padding: 1.3242rem;
+}
+
+.main-content{
+    padding: 5.25vh;
+}

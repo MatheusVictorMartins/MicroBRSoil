@@ -70,6 +70,10 @@
     color: #2B373D;
 }
 
+#tpassword{
+    margin-bottom: 0.5rem;
+}
+
 .text-input::placeholder{
     font-family: "Inter", sans-serif;
     font-weight: 500;
@@ -80,6 +84,30 @@
 .text-input:focus{
     border: none;
     outline-offset: 0px;
+}
+
+.btn-dont-know-pass{
+    display: flex;
+    background-color: #F8FFFA;
+    justify-self: flex-end;
+    text-decoration: underline;
+
+    padding: .3125rem .625rem;
+
+    font-family: "Inter", sans-serif;
+    font-weight: 500;
+    color: #2a8a4c;
+}
+
+.btn-dont-know-pass:hover{
+    color: #2B373D;
+    background-color: rgba(67, 179, 71, 0.2);
+    border-radius: 1.25rem;
+    padding: .3125rem .625rem;
+}
+
+.btn-dont-know-pass:active{
+     background-color: rgba(100, 205, 68, 0.4);
 }
 
 .btn-lg{
@@ -122,3 +150,4 @@
 .btn-lg:not(:disabled):active{
     background-color: #2A8A4C;
     box-shadow: 0 1rem 1.5rem rgba(100,205,68,0.6);
+}

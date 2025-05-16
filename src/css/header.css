@@ -21,27 +21,3 @@ header{
     width: auto;
 }
 
-.btn-active-left-menu{
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    text-decoration: none;
-    background: none;
-    color: white;
-
-    cursor: alias;
-
-    width: 3.75rem;
-    height: 3.75rem; 
-    margin-right: 1.25rem;
-}
-
-.icon-btn-active-left-menu{
-   font-size: 2.8125rem !important;
-}
-
-.btn-active-left-menu:hover{
-    background-color: #fff;
-    color: #2B373D;
-    border-radius: 1.25rem;
-}
