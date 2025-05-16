@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>microBRsoil</title>
+
+    <!--#region BOOTSTRAP CSS IMPORT-->
+    <!--===================================================================================================================================-->
+    <!--BOOTSTRAP CDN CSS IMPORT *USE IF YOU NEED IT; **COMMENT THE BOOTSTRAP LOCAL CSS IMPORT BELOW BEFORE USE CDN-->
+    <!--<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-SgOJa3DmI69IUzQ2PVdRZhwQ+dy64/BUtbMJw1MZ8t5HZApcHrRKUc4W0kG879m7" crossorigin="anonymous">-->
+
+    <!--BOOTSTRAP MINIMAL LOCAL CSS IMPORT-->
+    <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+    <!--===================================================================================================================================-->
+    <!--#endregion-->
+    
+     <!--LOCAL CSS IMPORT-->
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/header.css">
+    <link rel="stylesheet" href="/static/css/footer.css">
+    <link rel="stylesheet" href="/static/css/reset.css">
+    <link rel="stylesheet" href="/static/css/left_menu.css">
+    <link rel="stylesheet" href="/static/css/login.css">
+    <!--FONT IMPORT-->
+    <!--INTER-->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap" rel="stylesheet">
+    <!--TIENNE-->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tienne:wght@400;700;900&display=swap" rel="stylesheet">
+    <!--ICONS IMPORT-->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:wght@300" rel="stylesheet" />
+</head>
+
+<body>
+        <main class="login-main-content">
+            <div class="login-layout">
+                <span class="left-side">
+                    <img src="/static/assets/figures/login_decoration.png" alt="" class="login-decoration">
+                    <img src="/static/assets/logo/microBR_logo_white_reduced.png" alt="" class="white-reduced-logo">
+                </span>
+                <span class="right-side">
+                    <img src="/static/assets/logo/microBR_logo2DB.png" alt="" class="normal-logo">
+                    <h1 class="login-welcome-message">WELCOME BACK</h1>
+                    <form action="/auth/login" class="login-form">
+                        <label for="user" class="text-input-label">USER</label>
+                        <input type="text" name="user" id="user" class="text-input" placeholder="USER">
+                        <label for="tpassword" class="text-input-label">PASSWORD</label>
+                        <input type="password" name="tpassword" id="tpassword" class="text-input" placeholder="PASSWORD">
+                    </form>
+                    <button typer="button" class="btn-dont-know-pass">Don't know your password?</button>
+                    <button type="button" class="btn btn-primary btn-lg"><span class="material-symbols-rounded btn-login-icon">login</span>LOG IN</button>
+
+                </span>
+            </div>
+        </main>
+    <!--#region TRANSLATE WRAPPER-->
+        <!--<div class="gtranslate_wrapper"></div>
+        <script>window.gtranslateSettings = {"default_language":"en","languages":["en","fr","de", "pt", "it","es"],"wrapper_selector":".gtranslate_wrapper","switcher_horizontal_position":"left","switcher_vertical_position":"bottom","alt_flags":{"en":"usa","pt":"brazil"}}</script>
+        <script src="https://cdn.gtranslate.net/widgets/latest/float.js" defer></script>.-->
+    <!--#endregion-->
+    <!--#region BOOTSTRAP JS LINK-->
+        <script src="/static/js/button.js"></script>
+    <!--===================================================================================================================================-->
+    <!--BOOTSTRAP CDN JAVASCRIPT IMPORT *USE IF YOU NEED IT; **COMMENT THE "BOOTSTRAP LOCAL JAVASCRIPT IMPORT" BELOW BEFORE USE CDN-->
+    <!--
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js" integrity="sha384-k6d4wzSIapyDyv1kpU366/PK5hCdSbCRGRCMv+eplOQJWyd1fbcAu9OCUj5zNLiq" crossorigin="anonymous"></script>
+    -->
+
+    <!--BOOSTRAP MINIMAL LOCAL JAVASCRIPT IMPORT-->
+        <script src="/static/js/bootstrap.bundle.min.js"></script>
+    <!--===================================================================================================================================-->
+    <!--#endregion-->
+</body>
+</html>

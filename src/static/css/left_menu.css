@@ -1,0 +1,59 @@
+#left-menu{
+    display: flex;
+    flex-direction: column;
+    padding: 3.125rem 0;
+    width: 15vw;
+    height: 89.52vh;
+    background-color: #3C6960;
+
+    font-family:"Inter", sans-serif;
+}
+
+.btn-left-menu{
+    display: flex;
+    align-items: center;
+    gap: .375rem;
+
+    padding: 1.5rem 1.5rem;
+
+    height: 3.75rem;
+  
+    border: none;
+    border-radius: 0;
+   
+    text-align: left;
+    font-weight: 500;
+    font-size: 1.125rem;
+
+}
+
+.btn-left-menu:hover{
+    font-weight: 500;
+}
+
+#btn-left-menu-data-download::before{
+    content: '';
+    border-bottom: solid #2B373D .125rem;
+    width: 15vw;
+    position: absolute;
+    margin-left: -1.5rem;
+    margin-top: -3.775rem;
+
+}
+
+#btn-left-menu-help{
+    margin-top: .125rem;
+}
+#btn-left-menu-help::before{
+    content: '';
+    border-bottom: solid #2B373D .125rem;
+    width: 15vw;
+    position: absolute;
+    margin-left: -1.5rem;
+    margin-top: -3.775rem;
+
+}
+
+#btn-left-menu-logout{
+    margin-top: auto;
+}

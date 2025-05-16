@@ -1,0 +1,153 @@
+.login-layout{
+    display: flex;
+}
+.left-side{
+    position: relative;
+    top: 0;
+    left: 0;
+}
+.login-decoration{
+    position: relative;
+    top: 0;
+    left: 0;
+    height: 100vh;
+}
+.white-reduced-logo{
+    position: absolute;
+    top: 4.375rem;
+    left: 3.125rem;
+
+    width: 12%;
+    height: auto;
+}
+.right-side{
+    margin-left: 13vw;
+    margin-top: 10vh;
+    justify-content: center;
+}
+.normal-logo{
+    width: 20vw;
+    height: auto;
+
+    justify-self: center;
+
+}
+.login-welcome-message{
+    margin-top: 3.125rem;
+    margin-bottom: 1.5625rem;
+
+    text-align: center;
+    font-size: 2.375rem;
+}
+.login-form{
+    display: flex;
+    flex-direction: column;
+}
+.text-input-label{
+    font-family: "Inter", sans-serif;
+    font-weight: 600;
+    font-size: 1.5rem;
+    cursor: text;
+}
+.text-input{
+    border: .0625rem solid;
+    border-radius: 1.25rem;
+    border-color: #2B373D;
+    width: 28.125rem;
+    height: 3.75rem;
+
+    cursor:text;
+    margin-top: 1.5625rem;
+    margin-bottom: 2.5rem;
+
+    padding-left: 1.5625rem;
+
+    background-color: #F8FFFA;
+
+    font-family: "Inter",sans-serif;
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: #2B373D;
+}
+
+#tpassword{
+    margin-bottom: 0.5rem;
+}
+
+.text-input::placeholder{
+    font-family: "Inter", sans-serif;
+    font-weight: 500;
+    font-size: 1.25rem;
+    color: rgba(43,55,61, 0.6);
+}
+
+.text-input:focus{
+    border: none;
+    outline-offset: 0px;
+}
+
+.btn-dont-know-pass{
+    display: flex;
+    background-color: #F8FFFA;
+    justify-self: flex-end;
+    text-decoration: underline;
+
+    padding: .3125rem .625rem;
+
+    font-family: "Inter", sans-serif;
+    font-weight: 500;
+    color: #2a8a4c;
+}
+
+.btn-dont-know-pass:hover{
+    color: #2B373D;
+    background-color: rgba(67, 179, 71, 0.2);
+    border-radius: 1.25rem;
+    padding: .3125rem .625rem;
+}
+
+.btn-dont-know-pass:active{
+     background-color: rgba(100, 205, 68, 0.4);
+}
+
+.btn-lg{
+
+    display: flex;
+    align-items: center;
+    text-align: center;
+    justify-content: center;
+    background-color: #2A8A4C;
+    border: none;
+    border-radius: 1.25rem;
+
+    color: #E8FFF0;
+
+    width: 100%;
+    height: 3.75rem;
+
+    font-family: "Inter", sans-serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+
+    margin-top: 2.5rem;
+
+    box-shadow: 0 1rem 1.5rem rgba(100,205,68,0.6);
+
+}
+
+.btn-login-icon{
+    font-size: 2rem !important;
+    margin-right: .3125rem;
+}
+
+
+.btn-lg:hover{
+    background-color: #93E44D;
+    border: none;
+    color: #fff;
+    box-shadow: 0 1rem 1.5rem rgba(199,255,120,0.9);
+}
+.btn-lg:not(:disabled):active{
+    background-color: #2A8A4C;
+    box-shadow: 0 1rem 1.5rem rgba(100,205,68,0.6);
+}

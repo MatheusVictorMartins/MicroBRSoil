@@ -1,0 +1,32 @@
+const express = require('express');
+const path = require('path');
+const cookieParser = require('cookie-parser');
+
+const authRoutes = require('./routes/auth');
+const uploadRoutes = require('./routes/upload');
+const pipelineRoutes = require('./routes/pipeline');
+
+const app = express();
+app.use(express.json());
+app.use(cookieParser());
+
+// Rotas de API
+app.use('/auth', authRoutes);
+app.use('/upload', uploadRoutes);
+app.use('/pipeline', pipelineRoutes);
+
+// Servir arquivos estáticos HTML
+const htmlPath = path.join(__dirname, 'src', 'html');
+
+app.get('/', (req, res) => res.sendFile(path.join(htmlPath, 'index.html')));
+app.get('/login', (req, res) => res.sendFile(path.join(htmlPath, 'login.html')));
+app.get('/register', (req, res) => res.sendFile(path.join(htmlPath, 'register.html')));
+app.get('/geosearch', (req, res) => res.sendFile(path.join(htmlPath, 'geosearch.html')));
+app.get('/header', (req, res) => res.sendFile(path.join(htmlPath, 'header.html')));
+app.get('/left_menu', (req, res) => res.sendFile(path.join(htmlPath, 'left_menu.html')));
+app.get('/taxon_search', (req, res) => res.sendFile(path.join(htmlPath, 'taxon_search.html')));
+
+// Servir arquivos estáticos (CSS, JS, imagens, etc.) se necessário
+app.use('/static', express.static(path.join(__dirname, 'src', 'static')));
+
+app.listen(3000, () => console.log('Server running at http://localhost:3000'));
