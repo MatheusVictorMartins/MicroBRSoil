@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>microBRsoil</title>
+    <link rel="stylesheet" href="/static/css/reset.css">
+    <link rel="stylesheet" href="/static/css/upload.css">
+</head>
+
+<body>
+    <main>
+        <form action="/upload/profile" method="post" enctype="multipart/form-data">
+            <label for="user" class="text-input-label">Arquivo FASTQ</label>
+            <input type="file" name="fastq_file" />
+            <label for="user" class="text-input-label">Metadados</label>
+            <input type="file" name="csv_file" />
+            <label for="user" class="text-input-label">Arquivo de Mapeamento</label>
+            <input type="file" name="map_file" />
+            <button type="submit">Enviar arquivos</button>
+        </form>
+    </main>
+</body>
+</html>

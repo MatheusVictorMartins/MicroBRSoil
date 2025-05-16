@@ -1,0 +1,6 @@
+sample_id,latitude,longitude,altitude_m,depth_cm,collection_date,soil_type,ph,moisture_pct,collector
+S001,-23.5616,-46.6559,780,10,2024-11-10,Argiloso,6.5,23.1,Dr. A. Souza
+S002,-23.5620,-46.6565,782,20,2024-11-10,Arenoso,5.8,18.7,Dr. A. Souza
+S003,-23.5630,-46.6570,775,5,2024-11-11,Latossolo,6.2,30.4,Equipe B
+S004,-23.5642,-46.6581,770,15,2024-11-12,Glei,6.9,26.8,Equipe B
+S005,-23.5650,-46.6595,765,25,2024-11-12,Humoso,7.0,31.5,Dr. C. Lima

@@ -10,12 +10,12 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
-// Rotas de API
+// ROUTES
 app.use('/auth', authRoutes);
 app.use('/upload', uploadRoutes);
 app.use('/pipeline', pipelineRoutes);
 
-// Servir arquivos estáticos HTML
+// JOINS
 const htmlPath = path.join(__dirname, 'src', 'html');
 
 app.get('/', (req, res) => res.sendFile(path.join(htmlPath, 'index.html')));
@@ -25,8 +25,9 @@ app.get('/geosearch', (req, res) => res.sendFile(path.join(htmlPath, 'geosearch.
 app.get('/header', (req, res) => res.sendFile(path.join(htmlPath, 'header.html')));
 app.get('/left_menu', (req, res) => res.sendFile(path.join(htmlPath, 'left_menu.html')));
 app.get('/taxon_search', (req, res) => res.sendFile(path.join(htmlPath, 'taxon_search.html')));
+app.get('/upload', (req, res) => res.sendFile(path.join(htmlPath, 'upload.html')));
 
-// Servir arquivos estáticos (CSS, JS, imagens, etc.) se necessário
+// STATIC
 app.use('/static', express.static(path.join(__dirname, 'src', 'static')));
 
 app.listen(3000, () => console.log('Server running at http://localhost:3000'));
