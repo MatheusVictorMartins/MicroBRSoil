@@ -1,0 +1,261 @@
+
+
+====================  17h-38m-47s/18-5-2025 ====================
+Erro em createSoil
+ReferenceError: response is not defined
+
+====================  17h-39m-8s/18-5-2025 ====================
+Erro em createSoil
+ReferenceError: response is not defined
+
+====================  17h-39m-31s/18-5-2025 ====================
+Erro em createSoil
+ReferenceError: response is not defined
+
+====================  17h-49m-4s/18-5-2025 ====================
+Erro em createSoil
+ReferenceError: response is not defined
+
+====================  17h-49m-16s/18-5-2025 ====================
+Erro em createSoil
+ReferenceError: response is not defined
+
+====================  17h-50m-13s/18-5-2025 ====================
+Erro em createSoil
+ReferenceError: response is not defined
+
+====================  17h-52m-19s/18-5-2025 ====================
+Erro em createSoil
+ReferenceError: response is not defined
+
+====================  17h-53m-44s/18-5-2025 ====================
+Erro em createSoil
+ReferenceError: response is not defined
+
+====================  18h-11m-53s/18-5-2025 ====================
+Erro em createSoil
+ReferenceError: response is not defined
+
+====================  18h-12m-28s/18-5-2025 ====================
+Erro em createSoil
+error: o valor nulo na coluna "alpha_observed" da relação "soil" viola a restrição de não-nulo
+
+====================  18h-18m-43s/18-5-2025 ====================
+Sucesso em createSoil
+Linha criada:
+{"soil_id":1}
+
+====================  18h-19m-4s/18-5-2025 ====================
+Sucesso em createSoil
+Linha criada:
+{"soil_id":2}
+
+====================  18h-19m-21s/18-5-2025 ====================
+Sucesso em createSoil
+Linha criada:
+{"soil_id":3}
+
+====================  18h-19m-45s/18-5-2025 ====================
+Sucesso em createSoil
+Linha criada:
+{"soil_id":4}
+
+====================  18h-19m-45s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  18h-22m-34s/18-5-2025 ====================
+Sucesso em createSoil
+Linha criada:
+{"soil_id":5}
+
+====================  18h-22m-34s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  18h-27m-15s/18-5-2025 ====================
+Sucesso em createSoil
+Linha criada:
+{"soil_id":6}
+
+====================  18h-28m-30s/18-5-2025 ====================
+Sucesso em createSoil
+Linha criada:
+{"soil_id":7}
+
+====================  18h-28m-30s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  18h-28m-30s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  18h-28m-56s/18-5-2025 ====================
+Sucesso em createSoil
+Linha criada:
+{"soil_id":8}
+
+====================  18h-28m-56s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  18h-28m-56s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  18h-30m-26s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  18h-30m-26s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  18h-30m-48s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  18h-30m-48s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  18h-31m-2s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  18h-31m-2s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  18h-31m-41s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  18h-31m-41s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  18h-31m-49s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  18h-31m-49s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  18h-31m-55s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  18h-31m-55s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  19h-24m-56s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  19h-24m-56s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  19h-26m-53s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  19h-26m-53s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  19h-28m-17s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  19h-28m-17s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  19h-28m-37s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  19h-28m-37s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  19h-29m-32s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  19h-29m-32s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  19h-33m-39s/18-5-2025 ====================
+asdokasdhkahs
+
+====================  19h-33m-39s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  19h-33m-39s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  19h-33m-39s/18-5-2025 ====================
+asdokasdhkahs
+
+====================  19h-33m-55s/18-5-2025 ====================
+asdokasdhkahs
+
+====================  19h-33m-55s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  19h-33m-55s/18-5-2025 ====================
+asdokasdhkahs
+
+====================  19h-33m-55s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  19h-34m-14s/18-5-2025 ====================
+asdokasdhkahs
+
+====================  19h-34m-14s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  19h-34m-14s/18-5-2025 ====================
+asdokasdhkahs
+
+====================  19h-34m-14s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  19h-34m-55s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  19h-34m-55s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  19h-35m-29s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  19h-35m-29s/18-5-2025 ====================
+Erro em createAlpha: 
+TypeError: Cannot read properties of undefined (reading '0')
+
+====================  19h-38m-29s/18-5-2025 ====================
+Sucesso em createAlpha
+Linha criada: 
+{"alpha_id":35,"soil_id":1,"alpha_observed":7,"alpha_shannon":1.84613470040584,"alpha_simpson":0.828125,"alpha_chao1":7,"alpha_goods":1}
+
+====================  19h-38m-29s/18-5-2025 ====================
+Sucesso em createAlpha
+Linha criada: 
+{"alpha_id":36,"soil_id":1,"alpha_observed":10,"alpha_shannon":2.1196809096731,"alpha_simpson":0.853741496598639,"alpha_chao1":10,"alpha_goods":1}

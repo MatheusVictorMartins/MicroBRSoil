@@ -1,0 +1,28 @@
+
+
+====================  15h-2m-50s/17-5-2025 ====================
+Erro na leitura de CSV .csv na pasta D:/utfpr - atual/CRUD/TESTING FOLDER/MicroBRSoil/mock_results_csv
+
+====================  15h-3m-27s/17-5-2025 ====================
+Erro na leitura de CSV .csv na pasta D:/utfpr - atual/CRUD/TESTING FOLDER/MicroBRSoil/mock_results_csv
+erro: Error: ENOENT: no such file or directory, open 'D:\utfpr - atual\CRUD\TESTING FOLDER\MicroBRSoil\mock_results_csv\.csv'
+
+====================  15h-6m-39s/17-5-2025 ====================
+Erro ANTES DA leitura de CSV .csv na pasta D:/utfpr - atual/CRUD/TESTING FOLDER/MicroBRSoil/mock_results_csv
+erro: Error: ENOENT: no such file or directory, open 'D:\utfpr - atual\CRUD\TESTING FOLDER\MicroBRSoil\mock_results_csv\.csv'
+
+====================  15h-22m-51s/17-5-2025 ====================
+Erro ANTES DA leitura de CSV mock_metadata na pasta D:/utfpr - atual/CRUD/TESTING FOLDER/MicroBRSoil/mock_results_csv
+erro: Error: ENOENT: no such file or directory, open 'D:\utfpr - atual\CRUD\TESTING FOLDER\MicroBRSoil\mock_results_csv\mock_metadata'
+
+====================  15h-23m-20s/17-5-2025 ====================
+Erro ANTES DA leitura de CSV mock_metadata.csv na pasta D:/utfpr - atual/CRUD/TESTING FOLDER/MicroBRSoil/mock_results_csv
+erro: Error: ENOENT: no such file or directory, open 'D:\utfpr - atual\CRUD\TESTING FOLDER\MicroBRSoil\mock_results_csv\mock_metadata.csv'
+
+====================  15h-23m-41s/17-5-2025 ====================
+Erro ANTES DA leitura de CSV mock_metadata.csv na pasta D:/utfpr - atual/CRUD/TESTING FOLDER/MicroBRSoil/mock_results_csv
+erro: Error: ENOENT: no such file or directory, open 'D:\utfpr - atual\CRUD\TESTING FOLDER\MicroBRSoil\mock_results_csv\mock_metadata.csv'
+
+====================  15h-24m-51s/17-5-2025 ====================
+Erro ANTES DA leitura de CSV mock_metadata.csv na pasta D:/utfpr - atual/CRUD/TESTING FOLDER/MicroBRSoil/mock_results_csv
+erro: Error: ENOENT: no such file or directory, open 'D:\utfpr - atual\CRUD\TESTING FOLDER\MicroBRSoil\mock_results_csv\mock_metadata.csv'

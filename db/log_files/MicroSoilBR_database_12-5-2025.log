@@ -1,0 +1,188 @@
+====================  15h-52m-56s/12-5-2025 ====================
+Sucesso em createUser
+{"user_id":1,"user_email":"kill2","password_hash":"kill3","role_id":4,"created_at":"2025-06-12T18:52:56.272Z","last_login_at":null,"is_active":true}
+
+====================  15h-54m-9s/12-5-2025 ====================
+Sucesso em getRole
+[
+"user_id":1,"user_email":"kill2","password_hash":"kill3","role_id":4,"created_at":"2025-06-12T18:52:56.272Z","last_login_at":null,"is_active":true}]
+
+====================  15h-54m-9s/12-5-2025 ====================
+Sucesso em getRole
+[
+"user_id":1,"user_email":"kill2","password_hash":"kill3","role_id":4,"created_at":"2025-06-12T18:52:56.272Z","last_login_at":null,"is_active":true}]
+
+====================  15h-54m-9s/12-5-2025 ====================
+Sucesso em getRole
+[
+"user_id":1,"user_email":"kill2","password_hash":"kill3","role_id":4,"created_at":"2025-06-12T18:52:56.272Z","last_login_at":null,"is_active":true}]
+
+====================  15h-54m-9s/12-5-2025 ====================
+Erro em updateUser
+error: relação "microsoil_db.user" não existe
+
+====================  15h-57m-35s/12-5-2025 ====================
+Sucesso em getRole
+[
+"user_id":1,"user_email":"kill2","password_hash":"kill3","role_id":4,"created_at":"2025-06-12T18:52:56.272Z","last_login_at":null,"is_active":true}]
+
+====================  15h-57m-35s/12-5-2025 ====================
+Erro em updateUser
+error: relação "microsoil_db.users" não existe
+
+====================  15h-57m-35s/12-5-2025 ====================
+Sucesso em getRole
+[
+"user_id":1,"user_email":"kill2","password_hash":"kill3","role_id":4,"created_at":"2025-06-12T18:52:56.272Z","last_login_at":null,"is_active":true}]
+
+====================  16h-0m-29s/12-5-2025 ====================
+Erro em updateUser
+error: relação "microsoil_db.users" não existe
+
+====================  16h-0m-29s/12-5-2025 ====================
+Sucesso em createUser
+{"user_id":2,"user_email":"aasasdasdasd","password_hash":"kill3","role_id":4,"created_at":"2025-06-12T19:00:29.794Z","last_login_at":null,"is_active":true}
+
+====================  16h-0m-29s/12-5-2025 ====================
+Sucesso em getRole
+[
+"user_id":1,"user_email":"kill2","password_hash":"kill3","role_id":4,"created_at":"2025-06-12T18:52:56.272Z","last_login_at":null,"is_active":true},
+"user_id":2,"user_email":"aasasdasdasd","password_hash":"kill3","role_id":4,"created_at":"2025-06-12T19:00:29.794Z","last_login_at":null,"is_active":true}]
+
+====================  16h-0m-29s/12-5-2025 ====================
+Sucesso em createUser
+{"user_id":3,"user_email":"asdasdasd","password_hash":"kill3","role_id":4,"created_at":"2025-06-12T19:00:29.798Z","last_login_at":null,"is_active":true}
+
+====================  16h-0m-29s/12-5-2025 ====================
+Sucesso em getRole
+[
+"user_id":1,"user_email":"kill2","password_hash":"kill3","role_id":4,"created_at":"2025-06-12T18:52:56.272Z","last_login_at":null,"is_active":true},
+"user_id":2,"user_email":"aasasdasdasd","password_hash":"kill3","role_id":4,"created_at":"2025-06-12T19:00:29.794Z","last_login_at":null,"is_active":true},
+"user_id":3,"user_email":"asdasdasd","password_hash":"kill3","role_id":4,"created_at":"2025-06-12T19:00:29.798Z","last_login_at":null,"is_active":true}]
+
+====================  16h-0m-29s/12-5-2025 ====================
+Sucesso em getRole
+{"user_id":1,"user_email":"kill2","password_hash":"kill3","role_id":4,"created_at":"2025-06-12T18:52:56.272Z","last_login_at":null,"is_active":true}
+
+====================  16h-0m-29s/12-5-2025 ====================
+Sucesso em getRole
+[
+"user_id":1,"user_email":"kill2","password_hash":"kill3","role_id":4,"created_at":"2025-06-12T18:52:56.272Z","last_login_at":null,"is_active":true},
+"user_id":2,"user_email":"aasasdasdasd","password_hash":"kill3","role_id":4,"created_at":"2025-06-12T19:00:29.794Z","last_login_at":null,"is_active":true},
+"user_id":3,"user_email":"asdasdasd","password_hash":"kill3","role_id":4,"created_at":"2025-06-12T19:00:29.798Z","last_login_at":null,"is_active":true}]
+
+====================  16h-7m-32s/12-5-2025 ====================
+Erro em logUser
+error: coluna "hashed_password" não existe
+
+====================  16h-7m-51s/12-5-2025 ====================
+Sucesso em logUser
+{"user_id":3,"user_email":"asdasdasd","password_hash":"kill3","role_id":4,"created_at":"2025-06-12T19:00:29.798Z","last_login_at":null,"is_active":true}
+
+====================  17h-11m-24s/12-5-2025 ====================
+Erro em deleteUser
+Entrada incorreta em deleteUser
+ID: undefined typeof: undefined
+
+====================  17h-11m-24s/12-5-2025 ====================
+Sucesso em logUser
+{"user_id":3,"user_email":"asdasdasd","password_hash":"kill3","role_id":4,"created_at":"2025-06-12T19:00:29.798Z","last_login_at":null,"is_active":true}
+
+====================  17h-11m-24s/12-5-2025 ====================
+Sucesso em deleteUser
+{"user_id":3,"user_email":"asdasdasd","password_hash":"kill3","role_id":4,"created_at":"2025-06-12T19:00:29.798Z","last_login_at":null,"is_active":true}
+
+====================  17h-13m-35s/12-5-2025 ====================
+Sucesso em logUser
+undefined
+
+====================  17h-13m-35s/12-5-2025 ====================
+Erro em deleteUser
+Entrada incorreta em deleteUser
+ID: undefined typeof: undefined
+
+====================  17h-13m-35s/12-5-2025 ====================
+Sucesso em deleteUser
+undefined
+
+====================  17h-13m-35s/12-5-2025 ====================
+Sucesso em deleteUser
+undefined
+
+====================  17h-14m-32s/12-5-2025 ====================
+Sucesso em logUser
+undefined
+
+====================  17h-14m-32s/12-5-2025 ====================
+Sucesso em getRole
+[
+"user_id":1,"user_email":"kill2","password_hash":"kill3","role_id":4,"created_at":"2025-06-12T18:52:56.272Z","last_login_at":null,"is_active":true},
+"user_id":2,"user_email":"aasasdasdasd","password_hash":"kill3","role_id":4,"created_at":"2025-06-12T19:00:29.794Z","last_login_at":null,"is_active":true}]
+
+====================  17h-15m-19s/12-5-2025 ====================
+Sucesso em logUser
+undefined
+
+====================  17h-15m-19s/12-5-2025 ====================
+Sucesso em deleteUser
+undefined
+
+====================  17h-22m-8s/12-5-2025 ====================
+Sucesso em logUser
+undefined
+
+====================  17h-22m-8s/12-5-2025 ====================
+Sucesso em deleteUser
+undefined
+
+====================  17h-23m-2s/12-5-2025 ====================
+Sucesso em logUser
+undefined
+
+====================  17h-23m-2s/12-5-2025 ====================
+Sucesso em deleteUser
+undefined
+
+====================  17h-23m-42s/12-5-2025 ====================
+Sucesso em logUser
+undefined
+
+====================  17h-23m-42s/12-5-2025 ====================
+Erro em logUser
+Resposta ruim, provavelmente não encontrou o que você estava procurando
+Resposta:
+[object Object]
+undefined
+
+====================  17h-23m-42s/12-5-2025 ====================
+Sucesso em deleteUser
+undefined
+
+====================  17h-23m-42s/12-5-2025 ====================
+Erro em deleteUser
+Resposta ruim, provavelmente não encontrou o que você estava procurando
+Resposta:
+[object Object]
+undefined
+
+====================  17h-24m-17s/12-5-2025 ====================
+Sucesso em logUser
+undefined
+
+====================  17h-24m-17s/12-5-2025 ====================
+Erro em logUser
+Resposta ruim, provavelmente não encontrou o que você estava procurando
+Resposta:
+{"command":"SELECT","rowCount":0,"oid":null,"rows":[],"fields":[{"name":"user_id","tableID":41223,"columnID":1,"dataTypeID":23,"dataTypeSize":4,"dataTypeModifier":-1,"format":"text"},{"name":"user_email","tableID":41223,"columnID":2,"dataTypeID":1043,"dataTypeSize":-1,"dataTypeModifier":259,"format":"text"},{"name":"password_hash","tableID":41223,"columnID":3,"dataTypeID":1043,"dataTypeSize":-1,"dataTypeModifier":259,"format":"text"},{"name":"role_id","tableID":41223,"columnID":4,"dataTypeID":23,"dataTypeSize":4,"dataTypeModifier":-1,"format":"text"},{"name":"created_at","tableID":41223,"columnID":5,"dataTypeID":1114,"dataTypeSize":8,"dataTypeModifier":-1,"format":"text"},{"name":"last_login_at","tableID":41223,"columnID":6,"dataTypeID":1114,"dataTypeSize":8,"dataTypeModifier":-1,"format":"text"},{"name":"is_active","tableID":41223,"columnID":7,"dataTypeID":16,"dataTypeSize":1,"dataTypeModifier":-1,"format":"text"}],"_parsers":[null,null,null,null,null,null,null],"_types":{"_types":{"arrayParser":{},"builtins":{"BOOL":16,"BYTEA":17,"CHAR":18,"INT8":20,"INT2":21,"INT4":23,"REGPROC":24,"TEXT":25,"OID":26,"TID":27,"XID":28,"CID":29,"JSON":114,"XML":142,"PG_NODE_TREE":194,"SMGR":210,"PATH":602,"POLYGON":604,"CIDR":650,"FLOAT4":700,"FLOAT8":701,"ABSTIME":702,"RELTIME":703,"TINTERVAL":704,"CIRCLE":718,"MACADDR8":774,"MONEY":790,"MACADDR":829,"INET":869,"ACLITEM":1033,"BPCHAR":1042,"VARCHAR":1043,"DATE":1082,"TIME":1083,"TIMESTAMP":1114,"TIMESTAMPTZ":1184,"INTERVAL":1186,"TIMETZ":1266,"BIT":1560,"VARBIT":1562,"NUMERIC":1700,"REFCURSOR":1790,"REGPROCEDURE":2202,"REGOPER":2203,"REGOPERATOR":2204,"REGCLASS":2205,"REGTYPE":2206,"UUID":2950,"TXID_SNAPSHOT":2970,"PG_LSN":3220,"PG_NDISTINCT":3361,"PG_DEPENDENCIES":3402,"TSVECTOR":3614,"TSQUERY":3615,"GTSVECTOR":3642,"REGCONFIG":3734,"REGDICTIONARY":3769,"JSONB":3802,"REGNAMESPACE":4089,"REGROLE":4096}},"text":{},"binary":{}},"RowCtor":null,"rowAsArray":false,"_prebuiltEmptyResultObject":{"user_id":null,"user_email":null,"password_hash":null,"role_id":null,"created_at":null,"last_login_at":null,"is_active":null}}
+undefined
+
+====================  17h-24m-17s/12-5-2025 ====================
+Sucesso em deleteUser
+undefined
+
+====================  17h-24m-17s/12-5-2025 ====================
+Erro em deleteUser
+Resposta ruim, provavelmente não encontrou o que você estava procurando
+Resposta:
+{"command":"DELETE","rowCount":0,"oid":null,"rows":[],"fields":[{"name":"user_id","tableID":41223,"columnID":1,"dataTypeID":23,"dataTypeSize":4,"dataTypeModifier":-1,"format":"text"},{"name":"user_email","tableID":41223,"columnID":2,"dataTypeID":1043,"dataTypeSize":-1,"dataTypeModifier":259,"format":"text"},{"name":"password_hash","tableID":41223,"columnID":3,"dataTypeID":1043,"dataTypeSize":-1,"dataTypeModifier":259,"format":"text"},{"name":"role_id","tableID":41223,"columnID":4,"dataTypeID":23,"dataTypeSize":4,"dataTypeModifier":-1,"format":"text"},{"name":"created_at","tableID":41223,"columnID":5,"dataTypeID":1114,"dataTypeSize":8,"dataTypeModifier":-1,"format":"text"},{"name":"last_login_at","tableID":41223,"columnID":6,"dataTypeID":1114,"dataTypeSize":8,"dataTypeModifier":-1,"format":"text"},{"name":"is_active","tableID":41223,"columnID":7,"dataTypeID":16,"dataTypeSize":1,"dataTypeModifier":-1,"format":"text"}],"_parsers":[null,null,null,null,null,null,null],"_types":{"_types":{"arrayParser":{},"builtins":{"BOOL":16,"BYTEA":17,"CHAR":18,"INT8":20,"INT2":21,"INT4":23,"REGPROC":24,"TEXT":25,"OID":26,"TID":27,"XID":28,"CID":29,"JSON":114,"XML":142,"PG_NODE_TREE":194,"SMGR":210,"PATH":602,"POLYGON":604,"CIDR":650,"FLOAT4":700,"FLOAT8":701,"ABSTIME":702,"RELTIME":703,"TINTERVAL":704,"CIRCLE":718,"MACADDR8":774,"MONEY":790,"MACADDR":829,"INET":869,"ACLITEM":1033,"BPCHAR":1042,"VARCHAR":1043,"DATE":1082,"TIME":1083,"TIMESTAMP":1114,"TIMESTAMPTZ":1184,"INTERVAL":1186,"TIMETZ":1266,"BIT":1560,"VARBIT":1562,"NUMERIC":1700,"REFCURSOR":1790,"REGPROCEDURE":2202,"REGOPER":2203,"REGOPERATOR":2204,"REGCLASS":2205,"REGTYPE":2206,"UUID":2950,"TXID_SNAPSHOT":2970,"PG_LSN":3220,"PG_NDISTINCT":3361,"PG_DEPENDENCIES":3402,"TSVECTOR":3614,"TSQUERY":3615,"GTSVECTOR":3642,"REGCONFIG":3734,"REGDICTIONARY":3769,"JSONB":3802,"REGNAMESPACE":4089,"REGROLE":4096}},"text":{},"binary":{}},"RowCtor":null,"rowAsArray":false,"_prebuiltEmptyResultObject":{"user_id":null,"user_email":null,"password_hash":null,"role_id":null,"created_at":null,"last_login_at":null,"is_active":null}}
+undefined
