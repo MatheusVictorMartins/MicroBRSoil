@@ -43,32 +43,6 @@
     display: flex;
     flex-direction: column;
 }
-.text-input-label{
-    font-family: "Inter", sans-serif;
-    font-weight: 600;
-    font-size: 1.5rem;
-    cursor: text;
-}
-.text-input{
-    border: .0625rem solid;
-    border-radius: 1.25rem;
-    border-color: #2B373D;
-    width: 28.125rem;
-    height: 3.75rem;
-
-    cursor:text;
-    margin-top: 1.5625rem;
-    margin-bottom: 2.5rem;
-
-    padding-left: 1.5625rem;
-
-    background-color: #F8FFFA;
-
-    font-family: "Inter",sans-serif;
-    font-size: 1.25rem;
-    font-weight: 500;
-    color: #2B373D;
-}
 
 #tpassword{
     margin-bottom: 0.5rem;
@@ -85,6 +59,8 @@
     border: none;
     outline-offset: 0px;
 }
+
+
 
 .btn-dont-know-pass{
     display: flex;
@@ -140,7 +116,6 @@
     margin-right: .3125rem;
 }
 
-
 .btn-lg:hover{
     background-color: #93E44D;
     border: none;
@@ -150,4 +125,45 @@
 .btn-lg:not(:disabled):active{
     background-color: #2A8A4C;
     box-shadow: 0 1rem 1.5rem rgba(100,205,68,0.6);
+}
+
+.login-input-label{
+    font-family: "Inter", sans-serif;
+    font-weight: 600;
+    font-size: 1.5rem;
+    cursor: text;
+    color: #2B373D;
+}
+
+.login-text-input{
+    border: .0625rem solid;
+    border-radius: 1.25rem;
+    border-color: #2B373D;
+    width: 28.125rem;
+    height: 3.75rem;
+
+    cursor:text;
+    margin-top: 1.5625rem;
+    margin-bottom: 2.5rem;
+
+    padding-left: 1.5625rem;
+
+    background-color: #F8FFFA;
+
+    font-family: "Inter",sans-serif;
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: #2B373D;
+}
+
+.login-text-input::placeholder{
+    font-family: "Inter", sans-serif;
+    font-weight: 500;
+    font-size: 1.25rem;
+    color: rgba(43,55,61, 0.6);
+}
+
+.login-text-input:focus{
+    border: none;
+    outline-offset: 0px;
 }

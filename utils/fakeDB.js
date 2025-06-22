@@ -1,4 +1,20 @@
-const users = [];
+const bcrypt = require('bcrypt');
+
+const users = [
+  {
+    id: 1,
+    username: 'admin',
+    passwordHash: bcrypt.hashSync('admin123', 10),
+    role: 'admin'
+  },
+  {
+    id: 2,
+    username: 'joao',
+    passwordHash: bcrypt.hashSync('senha123', 10),
+    role: 'user'
+  }
+];
+
 const pipelines = {};
 
 // PLACEHOLDER
@@ -82,4 +98,4 @@ const samples= [
     }
 ];
 
-module.exports = { users, pipelines, samples};
+module.exports = { users, pipelines, samples };

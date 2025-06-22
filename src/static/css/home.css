@@ -89,13 +89,14 @@
 .filters-dropdown{
     display: grid;
     grid-template-columns: auto auto auto;
+    grid-template-rows: 3rem 3rem;
     padding: 1.665% 1.665%;
     column-gap: 3.33%;
     row-gap: 10%;
     width: 78.125vw;
     height: auto;
     align-content: center;
-    margin-bottom: 5.24vh;
+    margin-bottom: 4.5vh;
     background-color: #ffffff;
 }
 

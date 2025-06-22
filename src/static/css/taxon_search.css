@@ -1,0 +1,22 @@
+.basic-frame{
+    display: flex;
+    flex-direction: column;
+}
+
+.select-sh-form{
+    display: flex;
+    flex-direction: column;
+}
+
+.btn-taxon-search{
+    border-radius: 1.25rem;
+    height: 3.75rem;
+
+    font-size: 1.25rem;
+    font-family: "Inter",sans-serif;
+    font-weight: 600;
+}
+
+.graphic-frame{
+    margin-top: 2vh;
+}
