@@ -12,7 +12,7 @@
 .btn-left-menu{
     display: flex;
     align-items: center;
-    gap: .375rem;
+    gap: var(--bt-default-gap);
 
     padding: 1.5rem 1.5rem;
 
@@ -23,7 +23,7 @@
    
     text-align: left;
     font-weight: 500;
-    font-size: 1.125rem;
+    font-size: 1.25rem;
 
 }
 
@@ -38,7 +38,6 @@
     position: absolute;
     margin-left: -1.5rem;
     margin-top: -3.775rem;
-
 }
 
 #btn-left-menu-help{

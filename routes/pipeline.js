@@ -1,12 +1,12 @@
 const express = require('express');
 const { pipelines } = require('../utils/fakeDB');
-const authMiddleware = require('../middleware/authMiddleware');
+const authenticate = require('../middleware/authenticate');
 const { v4: uuidv4 } = require('uuid');
 
 const router = express.Router();
 
 // Iniciar pipeline
-router.post('/run/:id', authMiddleware, (req, res) => {
+router.post('/run/:id', authenticate, (req, res) => {
   const pipelineId = req.params.id;
   const runId = uuidv4();
   pipelines[runId] = { log: `Pipeline ${pipelineId} started by user ${req.user.username}` };
@@ -14,7 +14,7 @@ router.post('/run/:id', authMiddleware, (req, res) => {
 });
 
 // Consultar logs
-router.get('/logs/:id', authMiddleware, (req, res) => {
+router.get('/logs/:id', authenticate, (req, res) => {
   const runId = req.params.id;
   const pipeline = pipelines[runId];
   if (!pipeline) return res.status(404).json({ error: 'Pipeline not found' });

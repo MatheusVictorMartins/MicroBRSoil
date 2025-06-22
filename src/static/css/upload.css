@@ -1,49 +1,116 @@
-body {
+#home{
     display: flex;
-    flex-direction: column;
-
-    align-items: center;
-    justify-content: center;
+    flex-direction: row;
+    gap: 2.6vw;
 }
 
-main {
+
+.home-title-row{
     display: flex;
-    flex-direction: column;
-
-    align-items: center;
-    justify-content: center;
-
-    height: 50vh;
-    width: 30vw;
-
-    background-color: #E2E2E2;
+    flex-direction: row;
+    margin-bottom: 3.125rem;
 }
 
-form {
+.welcome-message{
+    margin-left: auto;
+}
+
+.dashboard-table{
+    padding-top: 0;
+    max-height: 41.9vh;
+
+    justify-content: center;
+    width: 78.125vw;
+
+    overflow-x: auto;
+    overflow-y: auto;
+
+    position: relative;
+}
+
+.dashboard-table table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+}
+
+.dashboard-table thead th{
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding-top: 1.3242rem;
+}
+
+.dashboard-actions{
     display: flex;
-    flex-direction: column;
+    width: 78.125vw;
+    border-bottom: solid #2B373D .0625rem;
+    margin-bottom: 1.5625rem;
+}
 
+.btn-actions{
+    display: flex;
+    margin-bottom: .9375rem;
     align-items: center;
-    justify-content: center;
-
-
-
 }
 
-
-label {
-    margin-top: 3vh;
+.btn-filters{
+    border: 0;
+    color: #2B373D;
 }
 
-input {
-    margin-bottom: 3vh;
+.btn-filters:hover{
+    background-color: #2B373D;
 }
 
-button {
-    margin-top: 3rem;
-    padding: 0.5rem 2rem 0.5rem 2rem;
-    background-color: #2A8A4C;
-    color: #FFFFFF;
-    
-    border-radius: 1rem;
+.btn-filters:active{
+    background-color: #2B373D;
+}
+
+.btn-filters:not(:disabled):active{
+    background-color: #3C6960
+}
+
+.btn-upload{
+    margin-left: auto;
+    color: #2B373D;
+    border-color: #2B373D;
+    display: flex;
+}
+
+.btn-upload:hover{
+    background-color: #2B373D;
+}
+
+.btn-upload:not(:disabled):active{
+    background-color: #3C6960;
+}
+
+.filters-dropdown{
+    display: grid;
+    grid-template-columns: auto auto auto;
+    grid-template-rows: 3rem 3rem;
+    padding: 1.665% 1.665%;
+    column-gap: 3.33%;
+    row-gap: 10%;
+    width: 78.125vw;
+    height: auto;
+    align-content: center;
+    margin-bottom: 4.5vh;
+    background-color: #ffffff;
+}
+
+.filter-item:focus{
+    box-shadow:  0px 0px 3px rgba(60,105,96,0.5) inset, 0px 0px 6px rgba(60,105,96,1);
+    border-color: #3C6960;
+}
+.drop-label{
+    font-size: 1.5rem;
+    font-family: "Inter",sans-serif;
+    font-weight: 600;
+}
+
+.input-group > .btn{
+    display: flex;
+    align-items: center;
 }

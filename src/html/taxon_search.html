@@ -14,14 +14,13 @@
     <link rel="stylesheet" href="../static/css/bootstrap.min.css">
     <!--===================================================================================================================================-->
     <!--#endregion-->
-    
-     <!--LOCAL CSS IMPORT-->
+    <!--LOCAL CSS IMPORT-->
     <link rel="stylesheet" href="../static/css/reset.css">
     <link rel="stylesheet" href="../static/css/style.css">
     <link rel="stylesheet" href="../static/css/header.css">
     <link rel="stylesheet" href="../static/css/footer.css">
     <link rel="stylesheet" href="../static/css/left_menu.css">
-    <link rel="stylesheet" href="../static/css/login.css">
+    <link rel="stylesheet" href="../static/css/taxon_search.css">
     <!--FONT IMPORT-->
     <!--INTER-->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -34,38 +33,35 @@
     <!--ICONS IMPORT-->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:wght@300" rel="stylesheet" />
 </head>
-
 <body>
-    <main class="login-main-content">
-        <div class="login-layout">
-            <span class="left-side">
-                <img src="../static/assets/figures/login_decoration.png" alt="" class="login-decoration">
-                <img src="../static/assets/logo/microBR_logo_white_reduced.png" alt="" class="white-reduced-logo">
-            </span>
-            <span class="right-side">
-                    <img src="../static/assets/logo/microBR_logo2DB.png" alt="" class="normal-logo">
-                    <h1 class="login-welcome-message">WELCOME BACK</h1>
-                    
-                    <form action="/auth/login" method="POST" class="login-form">
-                        <label for="user" class="login-input-label">USER</label>
-                        <input type="text" name="user" id="user" class="login-text-input" placeholder="USER">
-                        <label for="tpassword" class="login-input-label">PASSWORD</label>
-                        <input type="password" name="tpassword" id="tpassword" class="login-text-input" placeholder="PASSWORD">
-                        <button typer="button" class="btn-dont-know-pass">Don't know your password?</button>
-                        <button type="submit" class="btn btn-primary btn-lg">
-                            <span class="material-symbols-rounded btn-login-icon">login</span>LOG IN
-                        </button>
-                    </form>
-                </span>
+    <!--HEADER PLACEHOLDER-->
+    <div id="header-placeholder"></div>
+    <!--#region LAYOUT-->
+    <div class="layout">
+    <!--LEFT MENU PLACEHOLDER-->
+        <div id="leftmenu-placeholder"></div>
+    <!--#region MAIN -->
+        <main class="main-content"> 
+            <h1 class="main-title">TAXON SEARCH</h1> 
+            <div class="basic-frame">
+               <form action="" class="select-sh-form">
+                    <label for="tselect_sh" class="text-input-label">SELECT SH</label>
+                    <input type="text" name="tselect_sh" id="tselect_sh" class="text-input register-text-input" placeholder="Enter SH">
+               </form>
+               <button type="button" class="btn btn-success btn-taxon-search">SEARCH</button>
+            </div>
+
+            <div class="basic-frame graphic-frame">
+                <img src="../static/assets/figures/graphic_placeholder.png" alt="">
             </div>
         </main>
-    <!--#region TRANSLATE WRAPPER-->
-        <!--<div class="gtranslate_wrapper"></div>
-        <script>window.gtranslateSettings = {"default_language":"en","languages":["en","fr","de", "pt", "it","es"],"wrapper_selector":".gtranslate_wrapper","switcher_horizontal_position":"left","switcher_vertical_position":"bottom","alt_flags":{"en":"usa","pt":"brazil"}}</script>
-        <script src="https://cdn.gtranslate.net/widgets/latest/float.js" defer></script>.-->
+    </div>
+
+    <!--#region HEADER INCLUDE-->
+    <script src="../static/js/include_elements.js"></script>
     <!--#endregion-->
     <!--#region BOOTSTRAP JS LINK-->
-        <script src="../static/js/button.js"></script>
+    <script src="../static/js/button.js"></script>
     <!--===================================================================================================================================-->
     <!--BOOTSTRAP CDN JAVASCRIPT IMPORT *USE IF YOU NEED IT; **COMMENT THE "BOOTSTRAP LOCAL JAVASCRIPT IMPORT" BELOW BEFORE USE CDN-->
     <!--
@@ -73,7 +69,7 @@
     -->
 
     <!--BOOSTRAP MINIMAL LOCAL JAVASCRIPT IMPORT-->
-        <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
     <!--===================================================================================================================================-->
     <!--#endregion-->
 </body>

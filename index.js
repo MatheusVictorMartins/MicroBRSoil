@@ -7,6 +7,7 @@ const uploadRoutes = require('./routes/upload');
 const pipelineRoutes = require('./routes/pipeline');
 
 const app = express();
+app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
@@ -22,10 +23,11 @@ app.get('/', (req, res) => res.sendFile(path.join(htmlPath, 'index.html')));
 app.get('/login', (req, res) => res.sendFile(path.join(htmlPath, 'login.html')));
 app.get('/register', (req, res) => res.sendFile(path.join(htmlPath, 'register.html')));
 app.get('/geosearch', (req, res) => res.sendFile(path.join(htmlPath, 'geosearch.html')));
+app.get('/sequence_search', (req, res) => res.sendFile(path.join(htmlPath, 'sequence_search.html')));
 app.get('/header', (req, res) => res.sendFile(path.join(htmlPath, 'header.html')));
 app.get('/left_menu', (req, res) => res.sendFile(path.join(htmlPath, 'left_menu.html')));
 app.get('/taxon_search', (req, res) => res.sendFile(path.join(htmlPath, 'taxon_search.html')));
-app.get('/upload', (req, res) => res.sendFile(path.join(htmlPath, 'upload.html')));
+app.get('/help', (req, res) => res.sendFile(path.join(htmlPath, 'help.html')));
 
 // STATIC
 app.use('/static', express.static(path.join(__dirname, 'src', 'static')));

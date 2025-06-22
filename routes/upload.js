@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const csv = require('csv-parser');
+const authenticate = require('../middleware/authenticate');
 
 // =========================================================================
 //                           PLACEHOLDER
@@ -10,6 +11,7 @@ const { samples } = require('../utils/fakeDB');
 // =========================================================================
 
 const router = express.Router();
+const htmlPath = path.join(__dirname, '..', 'src', 'html');
 
 // Define onde salvar os arquivos
 const storage = multer.diskStorage({
@@ -33,6 +35,10 @@ router.post('/profile', upload.fields([
 ]), (req, res) => {
   console.log('Arquivos recebidos:', req.files);
   res.send('Arquivos enviados com sucesso!');
+});
+
+router.get('/page', authenticate, (req, res) => {
+  res.sendFile(path.join(htmlPath, 'upload.html'));
 });
 
 module.exports = router;

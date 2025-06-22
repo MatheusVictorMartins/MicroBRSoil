@@ -1,3 +1,107 @@
+:root{
+    --register-column-1: 45vw;
+    --register-column-2: 32vw;
+    --register-row: 68vh;
+}
+
+.register-frames{
+    display: grid;
+    grid-template-columns: var(--register-column-1) var(--register-column-2);
+    grid-template-rows: var(--register-row);
+    gap: 3vw;
+}
+
 .main-title{
     margin-bottom: 5.25vh;
+}
+
+.register-frame{
+    display: flex;
+
+    flex-direction: column;
+    padding: 3.125rem;
+    width: var(--register-column-1);
+}
+
+.register-form{
+    display: flex;
+    flex-direction: column;
+
+    width: 100%;
+}
+
+.text-input-label{
+    font-size: 1.25rem;
+}
+
+.text-input{
+    width: 100%;
+}
+
+.btn-register{
+
+    display: flex;
+    gap: var(--bt-default-gap);
+    align-items: center;
+    text-align: center;
+    justify-content: center;
+    background-color: #2A8A4C;
+    border: none;
+    border-radius: 1.25rem;
+
+    color: #E8FFF0;
+
+    width: 100%;
+    height: 3.75rem;
+
+    font-family: "Inter", sans-serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+
+    margin-top: 1rem;
+
+    box-shadow: 0 1rem 1.5rem rgba(100,205,68,0.6);
+}
+
+.btn-register:hover{
+    background-color: #93E44D;
+    border: none;
+    color: #fff;
+    box-shadow: 0 1rem 1.5rem rgba(199,255,120,0.9);
+}
+.btn-register:not(:disabled):active{
+    background-color: #2A8A4C;
+    box-shadow: 0 1rem 1.5rem rgba(100,205,68,0.6);
+}
+.register-users-table{
+    padding-top: 0;
+    max-width: var(--register-column-2);
+    max-height: var(--register-row);
+
+    justify-content: center;
+
+    overflow-x: auto;
+    overflow-y: auto;
+
+    position: relative;
+}
+
+.register-users-table table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.register-users-table thead th{
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding-top: 1.3242rem;
+}
+
+.register-users-table td{
+    align-items: center;
+}
+
+.txt-icon{
+    font-size: 1.3rem !important;
 }
