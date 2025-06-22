@@ -15,10 +15,10 @@
     <!--===================================================================================================================================-->
     <!--#endregion-->
     <!--LOCAL CSS IMPORT-->
+    <link rel="stylesheet" href="../css/reset.css">
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/header.css">
     <link rel="stylesheet" href="../css/footer.css">
-    <link rel="stylesheet" href="../css/reset.css">
     <link rel="stylesheet" href="../css/left_menu.css">
     <link rel="stylesheet" href="../css/register.css">
     <!--FONT IMPORT-->
@@ -43,7 +43,93 @@
     <!--#region MAIN -->
         <main class="main-content"> 
             <h1 class="main-title">NEW USER</h1> 
-            <div class="basic-frame">
+            <div class="register-frames">
+                <div class="basic-frame register-frame">
+                    <form action="/auth/register" class="register-form">
+                        <label for="tname" class="text-input-label">NAME</label>
+                        <input type="text" name="tname" id="tname" class="text-input register-text-input" placeholder="NAME">
+                        <label for="tpassword" class="text-input-label">PASSWORD</label>
+                        <input type="password" name="tpassword" id="tpassword" class="text-input register-text-input" placeholder="PASSWORD">
+                        <label for="tconfpassword" class="text-input-label">CONFIRM PASSWORD</label>
+                        <input type="password" name="tconfpassword" id="tconfpassword" class="text-input register-text-input" placeholder="CONFIRM PASSWORD">
+                    </form>
+                    <button type="button" class="btn btn-primary btn-register"><span class="material-symbols-rounded btn-icon">person_add</span>REGISTER</button>
+                </div>
+
+                <div class="register-users-table table-responsive basic-frame ">
+                    <table class="table">
+                        <thead>
+                        <tr>
+                            <th scope="col">USER NAME</th>
+                            <th scope="col">PASSWORD</th>
+                            <th scope="col">REGISTER DATE</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr>
+                            <th scope="row">Matheus</th>
+                            <td>********* <span class="material-symbols-rounded txt-icon btn-visibility">visibility</span></td>
+                            <td>15/05/2025</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">João Sales</th>
+                            <td>********* <span class="material-symbols-rounded txt-icon btn-visibility">visibility</span></td>
+                            <td>15/05/2025</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Tom</th>
+                            <td>********* <span class="material-symbols-rounded txt-icon btn-visibility">visibility</span></td>
+                            <td>15/05/2025</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Yuri</th>
+                            <td>********* <span class="material-symbols-rounded txt-icon btn-visibility">visibility</span></td>
+                            <td>15/05/2025</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">João Cassimiro</th>
+                            <td>********* <span class="material-symbols-rounded txt-icon btn-visibility">visibility</span></td>
+                            <td>15/05/2025</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">user</th>
+                            <td>********* <span class="material-symbols-rounded txt-icon btn-visibility">visibility</span></td>
+                            <td>15/05/2025</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">user</th>
+                            <td>********* <span class="material-symbols-rounded txt-icon btn-visibility">visibility</span></td>
+                            <td>15/05/2025</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">user</th>
+                            <td>********* <span class="material-symbols-rounded txt-icon btn-visibility">visibility</span></td>
+                            <td>15/05/2025</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">user</th>
+                            <td>********* <span class="material-symbols-rounded txt-icon btn-visibility">visibility</span></td>
+                            <td>15/05/2025</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">user</th>
+                            <td>********* <span class="material-symbols-rounded txt-icon btn-visibility">visibility</span></td>
+                            <td>15/05/2025</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">user</th>
+                            <td>********* <span class="material-symbols-rounded txt-icon btn-visibility">visibility</span></td>
+                            <td>15/05/2025</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">user</th>
+                            <td>********* <span class="material-symbols-rounded txt-icon btn-visibility">visibility</span></td>
+                            <td>15/05/2025</td>
+                        </tr>
+                        
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </main>
     </div>

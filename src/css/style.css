@@ -1,3 +1,7 @@
+
+:root{
+    --bt-default-gap: .3125rem;
+}
 body{
     background-color: #F8FFFA;
 }
@@ -5,6 +9,7 @@ body{
 h1, .main-title{
     font-family: "Tienne", serif;
     font-weight: 700;
+    color: #2B373D;
 }
 .layout{
     display: flex;
@@ -15,9 +20,61 @@ h1, .main-title{
 
     box-shadow: 0 0 1.5rem #CFCFCF;
     border-radius: 1.25rem;
-    padding: 1.3242rem;
+    padding: 3.125rem;
 }
 
 .main-content{
-    padding: 5.25vh;
+    padding: 5.25vh 2.6vw 0 2.6vw;
+    max-width: 85vw;
+}
+
+.text-input-label{
+    font-family: "Inter", sans-serif;
+    font-weight: 600;
+    font-size: 1.5rem;
+    cursor: text;
+    color: #2B373D;
+}
+.text-input{
+    border: .0625rem solid;
+    border-radius: 1.25rem;
+    border-color: #2B373D;
+    width: 28.125rem;
+    height: 3.75rem;
+
+    cursor:text;
+    margin-top: 1.5625rem;
+    margin-bottom: 2.5rem;
+
+    padding-left: 1.5625rem;
+
+    background-color: #F8FFFA;
+
+    font-family: "Inter",sans-serif;
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: #2B373D;
+}
+
+.text-input::placeholder{
+    font-family: "Inter", sans-serif;
+    font-weight: 500;
+    font-size: 1.25rem;
+    color: rgba(43,55,61, 0.6);
+}
+
+.text-input:focus{
+    border: none;
+    outline-offset: 0px;
+}
+
+.btn-icon{
+    font-size: 1.875rem !important;
+}
+
+.table{
+    color: #2B373D;
+
+    font-size: 1.125rem;
+    font-family: "Inter",sans-serif;
 }

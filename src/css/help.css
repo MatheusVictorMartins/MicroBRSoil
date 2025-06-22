@@ -1,0 +1,24 @@
+body{
+    font-family: "Inter", sans-serif;
+}
+
+.main-content{
+    overflow-y: auto;
+    max-height: 89.53vh;
+}
+
+.topic-title{
+    margin-bottom: 2vh;
+    margin-top: 5vh;
+
+    font-size: 1.75rem;
+}
+
+.basic-text{
+    text-align: justify;
+    font-size: 1.0625rem;
+}
+
+.topic-index{
+    font-weight: 500;
+}

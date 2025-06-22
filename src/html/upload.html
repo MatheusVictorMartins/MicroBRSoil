@@ -35,8 +35,8 @@
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/header.css">
     <link rel="stylesheet" href="../css/footer.css">
-    <link rel="stylesheet" href="../css/home.css">
     <link rel="stylesheet" href="../css/left_menu.css">
+    <link rel="stylesheet" href="../css/upload.css">
     <!--FONT IMPORT-->
     <!--INTER-->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -63,49 +63,28 @@
       <div id="home">
       <span id="dashboard">
         <span class="home-title-row">
-          <h1 class="main-title">HOME</h1>
+          <h1 class="main-title">UPLOAD DATA</h1>
         </span>
         <div class="dashboard-actions">
           <button type="button" class="btn btn-outline-primary btn-filters btn-actions"><span class="material-symbols-rounded btn_left_menu_icon">filter_list</span>FILTERS</button>
-          <button onclick="ButtonGoTo('../html/upload.html')" type="button" class="btn btn-outline-primary btn-upload btn-actions"><span class="material-symbols-rounded btn_left_menu_icon">upload_file</span>UPLOAD</button>
+          <button type="button" class="btn btn-outline-primary btn-upload btn-actions"><span class="material-symbols-rounded btn_left_menu_icon">upload_file</span>UPLOAD</button>
         </div>
         <div class="filters-dropdown basic-frame">
-            <select class="form-select filter-item" aria-label="Default select example">
-              <option selected>Filter 1</option>
-              <option value=" ">filter</option>
-              <option value=" ">filter</option>
-              <option value=" ">filter</option>
-            </select>
-            <select class="form-select filter-item" aria-label="Default select example">
-              <option selected>Filter 2</option>
-              <option value=" ">filter</option>
-              <option value=" ">filter</option>
-              <option value=" ">filter</option>
-            </select>
-            <select class="form-select filter-item" aria-label="Default select example">
-              <option selected>Filter 3</option>
-              <option value=" ">filter</option>
-              <option value=" ">filter</option>
-              <option value=" ">filter</option>
-            </select>
-            <select class="form-select filter-item" aria-label="Default select example">
-              <option selected>Filter 4</option>
-              <option value=" ">filter</option>
-              <option value=" ">filter</option>
-              <option value=" ">filter</option>
-            </select>
-            <select class="form-select filter-item" aria-label="Default select example">
-              <option selected>Filter 5</option>
-              <option value=" ">filter</option>
-              <option value=" ">filter</option>
-              <option value=" ">filter</option>
-            </select>
-            <select class="form-select filter-item" aria-label="Default select example">
-              <option selected>Filter 6</option>
-              <option value=" ">filter</option>
-              <option value=" ">filter</option>
-              <option value=" ">filter</option>
-            </select>
+          <h3 class="drop-label">CSV</h2>
+          <h3 class="drop-label">FASTQ</h2>
+          <h3 class="drop-label">TXT</h2>
+            <div class="input-group" id="csvdrop">
+              <input type="file" class="form-control" id="inputGroupFile04" aria-describedby="inputGroupFileAddon04" aria-label="Upload">
+              <button class="btn btn-outline-secondary" type="button" id="inputGroupFileAddon04">Upload</button>
+            </div>
+            <div class="input-group" id="fastqdrop">
+              <input type="file" class="form-control" id="inputGroupFile04" aria-describedby="inputGroupFileAddon04" aria-label="Upload">
+              <button class="btn btn-outline-secondary" type="button" id="inputGroupFileAddon04">Upload</button>
+            </div>
+            <div class="input-group">
+              <input type="file" class="form-control" id="inputGroupFile04" aria-describedby="inputGroupFileAddon04" aria-label="Upload">
+              <button class="btn btn-outline-secondary" type="button" id="inputGroupFileAddon04">Upload</button>
+            </div>
         </div>
         <div class="dashboard-table table-responsive basic-frame">
           <table class="table">
@@ -205,6 +184,7 @@
     <!--#endregion-->
   </div>
   <!--#endregion-->
+
 
   <!--#region HEADER INCLUDE-->
     <script src="../js/include_elements.js"></script>

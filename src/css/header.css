@@ -21,3 +21,35 @@ header{
     width: auto;
 }
 
+.btn-login{
+    display: flex;
+    gap: .3125rem;
+    margin-left: auto;
+    margin-right: 3vw;
+
+    align-items: center;
+
+    background-color: #2a8a4c;
+    border: none;
+
+    font-family: "Inter", sans-serif;
+    font-weight: 600;
+    font-size: 1.25rem;
+
+    padding: 0.5rem 1.25rem;
+
+    color: #F8FFFA;
+}
+
+.btn-login-icon{
+    margin-right: .3125rem;
+}
+
+.btn-login:hover{
+    background-color: #64CD44;
+    color: #FFFFFF;
+}
+
+.btn-login:not(:disabled):active{
+    background-color: #2a8a4c;
+}
