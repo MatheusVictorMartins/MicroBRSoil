@@ -61,5 +61,13 @@ CREATE TABLE IF NOT EXISTS alpha_tests (
     alpha_simpson FLOAT NOT NULL,
     alpha_chao1 INTEGER NOT NULL,
     alpha_goods INTEGER NOT NULL,
-    CONSTRAINT fk_sample_soil FOREIGN KEY (soil_id) REFERENCES soil(soil_id) ON DELETE CASCADE
-)
+    CONSTRAINT fk_alpha_soil FOREIGN KEY (soil_id) REFERENCES soil(soil_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS file_paths (
+    path_id SERIAL PRIMARY KEY,
+    soil_id INTEGER NOT NULL,
+    input_path TEXT NOT NULL,
+    output_path TEXT,
+    CONSTRAINT fk_file_soil FOREIGN KEY (soil_id) REFERENCES soil(soil_id) ON DELETE CASCADE
+);

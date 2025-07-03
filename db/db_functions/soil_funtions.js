@@ -6,7 +6,6 @@ const writeLog = require('../log_files/log_handler');
 
 const createSoil = async ({metadataArray, id}) => {
     try {
-        console.log(metadataArray,id);
         const query = `insert into microbrsoil_db.soil (x_coord, y_coord, soil_ph, owner_id) values ($1, $2, $3, $4)  returning soil_id`;
         const values = [metadataArray[0], metadataArray[1], metadataArray[2], id];
         const response = await pool.query(query, values);

@@ -7,7 +7,7 @@ const userFuntions = require('../db_functions/user_functions');
 const soilFunctions = require('../db_functions/soil_funtions');
 const sampleFuntions = require('../db_functions/sample_funtion');
 const alphaFunctions = require('../db_functions/alpha_functions');
-
+const fileFunctions = require('../db_functions/file_paths_functions');
 
 //extrator de dados
 //passar o caminho da pasta e os nomes dos arquivos
@@ -21,8 +21,8 @@ const dataExtractor = async (folderPath, tableName) => {
             })
             .pipe(csv({
                 mapValues: ({ header, index, value }) => value != 'NA' ? value = value : value = null,//valores n/a viram nulo
-                mapHeaders: ({ header, index }) => (header === '' ? 'sequence' : header).toLowerCase(),//header em minusculo e headers '' viram 'sequence' pq em dois arquivos o sequence não tem header no nome, isso buga o outro arquivo
-            })
+                mapHeaders: ({ header, index }) => (header === '' ? 'sequence' : header).toLowerCase(),//header em minusculo e headers '' viram 'sequence' pq em dois arquivos o sequence não tem header no nome 
+            })//a linha acima vai bugar a alpha table, atribuindo uma coluna vazia com a linha sequence, isso é tratado em dataFormater
                 .on('data', (data) => {//redrum
                     Object.keys(data).forEach((key) => {//redrum
                         if (!Number.isNaN(Number(data[key])) && data[key] != null) {//redrum
@@ -60,7 +60,7 @@ const dataFormater = async (tax, alpha, otu, metadata) => {
             taxArray.push(Object.values(element));
         });
 
-        alpha.forEach(element => {
+        alpha.forEach(element => {//trata o bug gerado em dataExtractor
             delete element.sequence;
             resultObj.push(element);
             resultArray.push(Object.values(element));
@@ -100,16 +100,22 @@ const workplace = async (folder) => {//PARA FINS DE TESTE
     const [resultObj, resultArray, taxArray, alphaArray, otuArray, metaArray] = await dataFormater(tax, alpha, otu, metadata);
 
     // const roleResp = await roleFuntions.createRole({name:"z", description:"Test Description"});
-    // const userResp = await userFuntions.createUser({email: "aaaaa", password: "qweqweqwe", role: roleResp.rows[0].role_id});
-    // const soilResp = await soilFunctions.createSoil({ metadataArray: metaArray, id: 5 });
+    // const userResp = await userFuntions.createUser({email: "zzzzzzzzzzzzzzzz", password: "qweqweqwe", role: 5});
+    // const soilResp = await soilFunctions.createSoil({ metadataArray: metaArray, id: 7 });
 
+    // const fileResp = await fileFunctions.createInputPath({inputPath: folder, soilId: 26});
 
     // taxArray.forEach(async (element, index) => {
     //     const sampleResp = await sampleFuntions.createSample({ id: soilResp.rows[0].soil_id, taxArray: element, otuArray: otuArray[index] });
-    // })
+    // });
+
     // alphaArray.forEach(async (element) => {
     //     const alphaResp = await alphaFunctions.createAlpha({ id: soilResp.rows[0].soil_id, alphaArray: element });
     // });
+
+    // await fileFunctions.updatePaths({outputPath: folder,id: 1});
+    // await fileFunctions.getPathsById({id: 1});
+    // await fileFunctions.getPathsBySoil({soilId: 26});
 
     // await roleFuntions.deleteRole(6);
     // await roleFuntions.getRole();
@@ -118,6 +124,7 @@ const workplace = async (folder) => {//PARA FINS DE TESTE
     // await sampleFuntions.getSample();
     // await alphaFunctions.getAlpha();
 }
+
 
 
 
