@@ -5,6 +5,7 @@ const cookieParser = require('cookie-parser');
 const authRoutes = require('./routes/auth');
 const uploadRoutes = require('./routes/upload');
 const pipelineRoutes = require('./routes/pipeline');
+const taxonSearch = require('./routes/taxon');
 
 const app = express();
 app.use(express.urlencoded({ extended: true }));
@@ -15,6 +16,7 @@ app.use(cookieParser());
 app.use('/auth', authRoutes);
 app.use('/upload', uploadRoutes);
 app.use('/pipeline', pipelineRoutes);
+app.use('/taxon_search', taxonSearch);
 
 // JOINS
 const htmlPath = path.join(__dirname, 'src', 'html');
@@ -26,7 +28,6 @@ app.get('/geosearch', (req, res) => res.sendFile(path.join(htmlPath, 'geosearch.
 app.get('/sequence_search', (req, res) => res.sendFile(path.join(htmlPath, 'sequence_search.html')));
 app.get('/header', (req, res) => res.sendFile(path.join(htmlPath, 'header.html')));
 app.get('/left_menu', (req, res) => res.sendFile(path.join(htmlPath, 'left_menu.html')));
-app.get('/taxon_search', (req, res) => res.sendFile(path.join(htmlPath, 'taxon_search.html')));
 app.get('/help', (req, res) => res.sendFile(path.join(htmlPath, 'help.html')));
 
 // STATIC
