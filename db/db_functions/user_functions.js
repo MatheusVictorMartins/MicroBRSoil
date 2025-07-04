@@ -19,7 +19,7 @@ fluxo das functions:
  */
 
 //cria user e retorna a linha criada
-const createUser = async ({ email, password, role }) => {
+const createUser = async ({ email, password, role = 1 }) => {
     try {
         if (email == null || email === "" || typeof (email) != "string" || password == null || password === "" || typeof (password) != "string" || role == null || typeof (role) != "number" || role === "") {//validador de entrada, devem respeitar o tipo e não pode ser undefined
             throw `Entrada incorreta em createUser\n:email:${email} typeof: ${typeof (email)}\nnpassword:${password} typeof: ${typeof (password)}\nrole: ${role} typeof: ${typeof (role)}`;
@@ -92,13 +92,13 @@ const getUser = async (id = 0) => {
 
 //faz login do usuario comparando email e senha
 //retorna linha do usuario 
-const logUser = async ({ email, password }) => {
+const logUser = async (email) => {
     try {
-        if (email == undefined || typeof (email) != "string" || password == undefined || typeof (password) != "string") {//validador de entrada, devem respeitar o tipo e não pode ser undefined
-            throw `Erro de entrada em logUser\nemail: ${email} typeof: ${typeof (email)}\npassword: ${password} typeof: ${typeof (password)}`
+        if (email == undefined || typeof (email) != "string") {//validador de entrada, devem respeitar o tipo e não pode ser undefined
+            throw `Erro de entrada em logUser\nemail: ${email} typeof: ${typeof (email)}}`
         } else {
-            const query = `select * from microbrsoil_db.users where user_email = $1 and password_hash = $2`;
-            const values = [email, password];
+            const query = `select * from microbrsoil_db.users where user_email = $1`;
+            const values = [email];
             const response = await pool.query(query, values);
             if (response.rowCount == 0) {
                 throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
