@@ -2,31 +2,31 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
-
-const { users, pipelines, samples } = require('../utils/fakeDB');
+const userFunctions = require('../db/db_functions/user_functions');
 
 const router = express.Router();
 
 // LOGIN
 router.post('/login', async (req, res) => {
-  const { user, tpassword } = req.body;
+  const { temail, tpassword } = req.body;
 
-  if (!user || !tpassword) {
+  if (!temail || !tpassword) {
     return res.status(400).send("Usuário e senha são obrigatórios.");
   }
 
-  const existingUser = users.find(u => u.username === user);
-  if (!existingUser) {
-    return res.status(401).send('Usuário não encontrado');
+  const checkUser = await userFunctions.logUser(temail);
+
+  if (checkUser == false) {
+    return res.status(400).send('Nome de usuário não existe.');
   }
 
-  const senhaCorreta = await bcrypt.compare(tpassword, existingUser.passwordHash);
+  const senhaCorreta = await bcrypt.compare(tpassword, checkUser.rows[0].password_hash);
   if (!senhaCorreta) {
     return res.status(401).send('Senha incorreta');
   }
 
   const token = jwt.sign(
-    { id: existingUser.id, username: existingUser.username, role: existingUser.role },
+    { id: checkUser.rows[0].user_id, username: checkUser.rows[0].user_email, role: checkUser.rows[0].user_role },
     process.env.JWT_SECRET || "segredo_super_secreto",
     { expiresIn: "1h" }
   );
@@ -43,9 +43,9 @@ router.post('/login', async (req, res) => {
 
 // REGISTER (somente simulação, sem autenticação de admin ainda)
 router.post('/register', async (req, res) => {
-  const { tname, tpassword, tconfpassword } = req.body;
+  const { temail, tpassword, tconfpassword } = req.body;
 
-  if (!tname || !tpassword || !tconfpassword) {
+  if (!temail || !tpassword || !tconfpassword) {
     return res.status(400).send('Todos os campos são obrigatórios.');
   }
 
@@ -53,22 +53,22 @@ router.post('/register', async (req, res) => {
     return res.status(400).send('As senhas não coincidem.');
   }
 
-  const userExists = users.some(u => u.username === tname);
-  if (userExists) {
+  const checkUser = await userFunctions.logUser(temail);
+
+  if (checkUser) {
     return res.status(400).send('Nome de usuário já existe.');
   }
 
   const passwordHash = await bcrypt.hash(tpassword, 10);
-  const newUser = {
-    id: users.length + 1,
-    username: tname,
-    passwordHash,
-    role: 'user' // default
-  };
 
-  users.push(newUser);
+  const userResp = await userFunctions.createUser({email: temail, password: passwordHash});
 
-  return res.send(`Usuário ${tname} registrado com sucesso.`);
+  if(userResp == false){
+    return res.status(500).send('Erro no BD.');
+  }
+
+  // res.send(`Usuário ${temail} registrado com sucesso.`);
+  res.redirect('/login');
 });
 
 router.post('/logout', (req, res) => {
