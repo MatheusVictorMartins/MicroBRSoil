@@ -52,7 +52,7 @@ const getSample = async (id = 0) => {
 
 const getDistinctSpecies = async () => {
     try {
-        const query = `select distinct tax_species from sample`;
+        const query = `select distinct tax_species from microbrsoil_db.sample`;
         const response = await pool.query(query);
         if (response.rowCount == 0) {
             throw `Resposta ruim em getDistinctSpecies, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
@@ -67,7 +67,7 @@ const getDistinctSpecies = async () => {
 
 const getDistinctGenus = async () => {
     try {
-        const query = `select distinct tax_genus from sample`;
+        const query = `select distinct tax_genus from microbrsoil_db.sample`;
         const response = await pool.query(query);
         if (response.rowCount == 0) {
             throw `Resposta ruim em getDistinctGenus, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
