@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const userFunctions = require('../db/db_functions/user_functions');
+const authenticate = require('../middleware/authenticate');
 
 const router = express.Router();
 
@@ -76,5 +77,13 @@ router.post('/logout', (req, res) => {
   res.redirect('/');
 });
 
+
+router.get('/api/userList', authenticate, async (req, res)=>{ 
+  const userList = await userFunctions.listUsers();
+  if(userList == false){
+    return res.status(500).send('Erro no BD.');
+  }
+  res.json({userList : userList.rows});
+});
 
 module.exports = router;
