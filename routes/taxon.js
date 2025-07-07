@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const sampleFunctions = require("../db/db_functions/sample_funtion");
+const path = require('path');
+
+const htmlPath = path.join(path.dirname(__dirname), 'src', 'html');
+
 
 // <script>
 // const startResponse = await fetch(`/taxon_search/populateList/`, {
@@ -23,12 +27,15 @@ const sampleFunctions = require("../db/db_functions/sample_funtion");
 
 // router.post('/'); // -> taxon_search/submit
 
-router.get('/', async (req, res) =>{
+router.get('/api/getLists', async (req, res) =>{
     const speciesList = await sampleFunctions.getDistinctSpecies();
     const genusList = await sampleFunctions.getDistinctGenus();
-    // res.json({lis1: speciesList.rows, list2: genusList.rows});funciona!!!!
+    res.json({speciesList: speciesList.rows, genusList: genusList.rows});
+}); //recupera listas do BD, será usado em um fetchmno client-side
+
+router.get('/', async (req, res) =>{
     res.sendFile(path.join(htmlPath, 'taxon_search.html'));
-} ); // -> /taxon_search
+}); // -> /taxon_search
 
 // router.post('/submit'); // -> taxon_search/submit
 // router.get('/:id/result'); // -> taxon_search/:id/result

@@ -144,7 +144,7 @@ const updateUser = async ({ email, password, name, id }) => {
         }
 
         values.push(id);
-        const query = `UPDATE microsoil_db.users SET ${columns.join(', ')} WHERE user_id = $${index} RETURNING *`;//query dinamica
+        const query = `UPDATE microbrsoil_db.users SET ${columns.join(', ')} WHERE user_id = $${index} RETURNING *`;//query dinamica
         const response = await pool.query(query, values);
         if (response.rowCount == 0) {
             throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
@@ -158,10 +158,27 @@ const updateUser = async ({ email, password, name, id }) => {
 }
 
 
+const listUsers = async () => {
+    try {
+        const query = `select * from microbrsoil_db.users`;
+        const response = pool.query(query);
+        if (response.rowCount == 0) {
+            throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
+        }
+        writeLog("\nSucesso em listUsers\n" + JSON.stringify(response.rowCount));
+        return response;
+    } catch (err) {
+        writeLog("\nErro em listUsers\n" + err);
+        return false;
+    }
+}
+
+
 module.exports = {
     createUser,
     deleteUser,
     getUser,
     logUser,
     updateUser,
+    listUsers,
 } 
