@@ -20,51 +20,52 @@ fluxo das functions:
 
 //cria user e retorna a linha criada
 const createUser = async ({ email, password, role = 1 }) => {
+    const values = [email, password, role];
     try {
         if (email == null || email === "" || typeof (email) != "string" || password == null || password === "" || typeof (password) != "string" || role == null || typeof (role) != "number" || role === "") {//validador de entrada, devem respeitar o tipo e não pode ser undefined
-            throw `Entrada incorreta em createUser\n:email:${email} typeof: ${typeof (email)}\nnpassword:${password} typeof: ${typeof (password)}\nrole: ${role} typeof: ${typeof (role)}`;
+            throw `Entrada incorreta\n:email:${email} typeof: ${typeof (email)}\nnpassword:${password} typeof: ${typeof (password)}\nrole: ${role} typeof: ${typeof (role)}`;
         } else {
             const query = `insert into microbrsoil_db.users (user_email, password_hash, role_id) values ($1,$2,$3) returning *`;
-            const values = [email, password, role];
             const response = await pool.query(query, values);
             if (response.rowCount === 0) {
                 throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
             }
-            writeLog("\nSucesso em createUser\n" + JSON.stringify(response.rows[0]));
+            writeLog("\n[SUCESSO]"+ "\nEntrada: "+ values+ "\nLinhas: " + JSON.stringify(response.rows[0]));
             return response;
         }
     } catch (err) {
-        writeLog("\nErro em createUser\n" + err);
+        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas: " + values);
         return false;
     }
 }
 
 //deleta user e retorna a linha deletada
 const deleteUser = async (id) => {
+    const values = [id];
     try {
         if (id == null || typeof (id) != "number") {//validador de entrada, devem respeitar o tipo e não pode ser undefined
-            throw `Entrada incorreta em deleteUser\nID: ${id} typeof: ${typeof (id)}`;
+            throw `Entrada incorreta\nID: ${id} typeof: ${typeof (id)}`;
         } else {
             const query = `delete from microbrsoil_db.users where user_id = $1 returning *`;
-            const values = [id];
             const response = await pool.query(query, values);
             if (response.rowCount == 0) {
                 throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
             }
-            writeLog("\nSucesso em deleteUser\n" + JSON.stringify(response.rows[0]));
+            writeLog("\n[SUCESSO]"+ "\nEntrada: "+ values+ "\nLinhas: " + JSON.stringify(response.rows[0]));
             return response;
         }
     } catch (err) {
-        writeLog("\nErro em deleteUser\n" + err);
+        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas: " + values);
         return false;
     }
 }
 
 //retorna user com base no id ou retorna todos
 const getUser = async (id = 0) => {
+    const values = [id];
     try {
         if (id === undefined || typeof (id) != "number") {//validador de entrada, devem respeitar o tipo e não pode ser undefined
-            throw `Entrada incorreta em getUser\nid: ${id} typeOf: ${typeof (id)}`;
+            throw `Entrada incorreta\nid: ${id} typeOf: ${typeof (id)}`;
         } else if (id === 0) {
             const query = `select * from microbrsoil_db.users`;
             const response = await pool.query(query);
@@ -72,20 +73,19 @@ const getUser = async (id = 0) => {
             if (response.rowCount == 0) {
                 throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
             }
-            writeLog("\nSucesso em getRole\n" + JSON.stringify(response.rows).replace(regex, "\n"));
+            writeLog("\n[SUCESSO]"+ "\nEntrada: "+ values+ "\nLinhas: " + JSON.stringify(response.rows).replace(regex, "\n"));
             return response;
         } else {
             const query = `select * from microbrsoil_db.users where user_id = $1`;
-            const values = [id];
             const response = await pool.query(query, values);
-            writeLog("\nSucesso em getRole\n" + JSON.stringify(response.rows[0]));
+            writeLog("\n[SUCESSO]"+ "\nEntrada: "+ values+ "\nLinhas: " + JSON.stringify(response.rows[0]));
             if (response.rowCount == 0) {
                 throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
             }
             return response;
         }
     } catch (err) {
-        writeLog("\nErro em getUser\n" + err);
+        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas: " + values);
         return false;
     }
 }
@@ -93,21 +93,21 @@ const getUser = async (id = 0) => {
 //faz login do usuario comparando email e senha
 //retorna linha do usuario 
 const logUser = async (email) => {
+    const values = [email];
     try {
         if (email == undefined || typeof (email) != "string") {//validador de entrada, devem respeitar o tipo e não pode ser undefined
             throw `Erro de entrada em logUser\nemail: ${email} typeof: ${typeof (email)}}`
         } else {
             const query = `select * from microbrsoil_db.users where user_email = $1`;
-            const values = [email];
             const response = await pool.query(query, values);
             if (response.rowCount == 0) {
                 throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
             }
-            writeLog("\nSucesso em logUser\n" + JSON.stringify(response.rows[0]));
+            writeLog("\n[SUCESSO]"+ "\nEntrada: "+ values+ "\nLinhas: " + JSON.stringify(response.rows[0]));
             return response;
         }
     } catch (err) {
-        writeLog("\nErro em logUser\n" + err);
+        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas: " + values);
         return false;
     }
 }
@@ -122,7 +122,7 @@ const updateUser = async ({ email, password, name, id }) => {
     let index = 1;//indice atual do array para a query
     try {
         if (id == null || typeof id !== "number") {//validador de entrada, devem respeitar o tipo e não pode ser undefined
-            throw `Formatação da entrada incorreta em updateUser\nid: ${id} typeOf: ${typeof (id)}`;
+            throw `Formatação incorreta\nid: ${id} typeOf: ${typeof (id)}`;
         }
         if (email != null && email !== "" && typeof email === "string") {//valores vão para os arrays se são validos
             columns.push(`user_email = $${index}`);
@@ -140,7 +140,7 @@ const updateUser = async ({ email, password, name, id }) => {
             index++;
         }
         if (columns.length === 0) {//caso não tenhão valores validos nas colunas
-            throw `Nenhum dado válido para atualização em updateUser\nid: ${id} typeOf: ${typeof id}\nemail: ${email}\npassword: ${password}\nname: ${name}`;
+            throw `Formatação incorreta\nid: ${id} typeOf: ${typeof id}\nemail: ${email}\npassword: ${password}\nname: ${name}`;
         }
 
         values.push(id);
@@ -149,10 +149,10 @@ const updateUser = async ({ email, password, name, id }) => {
         if (response.rowCount == 0) {
             throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
         }
-        writeLog("\nSucesso em updateUser\n" + JSON.stringify(response.rows[0]));
+        writeLog("\n[SUCESSO]"+ "\nEntrada: "+ values+ "\nLinhas: " + JSON.stringify(response.rows[0]));
         return response;
     } catch (err) {
-        writeLog("\nErro em updateUser\n" + err);
+        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas: " + values);
         return false;
     }
 }
@@ -161,14 +161,14 @@ const updateUser = async ({ email, password, name, id }) => {
 const listUsers = async () => {
     try {
         const query = `select * from microbrsoil_db.users`;
-        const response = pool.query(query);
+        const response = await pool.query(query);
         if (response.rowCount == 0) {
             throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
         }
-        writeLog("\nSucesso em listUsers\n" + JSON.stringify(response.rowCount));
+        writeLog("\n[SUCESSO]"+  "\nLinhas: " + JSON.stringify(response.rowCount));
         return response;
     } catch (err) {
-        writeLog("\nErro em listUsers\n" + err);
+        writeLog("\n[ERRO]\nMensagem de erro: " + err);
         return false;
     }
 }
