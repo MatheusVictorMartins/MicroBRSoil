@@ -20,7 +20,7 @@ const dataExtractor = async (folderPath, tableName) => {
                 writeLog(`\nErro ANTES DA leitura de CSV ${tableName} na pasta ${folderPath}\nerro: ` + err);
             })
             .pipe(csv({
-                mapValues: ({ header, index, value }) => value != 'NA' ? value = value : value = null,//valores n/a viram nulo
+                mapValues: ({ header, index, value }) => (value === 'NA' || value === '' ?  null : value),//valores n/a viram nulo
                 mapHeaders: ({ header, index }) => (header === '' ? 'sequence' : header).toLowerCase(),//header em minusculo e headers '' viram 'sequence' pq em dois arquivos o sequence não tem header no nome 
             })//a linha acima vai bugar a alpha table, atribuindo uma coluna vazia com a linha sequence, isso é tratado em dataFormater
                 .on('data', (data) => {//redrum
@@ -52,7 +52,7 @@ const dataFormater = async (tax, alpha, otu, metadata) => {
         let taxArray = [];
         let alphaArray = [];
         let otuArray = [];
-        let metaArray;
+        let metaArray = [];
 
         tax.forEach(element => {
             resultObj.push(element);
@@ -75,11 +75,20 @@ const dataFormater = async (tax, alpha, otu, metadata) => {
         }
 
         metadata.forEach(element => {
+            const splitLatLon = (element.lat_lon).split(" ");
+            element.lat_lon = [Number(splitLatLon[0]), Number(splitLatLon[2])];
+            Object.keys(element).forEach((key)=>{
+                if(typeof(element[key]) === 'string'){
+                    element[key] = element[key].replace(/\./g, '').replace(',', '.');
+                    if(!Number.isNaN(Number(element[key]))){
+                        element[key] = Number(element[key]); 
+                    }
+                }
+            });
             resultObj.push(element);
             resultArray.push(Object.values(element));
-            metaArray = (Object.values(element));
-
-        })
+            metaArray.push(Object.values(element));
+        });
 
         return [resultObj, resultArray, taxArray, alphaArray, otuArray, metaArray];
     } catch (err) {
@@ -94,14 +103,13 @@ const workplace = async (folder) => {//PARA FINS DE TESTE
         dataExtractor(folder, 'taxonomy_table.csv'),
         dataExtractor(folder, 'otu_table.csv'),
         dataExtractor(folder, 'alpha_diversity_metrics.csv'),
-        dataExtractor(folder, 'mock_metadata.csv')
+        dataExtractor(folder, 'METADATAFONTEKV2025.xlsx - MIMARKS.survey.soil.6.0.csv')
     ]);
 
     const [resultObj, resultArray, taxArray, alphaArray, otuArray, metaArray] = await dataFormater(tax, alpha, otu, metadata);
-
     // const roleResp = await roleFuntions.createRole({name:"z", description:"Test Description"});
     // const userResp = await userFuntions.createUser({email: "zzzzzzzzzzzzzzzz", password: "qweqweqwe", role: 5});
-    // const soilResp = await soilFunctions.createSoil({ metadataArray: metaArray, id: 7 });
+    const soilResp = await soilFunctions.createSoil({ metadataArray: metaArray[0], id: 7 });
 
     // const fileResp = await fileFunctions.createInputPath({inputPath: folder, soilId: 26});
 
