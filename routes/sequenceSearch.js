@@ -9,7 +9,7 @@ const htmlPath = path.join(path.dirname(__dirname), 'src', 'html');
 
 router.get('/api/result', async (req, res) => {
     //Entrada da seq pelo html
-    const seq = req.body.tselect_sh;
+    const seq = req.query.tselect_sh;
     const hitSeq = await sampleFunctions.getSampleByExactSequence(seq);
     res.json({ foundSequence: hitSeq.rows})
 })
