@@ -92,48 +92,48 @@ const dataFormater = async (tax, alpha, otu, metadata) => {
 
         return [resultObj, resultArray, taxArray, alphaArray, otuArray, metaArray];
     } catch (err) {
-        writeLog("\nErro em dataFormater no csv_data_extractor\nerro: " + err);
+        writeLog("\n[ERRO]\nmensagem de erro: " + err);
         return false;
     }
 
 }
 
-const workplace = async (folder) => {//PARA FINS DE TESTE
-    const [tax, otu, alpha, metadata] = await Promise.all([
-        dataExtractor(folder, 'taxonomy_table.csv'),
-        dataExtractor(folder, 'otu_table.csv'),
-        dataExtractor(folder, 'alpha_diversity_metrics.csv'),
-        dataExtractor(folder, 'METADATAFONTEKV2025.xlsx - MIMARKS.survey.soil.6.0.csv')
-    ]);
+// const workplace = async (folder) => {//PARA FINS DE TESTE
+//     const [tax, otu, alpha, metadata] = await Promise.all([
+//         dataExtractor(folder, 'taxonomy_table.csv'),
+//         dataExtractor(folder, 'otu_table.csv'),
+//         dataExtractor(folder, 'alpha_diversity_metrics.csv'),
+//         dataExtractor(folder, 'METADATAFONTEKV2025.xlsx - MIMARKS.survey.soil.6.0.csv')
+//     ]);
 
-    const [resultObj, resultArray, taxArray, alphaArray, otuArray, metaArray] = await dataFormater(tax, alpha, otu, metadata);
-    // const roleResp = await roleFuntions.createRole({name:"z", description:"Test Description"});
-    // const userResp = await userFuntions.createUser({email: "zzzzzzzzzzzzzzzz", password: "qweqweqwe", role: 5});
-    const soilResp = await soilFunctions.createSoil({ metadataArray: metaArray[0], id: 7 });
+//     const [resultObj, resultArray, taxArray, alphaArray, otuArray, metaArray] = await dataFormater(tax, alpha, otu, metadata);
+//     //const roleResp = await roleFuntions.createRole({name:"z", description:"Test Description"});
+//     //const userResp = await userFuntions.createUser({email: "zzzzzzzzzzzzzzzz", password: "qweqweqwe", role: 5});
+//     //const soilResp = await soilFunctions.createSoil({ metadataArray: metaArray[0], id: 7 });
 
-    // const fileResp = await fileFunctions.createInputPath({inputPath: folder, soilId: 26});
+//     // const fileResp = await fileFunctions.createInputPath({inputPath: folder, soilId: 26});
 
-    // taxArray.forEach(async (element, index) => {
-    //     const sampleResp = await sampleFuntions.createSample({ id: soilResp.rows[0].soil_id, taxArray: element, otuArray: otuArray[index] });
-    // });
+//     taxArray.forEach(async (element, index) => {
+//         const sampleResp = await sampleFuntions.createSample({ id: 29, taxArray: element, otuArray: otuArray[index] });
+//     });
 
-    // alphaArray.forEach(async (element) => {
-    //     const alphaResp = await alphaFunctions.createAlpha({ id: soilResp.rows[0].soil_id, alphaArray: element });
-    // });
+//     // alphaArray.forEach(async (element) => {
+//     //     const alphaResp = await alphaFunctions.createAlpha({ id: soilResp.rows[0].soil_id, alphaArray: element });
+//     // });
 
-    // await fileFunctions.updatePaths({outputPath: folder,id: 1});
-    // await fileFunctions.getPathsById({id: 1});
-    // await fileFunctions.getPathsBySoil({soilId: 26});
+//     // await fileFunctions.updatePaths({outputPath: folder,id: 1});
+//     // await fileFunctions.getPathsById({id: 1});
+//     // await fileFunctions.getPathsBySoil({soilId: 26});
 
-    // await roleFuntions.deleteRole(6);
-    // await roleFuntions.getRole();
-    // await userFuntions.getUser();
-    // await soilFunctions.getSoil();
-    // await sampleFuntions.getSample();
-    // await alphaFunctions.getAlpha();
-}
-
-
+//     // await roleFuntions.deleteRole(6);
+//     // await roleFuntions.getRole();
+//     // await userFuntions.getUser();
+//     // await soilFunctions.getSoil();
+//     // await sampleFuntions.getSample();
+//     // await alphaFunctions.getAlpha();
+// }
 
 
-workplace("D:/utfpr - atual/CRUD/TESTING FOLDER/MicroBRSoil/mock_results_csv");//PARA FINS DE TESTE
+
+
+// workplace("D:/utfpr - atual/CRUD/TESTING FOLDER/MicroBRSoil/mock_results_csv");//PARA FINS DE TESTE
