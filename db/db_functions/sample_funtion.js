@@ -97,6 +97,23 @@ const getSampleByExactSequence = async (sequenceString) => {
     }
 }
 
+const getSampleBySimilarity = async (sequenceString) => {
+    const values = [sequenceString];
+    try{
+        const query = `select * FROM microbrsoil_db.sample WHERE plant_sequence ILIKE '%$1%'`;
+        const response = await pool.query(query, values);
+        if (response.rowCount == 0){
+            throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
+        }
+        writeLog("\n[SUCESSO]" + "\nEntrada: " + values + "\nLinha: " + JSON.stringify(response.rowCount));
+        return response;
+    } catch (err) {
+        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas: " + values);
+
+        return false;
+    }
+}
+
 const getSamplesByGenus = async (genus) => {
     const values = [genus];
     try {

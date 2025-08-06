@@ -18,12 +18,7 @@ router.get('/', async (req, res) =>{
     res.sendFile(path.join(htmlPath, 'sequence_search.html'));
 })// Carregando o html de sequence search
 
-/*
-router.post('/submit', async (req, res) =>{
-    writeLog("\n[REQUISIÇÃO.BODY]: " + JSON.stringify(req.body));
-    
-})*/
-
+router.get('/api/approximateResults', async (req, res) =>{})//Rota de search aproximada
 
 
 
