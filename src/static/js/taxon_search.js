@@ -23,7 +23,7 @@ const fetchListData = async (endpoint) => {
             });
         })
         .catch((err) => {
-            writeLog(`\n[ERRO]\nMensagem de erro: ${err}`);
+            console.log("Erro\nerro: " + err);
         });
 }
 
