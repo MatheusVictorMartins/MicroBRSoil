@@ -7,11 +7,10 @@ const writeLog = require('../db/log_files/log_handler');
 const htmlPath = path.join(path.dirname(__dirname), 'src', 'html');
 
 
-router.get('api/result', async (req, res) => {
+router.get('/api/result', async (req, res) => {
     //Entrada da seq pelo html
     const seq = req.body.tselect_sh;
-    const hitSeq = sampleFunctions.getSampleByExactSequence(seq);
-
+    const hitSeq = await sampleFunctions.getSampleByExactSequence(seq);
     res.json({ foundSequence: hitSeq.rows})
 })
 

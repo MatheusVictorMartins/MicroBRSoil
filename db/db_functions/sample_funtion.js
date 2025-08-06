@@ -83,7 +83,7 @@ const getDistinctGenus = async () => {
 const getSampleByExactSequence = async (sequenceString) => {
     const values = [sequenceString];
     try {
-        const query = `select * from microbrsoil_db.sample where sequence = $1`;
+        const query = `select * from microbrsoil_db.sample where plant_sequence = $1`;
         const response = await pool.query(query, values);
         if (response.rowCount == 0) {
             throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);

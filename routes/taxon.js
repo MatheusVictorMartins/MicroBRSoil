@@ -33,7 +33,7 @@ router.get('/api/getLists', async (req, res) => {
     const genusList = await sampleFunctions.getDistinctGenus();
     
     res.json({ speciesList: speciesList.rows, genusList: genusList.rows });
-}); //recupera listas do BD, será usado em um fetchmno client-side
+}); //recupera listas do BD, será usado em um fetch no client-side
 
 router.get('/', async (req, res) => {
     res.sendFile(path.join(htmlPath, 'taxon_search.html'));
@@ -51,9 +51,8 @@ router.post('/submit', async (req, res) => {
 //vai retornar a pagina de resultados
 // router.get('taxon_search/:parameterType/:selectedParameter/result', (req,res)=>{});// -> taxon_search/:parameterType/:selectedParameter/result
 
-
 //fetch api
-router.get('/api/:parameterType/:selectedParameter/result', async (req, res) => {//a ideia é que podem ser 3 opções de pesquisa, sequence, genus e species
+router.get('/api/:parameterType/:selectedParameter/result', async (req, res) => {//a ideia é que podem ser 2 opções de pesquisa, genus e species
     writeLog("\n[REQUISIÇÃO.PARAMS]: " + JSON.stringify(req.params));
     const parameterType = req.params.parameterType;
     const selectedParameter = req.params.selectedParameter;
@@ -62,16 +61,17 @@ router.get('/api/:parameterType/:selectedParameter/result', async (req, res) => 
         return res.status(400).send('Parâmetro de pesquisa obrigatório.');
     }
 
-    if(parameterType == 'sequence'){
-
-    }else if(parameterType == 'genus'){
+   if(parameterType == 'genus'){
         const sampleList = await sampleFunctions.getSamplesByGenus(selectedParameter);
-        res.json({sampleList: sampleList.rows});
     }else{
         const sampleList = await sampleFunctions.getSamplesBySpecies(selectedParameter);
+    }
+    
+    if(sampleList.rowCount === 0){
+        res.status(500).send("Nenhuma linha encontrada para o parâmetro selecionado");
+    }else{
         res.json({sampleList: sampleList.rows});
     }
-
 }); // -> api/taxon_search/:id/result
 
 

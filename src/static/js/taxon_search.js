@@ -23,7 +23,7 @@ const fetchListData = async (endpoint) => {
             });
         })
         .catch((err) => {
-            writeLog(`\nErro no fetchListData no ${path.dirname(__filename)}\nErro: ${err}`);
+            writeLog(`\n[ERRO]\nMensagem de erro: ${err}`);
         });
 }
 
