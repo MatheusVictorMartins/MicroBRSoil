@@ -1,0 +1,31 @@
+const express = require('express');
+const router = express.Router();
+const sampleFunctions = require("../db/db_functions/sample_funtion");
+const path = require('path');
+const writeLog = require('../db/log_files/log_handler');
+
+const htmlPath = path.join(path.dirname(__dirname), 'src', 'html');
+
+
+router.get('api/result', async (req, res) => {
+    //Entrada da seq pelo html
+    const seq = req.body.tselect_sh;
+    const hitSeq = sampleFunctions.getSampleByExactSequence(seq);
+
+    res.json({ foundSequence: hitSeq.rows})
+})
+
+router.get('/', async (req, res) =>{
+    res.sendFile(path.join(htmlPath, 'sequence_search.html'));
+})// Carregando o html de sequence search
+
+/*
+router.post('/submit', async (req, res) =>{
+    writeLog("\n[REQUISIÇÃO.BODY]: " + JSON.stringify(req.body));
+    
+})*/
+
+
+
+
+module.exports = router;
