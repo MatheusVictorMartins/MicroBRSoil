@@ -18,7 +18,11 @@ router.get('/', async (req, res) =>{
     res.sendFile(path.join(htmlPath, 'sequence_search.html'));
 })// Carregando o html de sequence search
 
-router.get('/api/approximateResults', async (req, res) =>{})//Rota de search aproximada
+router.get('/api/approximateResults', async (req, res) =>{
+    const seq = req.query.tselect_sh;
+    const hitSeq = await sampleFunctions.getSampleBySimilarity(seq);
+    res.json({ foundSequences: hitSeq.rows})
+})//Rota de search aproximada
 
 
 
