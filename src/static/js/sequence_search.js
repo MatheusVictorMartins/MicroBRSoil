@@ -1,8 +1,19 @@
 const searchButon = document.querySelector(".btn-taxon-search");
 const sequenceField = document.getElementById("tselect_sh");
+// const tickButton = document.getElementById("tick_button");
+
+///api/approximateResults
+//`/sequence_search/api/result?tselect_sh=${sequenceField.value}`
 searchButon.addEventListener('click', async ()=>{
-    const sequenceResult = await fetchSimilarSequenceResult(`/sequence_search/api/result?tselect_sh=${sequenceField.value}`);
+    let sequenceResult;
+    // if(tickButton.value == 0){
+    //     sequenceResult = await fetchSequenceResult(`/sequence_search/api/result?tselect_sh=${sequenceField.value}`);
+    // }else{
+    //     sequenceResult = await fetchSimilarSequenceResult(`/sequence_search/api/approximateResults?tselect_sh=${sequenceField.value}`);
+    // }
+    sequenceResult = await fetchSequenceResult(`/sequence_search/api/result?tselect_sh=${sequenceField.value}`);
     console.log(sequenceResult);
+
 });
 
 const fetchSequenceResult = async (endpoint) => {
