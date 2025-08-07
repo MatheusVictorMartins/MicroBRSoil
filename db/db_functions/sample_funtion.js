@@ -153,6 +153,7 @@ module.exports = {
     getDistinctGenus,
     getDistinctSpecies,
     getSampleByExactSequence,
+    getSampleBySimilarity,
     getSamplesByGenus,
     getSamplesBySpecies
 }
