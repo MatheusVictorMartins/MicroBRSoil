@@ -1,0 +1,23 @@
+{
+  "name": "microbrsoil-backend",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "license": "MIT",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/index.js",
+    "worker": "node src/workers/pipeline.worker.js"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.0",
+    "bullmq": "^5.8.3",
+    "callsite": "^1.0.0",
+    "cookie-parser": "^1.4.6",
+    "dotenv": "^16.0.3",
+    "express": "^4.19.2",
+    "ioredis": "^5.3.3",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "pg": "^8.11.0"
+  }
+}
