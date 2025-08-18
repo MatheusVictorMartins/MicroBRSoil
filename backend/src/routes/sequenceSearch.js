@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const sampleFunctions = require("../db/db_functions/sample_funtion");
 const path = require('path');
-const writeLog = require('../db/log_files/log_handler');
+
+const sampleFunctions = require("../../db/db_functions/sample_funtion");
+const writeLog = require('../../db/log_files/log_handler');
 
 const htmlPath = path.join(path.dirname(__dirname), 'src', 'html');
 

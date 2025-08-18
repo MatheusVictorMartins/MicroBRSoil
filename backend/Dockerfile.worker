@@ -1,0 +1,29 @@
+# Use an official Node image so npm is available
+FROM node:20-bullseye
+
+ENV DEBIAN_FRONTEND=noninteractive
+WORKDIR /app
+
+# Install system libs and R (adjust CRAN / R version if you prefer rocker images)
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+     wget gnupg ca-certificates build-essential \
+     libcurl4-openssl-dev libssl-dev libxml2-dev \
+     r-base \
+  && rm -rf /var/lib/apt/lists/*
+
+# Copy package files and install production deps (use lockfile if present)
+COPY package*.json ./
+RUN if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then \
+      npm ci --omit=dev ; \
+    else \
+      npm install --omit=dev ; \
+    fi
+
+# Copy application source
+COPY . .
+
+# (Optional) install R packages required by your pipeline, e.g.:
+# RUN R -e "install.packages(c('jsonlite','httr'), repos='https://cloud.r-project.org')"
+
+CMD ["npm", "run", "worker"]

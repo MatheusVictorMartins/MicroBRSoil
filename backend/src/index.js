@@ -35,4 +35,16 @@ app.get('/help', (req, res) => res.sendFile(path.join(htmlPath, 'help.html')));
 // STATIC
 app.use('/static', express.static(path.join(__dirname, 'src', 'static')));
 
-app.listen(3000, () => console.log('Server running at http://localhost:3000'));
+// Start server when run directly and expose a health endpoint
+const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '0.0.0.0';
+
+app.get('/_health', (req, res) => res.json({ ok: true, pid: process.pid }));
+
+if (require.main === module) {
+  app.listen(PORT, HOST, () => {
+    console.log(`Server listening on ${HOST}:${PORT}`);
+  });
+}
+
+module.exports = app;
