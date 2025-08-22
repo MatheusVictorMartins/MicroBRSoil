@@ -10,13 +10,16 @@
     position: relative;
     top: 0;
     left: 0;
-    height: 100vh;
+
+    max-height: 100vh;
+
+
 }
 .btn-go-back{
     position: absolute;
-    bottom: 1rem;
-    left: 2rem;
 
+    bottom: 1rem;
+    left: 1rem;
     cursor: pointer;
 
     color: var(--background-color0);
