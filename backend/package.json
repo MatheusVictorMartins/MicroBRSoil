@@ -5,8 +5,11 @@
   "license": "MIT",
   "type": "commonjs",
   "scripts": {
-    "start": "node src/index.js",
-    "worker": "node src/workers/pipeline.worker.js"
+    "start": "node startup.js",
+    "dev": "node src/index.js",
+    "worker": "node src/workers/pipeline.worker.js",
+    "test-queue": "node test-queue.js",
+    "test-modules": "node test-modules.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.0",
@@ -19,6 +22,8 @@
     "ioredis": "^5.3.3",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
-    "pg": "^8.11.0"
+    "pg": "^8.11.0",
+    "r-integration": "^2.4.0",
+    "uuid": "^9.0.0"
   }
 }

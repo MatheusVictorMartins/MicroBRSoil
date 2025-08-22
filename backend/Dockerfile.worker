@@ -12,12 +12,12 @@ RUN apt-get update \
      r-base \
   && rm -rf /var/lib/apt/lists/*
 
-# Copy package files and install production deps (use lockfile if present)
+# Copy package files and install all dependencies (use lockfile if present)
 COPY package*.json ./
 RUN if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then \
-      npm ci --omit=dev ; \
+      npm ci ; \
     else \
-      npm install --omit=dev ; \
+      npm install ; \
     fi
 
 # Copy application source
