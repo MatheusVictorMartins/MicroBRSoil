@@ -66,47 +66,10 @@
           <h1 class="main-title">HOME</h1>
         </span>
         <div class="dashboard-actions">
-          <button type="button" class="btn btn-outline-primary btn-filters btn-actions"><span class="material-symbols-rounded btn_left_menu_icon">filter_list</span>FILTERS</button>
+          <button type="button" onclick="createFilterDropDown()" class="btn btn-outline-primary btn-filters btn-actions"><span class="material-symbols-rounded btn_left_menu_icon">filter_list</span>FILTERS</button>
           <button onclick="ButtonGoTo('../html/upload.html')" type="button" class="btn btn-outline-primary btn-upload btn-actions"><span class="material-symbols-rounded btn_left_menu_icon">upload_file</span>UPLOAD</button>
         </div>
-        <div class="filters-dropdown basic-frame">
-            <select class="form-select filter-item" aria-label="Default select example">
-              <option selected>Filter 1</option>
-              <option value=" ">filter</option>
-              <option value=" ">filter</option>
-              <option value=" ">filter</option>
-            </select>
-            <select class="form-select filter-item" aria-label="Default select example">
-              <option selected>Filter 2</option>
-              <option value=" ">filter</option>
-              <option value=" ">filter</option>
-              <option value=" ">filter</option>
-            </select>
-            <select class="form-select filter-item" aria-label="Default select example">
-              <option selected>Filter 3</option>
-              <option value=" ">filter</option>
-              <option value=" ">filter</option>
-              <option value=" ">filter</option>
-            </select>
-            <select class="form-select filter-item" aria-label="Default select example">
-              <option selected>Filter 4</option>
-              <option value=" ">filter</option>
-              <option value=" ">filter</option>
-              <option value=" ">filter</option>
-            </select>
-            <select class="form-select filter-item" aria-label="Default select example">
-              <option selected>Filter 5</option>
-              <option value=" ">filter</option>
-              <option value=" ">filter</option>
-              <option value=" ">filter</option>
-            </select>
-            <select class="form-select filter-item" aria-label="Default select example">
-              <option selected>Filter 6</option>
-              <option value=" ">filter</option>
-              <option value=" ">filter</option>
-              <option value=" ">filter</option>
-            </select>
-        </div>
+        <div id="filter_dropdown"></div>
         <div class="dashboard-table table-responsive basic-frame">
           <table class="table">
             <thead>
@@ -134,7 +97,7 @@
                 <td>2016-07-25</td>
               </tr>
               <tr class="table-row">
-                <th scope="row">00002</th>
+              <th scope="row">00002</th>
                 <td>Soil; Water</td>
                 <td>Metagenomic analysis of rice shoot-associated bacteria</td>
                 <td>United States of America</td>
@@ -161,14 +124,14 @@
                 <td>Japan</td>
                 <td>2017-03-23</td>
               </tr>
-                            <tr>
+              <tr>
                 <th scope="row">00005</th>
                 <td>Water</td>
                 <td>Dynamics of the gene pool of soil microbiota disturbed by chemical pollution</td>
                 <td>Japan</td>
                 <td>2017-03-23</td>
               </tr>
-                            <tr>
+              <tr>
                 <th scope="row">00005</th>
                 <td>Water</td>
                 <td>Dynamics of the gene pool of soil microbiota disturbed by chemical pollution</td>
@@ -220,6 +183,9 @@
     <!--BOOSTRAP MINIMAL LOCAL JAVASCRIPT IMPORT-->
     <script src="../js/bootstrap.bundle.min.js"></script>
     <!--===================================================================================================================================-->
+  <!--#endregion-->
+  <!--#region FILTER DROPDOWN INCLUDE-->
+  <script src="../js/filter_control..js"></script>
   <!--#endregion-->
 </body>
 </html>

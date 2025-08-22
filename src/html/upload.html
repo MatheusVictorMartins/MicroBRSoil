@@ -66,25 +66,19 @@
           <h1 class="main-title">UPLOAD DATA</h1>
         </span>
         <div class="dashboard-actions">
-          <button type="button" class="btn btn-outline-primary btn-filters btn-actions"><span class="material-symbols-rounded btn_left_menu_icon">filter_list</span>FILTERS</button>
-          <button type="button" class="btn btn-outline-primary btn-upload btn-actions"><span class="material-symbols-rounded btn_left_menu_icon">upload_file</span>UPLOAD</button>
+          <button type="button" class="btn btn-outline-primary btn-cancel btn-actions"><span class="material-symbols-rounded btn_left_menu_icon">close</span>CANCEL</button>
         </div>
-        <div class="filters-dropdown basic-frame">
-          <h3 class="drop-label">CSV</h2>
-          <h3 class="drop-label">FASTQ</h2>
-          <h3 class="drop-label">TXT</h2>
-            <div class="input-group" id="csvdrop">
-              <input type="file" class="form-control" id="inputGroupFile04" aria-describedby="inputGroupFileAddon04" aria-label="Upload">
-              <button class="btn btn-outline-secondary" type="button" id="inputGroupFileAddon04">Upload</button>
-            </div>
-            <div class="input-group" id="fastqdrop">
-              <input type="file" class="form-control" id="inputGroupFile04" aria-describedby="inputGroupFileAddon04" aria-label="Upload">
-              <button class="btn btn-outline-secondary" type="button" id="inputGroupFileAddon04">Upload</button>
-            </div>
-            <div class="input-group">
-              <input type="file" class="form-control" id="inputGroupFile04" aria-describedby="inputGroupFileAddon04" aria-label="Upload">
-              <button class="btn btn-outline-secondary" type="button" id="inputGroupFileAddon04">Upload</button>
-            </div>
+        <div class="upload-dropdown basic-frame">
+          <div class="upload-dropdown-item">
+            <label for="upload_select" class="form-label text-input-label">SELECT THE ANALYSIS TYPE</label>
+            <select id="upload_select" class="form-select" aria-label="Default select example">
+              <option selected disabled>Choose an analysis...</option>
+              <option value="ilumina">Ilumina - FASTQ(.fastq)</option>
+              <option value="iontorrent">Iontorrent - BARCODES(.fa) + FASTQ(.fastq)</option>
+              <option value="its">ITS - FASTQ(.fastq)</option>
+            </select>
+          </div>
+          <div id="inputfile_dropdown"></div>
         </div>
         <div class="dashboard-table table-responsive basic-frame">
           <table class="table">
@@ -154,7 +148,7 @@
                 <td>Japan</td>
                 <td>2017-03-23</td>
               </tr>
-                            <tr>
+              <tr>
                 <th scope="row">00005</th>
                 <td>Water</td>
                 <td>Dynamics of the gene pool of soil microbiota disturbed by chemical pollution</td>
@@ -168,7 +162,7 @@
                 <td>Japan</td>
                 <td>2017-03-23</td>
               </tr>
-                            <tr>
+              <tr>
                 <th scope="row">00005</th>
                 <td>Water</td>
                 <td>Dynamics of the gene pool of soil microbiota disturbed by chemical pollution</td>
@@ -201,5 +195,37 @@
     <script src="../js/bootstrap.bundle.min.js"></script>
     <!--===================================================================================================================================-->
   <!--#endregion-->
+
+  <script>
+    const analysis_select = document.getElementById("upload_select");
+    const input_file = document.getElementById("inputfile_dropdown");
+
+    function controlUploadInputs(){
+    let html = "";
+    const value = analysis_select.value;
+
+    if(value == "ilumina"){
+        html = `<div class="upload-inputfile">
+                <label for="formFile" class="form-label">Default file input example</label>
+                <input class="form-control dropfile-input" type="file" id="formFile">
+                </div>`;
+    }   else if(value == "iontorrent"){
+            html = `<div class="upload-inputfile">
+                    <label for="formFile" class="form-label">Default file input example</label>
+                    <input class="form-control dropfile-input" type="file" id="formFile">
+                    </div>`;
+        } else if(value == "its"){
+            html = `<div class="upload-inputfile">
+                    <label for="formFile" class="form-label">Default file input example</label>
+                    <input class="form-control dropfile-input" type="file" id="formFile">
+                    </div>`;
+           }
+    
+           input_file.innerHTML = html;
+  }
+  controlUploadInputs();
+  analysis_select.addEventListener("change",controlUploadInputs);
+
+  </script>
 </body>
 </html>

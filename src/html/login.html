@@ -41,19 +41,28 @@
             <span class="left-side">
                 <img src="../../assets/figures/login_decoration.png" alt="" class="login-decoration">
                 <img src="../../assets/logo/microBR_logo_white_reduced.png" alt="" class="white-reduced-logo">
+                <a onclick="ButtonGoTo('index.html')" class="btn-go-back"><span class="material-symbols-rounded btn-back-icon">arrow_back</span></a>
             </span>
             <span class="right-side">
+                    
                     <img src="../../assets/logo/microBR_logo2DB.png" alt="" class="normal-logo">
                     <h1 class="login-welcome-message">WELCOME BACK</h1>
-                    <form action="/auth/login" class="login-form">
-                        <label for="user" class="login-input-label">USER</label>
-                        <input type="text" name="user" id="user" class="login-text-input" placeholder="USER">
-                        <label for="tpassword" class="login-input-label">PASSWORD</label>
-                        <input type="password" name="tpassword" id="tpassword" class="login-text-input" placeholder="PASSWORD">
+                    <form action="/auth/login" class="login-form was-validated" novalidate>
+                        <div class="form-input-area">
+                            <label for="user" class="login-input-label form-label">E-MAIL</label>
+                            <input type="email" name="user" id="user" class="login-text-input form-control" placeholder="E-MAIL" required>
+                        </div>
+                        <div class="form-input-area">
+                            <label for="tpassword" class="login-input-label form-label">PASSWORD</label>
+                            <input type="password" name="tpassword" id="tpassword" class="login-text-input form-control" placeholder="PASSWORD" required>
+                                <button type="button" class="btn-dont-know-pass" data-bs-toggle="popover"
+                                data-bs-title="Forgotten password? Reach out to your system administrator."
+                                data-bs-content="This system does not allow users to create their own passwords. If you forgot or don’t know yours,
+                                please reach out to the administrator responsible for your account.">Don't know your password?</button>
+                        </div>
+                        <button type="button" class="btn btn-primary btn-lg"><span class="material-symbols-rounded btn-login-icon">login</span>LOG IN</button>
                     </form>
-                    <button typer="button" class="btn-dont-know-pass">Don't know your password?</button>
-                    <button type="button" class="btn btn-primary btn-lg"><span class="material-symbols-rounded btn-login-icon">login</span>LOG IN</button>
-
+                    
                 </span>
             </div>
         </main>
@@ -74,5 +83,9 @@
         <script src="../js/bootstrap.bundle.min.js"></script>
     <!--===================================================================================================================================-->
     <!--#endregion-->
+    <script>
+        const popoverTriggerList = document.querySelectorAll('[data-bs-toggle="popover"]')
+        const popoverList = [...popoverTriggerList].map(popoverTriggerEl => new bootstrap.Popover(popoverTriggerEl))
+    </script>    
 </body>
 </html>

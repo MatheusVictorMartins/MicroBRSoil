@@ -1,4 +1,29 @@
 <!-- LEFT MENU -->
+ <!--LOGOUT MODAL-->
+    <div id="logout_modal" class="modal fade" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <img src="../../assets/logo/microBR_logo_reduced.png" alt="" class="logout-modal-img">
+                    <h3 class="logout-modal-title">CONFIRM LOGOUT?</h3>
+                    <a><span class="material-symbols-rounded btn-close-logout-modal btn-icon" data-bs-dismiss="modal"
+                        aria-label="Close">close</span></a>
+                </div>
+                <div class="logout-modal-content">
+                    <p class="description-text logout-modal-text">
+                        Once you end your session, <span class="bold-text">only browsing and search features will remain available.</span>
+                        To restore upload and management permissions, you will need to <span class="bold-text">log in again using the
+                        administrator-provided email and password</span>.
+                    </p>
+                    <div class="btn-logout-modal-group">
+                        <button onclick="ButtonGoTo('login.html')" type="button" class="btn btn-primary btn-logout-modal-confirm">CONFIRM</button>
+                        <button type="button" class="btn btn-outline-secondary btn-logout-modal-cancel" data-bs-dismiss="modal"
+                        aria-label="Close">CANCEL</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <aside id="left-menu">
         <button onclick="ButtonGoTo('./')" type="button" class="btn btn-outline-light btn-left-menu"><span class="material-symbols-rounded btn_left_menu_icon btn-icon">home</span>HOME</button>
         <button onclick="ButtonGoTo('../html/taxon_search.html')" type="button" class="btn btn-outline-light btn-left-menu"><span class="material-symbols-rounded btn_left_menu_icon btn-icon">search</span>TAXON SEARCH</button>
@@ -10,5 +35,7 @@
         <button onclick="ButtonGoTo('../html/help.html')" type="button" id="btn-left-menu-help" class="btn btn-outline-light btn-left-menu"><span class="material-symbols-rounded btn_left_menu_icon btn-icon">help</span>HELP</button>
         <button onclick="ButtonGoTo('./')" type="button" class="btn btn-outline-light btn-left-menu"><span class="material-symbols-rounded btn_left_menu_icon btn-icon">eco</span>ABOUT</button>
 
-        <button onclick="ButtonGoTo('./')" type="button" id="btn-left-menu-logout" class="btn btn-outline-light btn-left-menu"><span class="material-symbols-rounded btn_left_menu_icon btn-icon">door_open</span>LOGOUT</button>
+        <button type="button" id="btn-left-menu-logout" class="btn btn-outline-light btn-left-menu" data-bs-toggle="modal" data-bs-target="#logout_modal"><span class="material-symbols-rounded btn_left_menu_icon btn-icon">door_open</span>LOGOUT</button>
+        
+
     </aside>
