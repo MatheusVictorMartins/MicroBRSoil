@@ -3,10 +3,10 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy package files and install production deps
+# Copy package files and install all dependencies
 # Note: build context is the `backend` folder so copy from current context
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci
 
 # Copy application source
 COPY . ./

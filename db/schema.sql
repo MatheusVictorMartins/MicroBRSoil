@@ -104,3 +104,34 @@ CREATE TABLE IF NOT EXISTS file_paths (
     output_path TEXT,
     CONSTRAINT fk_file_soil FOREIGN KEY (soil_id) REFERENCES soil(soil_id) ON DELETE CASCADE
 );
+
+-- Tabela de execuções de pipeline
+CREATE TABLE IF NOT EXISTS pipeline_runs (
+    run_id UUID PRIMARY KEY,
+    job_id VARCHAR(255),
+    user_id INTEGER,
+    status VARCHAR(50) NOT NULL DEFAULT 'queued',
+    pipeline_type VARCHAR(100) NOT NULL DEFAULT 'default',
+    input_file_path TEXT NOT NULL,
+    output_directory TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    started_at TIMESTAMP,
+    finished_at TIMESTAMP,
+    error_message TEXT,
+    logs TEXT[],
+    CONSTRAINT fk_pipeline_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE SET NULL
+);
+
+-- Tabela de resultados de pipeline
+CREATE TABLE IF NOT EXISTS pipeline_results (
+    result_id SERIAL PRIMARY KEY,
+    run_id UUID NOT NULL,
+    soil_id INTEGER,
+    alpha_diversity_file TEXT,
+    otu_table_file TEXT,
+    taxonomy_file TEXT,
+    metadata_file TEXT,
+    processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_results_run FOREIGN KEY (run_id) REFERENCES pipeline_runs(run_id) ON DELETE CASCADE,
+    CONSTRAINT fk_results_soil FOREIGN KEY (soil_id) REFERENCES soil(soil_id) ON DELETE SET NULL
+);

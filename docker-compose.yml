@@ -44,12 +44,16 @@ services:
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:-change_me}
       UPLOADS_DIR: /app/uploads
-      RESULTS_DIR: /app/mock_results_csv
+      RESULTS_DIR: /app/results
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
     volumes:
       - ./uploads:/app/uploads
+      - ./results:/app/results
+      - ./logs:/app/logs
       - ./mock_results_csv:/app/mock_results_csv
       - ./pipeline-r:/app/pipeline-r:ro
       - ./db:/app/db:ro
@@ -71,14 +75,19 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-micro}:${POSTGRES_PASSWORD:-micro_password}@postgres:5432/${POSTGRES_DB:-microbrsoil}
       REDIS_URL: redis://redis:6379
       UPLOADS_DIR: /app/uploads
-      RESULTS_DIR: /app/mock_results_csv
+      RESULTS_DIR: /app/results
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
     volumes:
       - ./uploads:/app/uploads
+      - ./results:/app/results
+      - ./logs:/app/logs
       - ./mock_results_csv:/app/mock_results_csv
       - ./pipeline-r:/app/pipeline-r:ro
+      - ./db:/app/db:ro
     command: ["node", "src/workers/pipeline.worker.js"]
     networks:
       - backnet
