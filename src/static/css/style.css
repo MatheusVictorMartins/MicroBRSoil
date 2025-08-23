@@ -72,6 +72,9 @@
 
 body{
     background-color: var(--background-color0);
+
+    overflow-x: hidden;
+    overflow-y: hidden;
 }
 
 h1, .main-title{
@@ -186,6 +189,8 @@ h1, .main-title{
     font-size: 1.2rem;
     color: var(--text-default-color);
 
+    margin-top: var(--inputs-margin-top);
+
     border-color: var(--border-default-color);
     border-radius: var(--basic-frame-def-radius);
 }
@@ -202,6 +207,9 @@ h1, .main-title{
 
     font-family: var(--main-font);
     font-size: 1.1rem;
+
+    border-radius: var(--basic-frame-def-radius);
+    border-color: var(--primary-color-green0);
 }
 
 .dropfile-input::file-selector-button{

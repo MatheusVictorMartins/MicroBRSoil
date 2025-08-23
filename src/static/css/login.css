@@ -10,7 +10,8 @@
     position: relative;
     top: 0;
     left: 0;
-
+    height: 100vh;
+    width: auto;
     max-height: 100vh;
 
 
@@ -41,11 +42,41 @@
     width: 12%;
     height: auto;
 }
+
+
+
 .right-side{
+    position: relative;
     margin-left: 13vw;
     margin-top: 10vh;
     justify-content: center;
+
+    z-index: 1;
 }
+
+.right-side-decoration{
+    position: absolute;
+    top: 1rem;
+    left: 35vw;
+    top: 75vh;
+    width: 71.094vw;
+
+    background: url("../assets/figures/login_decoration2.svg") no-repeat left bottom;
+    background-size: cover;
+
+    clip-path: inset(0 0 0 0);
+
+    z-index: -1;
+}
+
+.login-decoration2{
+    z-index: -1;
+    position: absolute;
+    width: 25%;
+
+    bottom: 1rem;
+}
+
 .normal-logo{
     width: 20vw;
     height: auto;

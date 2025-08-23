@@ -65,9 +65,6 @@
         <span class="home-title-row">
           <h1 class="main-title">UPLOAD DATA</h1>
         </span>
-        <div class="dashboard-actions">
-          <button type="button" class="btn btn-outline-primary btn-cancel btn-actions"><span class="material-symbols-rounded btn_left_menu_icon">close</span>CANCEL</button>
-        </div>
         <div class="upload-dropdown basic-frame">
           <div class="upload-dropdown-item">
             <label for="upload_select" class="form-label text-input-label">SELECT THE ANALYSIS TYPE</label>
@@ -204,24 +201,28 @@
     let html = "";
     const value = analysis_select.value;
 
-    if(value == "ilumina"){
-        html = `<div class="upload-inputfile">
-                <label for="formFile" class="form-label">Default file input example</label>
+    if(value == "ilumina" || value == "its"){
+        html = `<div class="upload-inputfile ilumina-inputfile">
+                <label for="formFile" class="form-label text-input-label">CHOOSE A FASTQ(.fastq) FILE</label>
                 <input class="form-control dropfile-input" type="file" id="formFile">
                 </div>`;
     }   else if(value == "iontorrent"){
-            html = `<div class="upload-inputfile">
-                    <label for="formFile" class="form-label">Default file input example</label>
-                    <input class="form-control dropfile-input" type="file" id="formFile">
+            html = `<div class="iontorrent-fileinputs">
+                      <div class="upload-inputfile">
+                      <label for="formFile" class="form-label text-input-label">CHOOSE A BARCODES(.fa) FILE</label>
+                      <input class="form-control dropfile-input" type="file" id="formFile">
+                      </div>
+
+                      <div class="upload-inputfile">
+                      <label for="formFile" class="form-label text-input-label">CHOOSE A FASTQ(.fastq) FILE</label>
+                      <input class="form-control dropfile-input" type="file" id="formFile">
+                      </div>
                     </div>`;
-        } else if(value == "its"){
-            html = `<div class="upload-inputfile">
-                    <label for="formFile" class="form-label">Default file input example</label>
-                    <input class="form-control dropfile-input" type="file" id="formFile">
-                    </div>`;
-           }
-    
-           input_file.innerHTML = html;
+        }
+          else{
+            html = "";
+          }
+        input_file.innerHTML = html;
   }
   controlUploadInputs();
   analysis_select.addEventListener("change",controlUploadInputs);

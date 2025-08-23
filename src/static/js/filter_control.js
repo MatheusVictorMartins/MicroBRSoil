@@ -5,6 +5,7 @@ function createFilterDropDown(){
     let html = "";
     if(filter_dropdown_activeted == false){
     html = `<div class="filters-dropdown basic-frame">
+              <div class="filter-row1">
               <select class="form-select filter-item" aria-label="Default select example">
                 <option selected>Filter 1</option>
                 <option value=" ">filter</option>
@@ -23,6 +24,8 @@ function createFilterDropDown(){
                 <option value=" ">filter</option>
                 <option value=" ">filter</option>
               </select>
+              </div>
+              <div class="filter-row2">
               <select class="form-select filter-item" aria-label="Default select example">
                 <option selected>Filter 4</option>
                 <option value=" ">filter</option>
@@ -41,6 +44,7 @@ function createFilterDropDown(){
                 <option value=" ">filter</option>
                 <option value=" ">filter</option>
               </select>
+              </div>
           </div>`;
           filter_dropdown_activeted = true;
     }

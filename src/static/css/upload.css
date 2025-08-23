@@ -82,7 +82,6 @@
 }
 
 
-
 .input-group{
     display: flex;
 }
@@ -103,4 +102,9 @@
     font-size: 1.5rem;
     font-family: "Inter",sans-serif;
     font-weight: 600;
+}
+
+.iontorrent-fileinputs{
+    display: flex;
+    gap: 5%;
 }
