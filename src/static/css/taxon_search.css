@@ -1,22 +1,68 @@
+.main-content{
+    width: 100%;
+}
+
+.main-title{
+    margin-bottom: var(--title-default-margin-bottom);
+}
+
 .basic-frame{
     display: flex;
     flex-direction: column;
+    width: auto;
 }
 
 .select-sh-form{
     display: flex;
-    flex-direction: column;
 }
 
 .btn-taxon-search{
     border-radius: 1.25rem;
     height: 3.75rem;
+    margin-left: 1vw;
+
+    width: 10vw;
 
     font-size: 1.25rem;
     font-family: "Inter",sans-serif;
     font-weight: 600;
+
+    align-self: end;
 }
 
-.graphic-frame{
-    margin-top: 2vh;
+.register-text-input{
+    height: var(--items-default-size);
+    margin: 0;
+    display: flex;
+
+    margin-top: 5vh;
+}
+
+.text-input:focus{
+    box-shadow: var(--border-default-shadow);
+    border-color: var(--border-focus-default-color);
+}
+
+#search-menu{
+    display: flex;
+    align-items: center;
+
+    gap: 2rem;
+}
+
+#search-inputs{
+    display: flex;
+    flex-direction: column;
+}
+
+.taxon-search-select{
+    width: 10rem;
+}
+
+
+
+
+
+.search-select{
+    margin-top: 5vh;
 }

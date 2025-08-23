@@ -1,0 +1,29 @@
+.filters-dropdown{
+    display: flex;
+    flex-direction: column;
+    padding: 2% 2%;
+    max-width: 78.125vw;
+    height: auto;
+    align-content: center;
+    margin-bottom: 2vh;
+    background-color: #ffffff;
+}
+
+.filter-item{
+    margin: 0;
+}
+
+.filter-item:focus{
+    box-shadow:  var(--border-default-shadow);
+    border-color: var(--border-focus-default-color);
+}
+
+.filter-row1{
+    display: flex;
+    flex-direction: row;
+}
+
+.filter-row2{
+    display: flex;
+    flex-direction: row;
+}

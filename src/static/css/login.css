@@ -11,6 +11,28 @@
     top: 0;
     left: 0;
     height: 100vh;
+    width: auto;
+    max-height: 100vh;
+
+
+}
+.btn-go-back{
+    position: absolute;
+
+    bottom: 1rem;
+    left: 1rem;
+    cursor: pointer;
+
+    color: var(--background-color0);
+}
+
+.btn-back-icon{
+    font-size: 4rem !important;
+}
+
+.btn-go-back:hover{
+    background-color: var(--decoration-colorRGBA3);
+    border-radius: 5rem;
 }
 .white-reduced-logo{
     position: absolute;
@@ -20,11 +42,41 @@
     width: 12%;
     height: auto;
 }
+
+
+
 .right-side{
+    position: relative;
     margin-left: 13vw;
     margin-top: 10vh;
     justify-content: center;
+
+    z-index: 1;
 }
+
+.right-side-decoration{
+    position: absolute;
+    top: 1rem;
+    left: 35vw;
+    top: 75vh;
+    width: 71.094vw;
+
+    background: url("../assets/figures/login_decoration2.svg") no-repeat left bottom;
+    background-size: cover;
+
+    clip-path: inset(0 0 0 0);
+
+    z-index: -1;
+}
+
+.login-decoration2{
+    z-index: -1;
+    position: absolute;
+    width: 25%;
+
+    bottom: 1rem;
+}
+
 .normal-logo{
     width: 20vw;
     height: auto;
@@ -64,26 +116,29 @@
 
 .btn-dont-know-pass{
     display: flex;
-    background-color: #F8FFFA;
+    background-color: transparent;
     justify-self: flex-end;
     text-decoration: underline;
+
+    width: fit-content;
 
     padding: .3125rem .625rem;
 
     font-family: "Inter", sans-serif;
     font-weight: 500;
-    color: #2a8a4c;
+    color: var(--complementary-color);
 }
 
 .btn-dont-know-pass:hover{
-    color: #2B373D;
-    background-color: rgba(67, 179, 71, 0.2);
+    color: var(--complementary-color0);
+    background-color: var(--decoration-complementary-colorRGBA1);
     border-radius: 1.25rem;
     padding: .3125rem .625rem;
 }
 
 .btn-dont-know-pass:active{
-     background-color: rgba(100, 205, 68, 0.4);
+     background-color: var(--decoration-complementary-colorRGBA0);
+     border-radius: 1.25rem;
 }
 
 .btn-lg{
@@ -144,7 +199,7 @@
 
     cursor:text;
     margin-top: 1.5625rem;
-    margin-bottom: 2.5rem;
+    margin-bottom: 0.5rem;
 
     padding-left: 1.5625rem;
 
@@ -166,4 +221,29 @@
 .login-text-input:focus{
     border: none;
     outline-offset: 0px;
+}
+
+.popover{
+    border-radius: var(--basic-frame-def-radius);
+    background-color: var(--background-color0);
+}
+
+.popover-header{
+    border-radius: var(--basic-frame-def-radius) var(--basic-frame-def-radius) 0 0;
+
+    background-color: var(--primary-color-green);
+    color: var(--background-color0);
+}
+
+
+.form-input-area{
+    margin-bottom: 2rem;
+}
+
+.dont-know-pass-area{
+    display: flex;
+
+    margin-bottom: auto;
+    margin-left: auto;
+    width: fit-content;
 }

@@ -1,4 +1,5 @@
 #left-menu{
+
     display: flex;
     flex-direction: column;
     padding: 3.125rem 0;
@@ -8,6 +9,8 @@
 
     font-family:"Inter", sans-serif;
 }
+
+
 
 .btn-left-menu{
     display: flex;
@@ -55,4 +58,107 @@
 
 #btn-left-menu-logout{
     margin-top: auto;
+}
+
+.modal-header{
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem 0 0;
+    background-color: var(--background-color0);
+    align-items: center;
+    justify-content: center;
+
+    gap: 1rem;
+}
+
+.logout-modal-img{
+    position: relative;
+    width: 15%;
+    height: auto;
+}
+
+.btn-close-logout-modal{
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    cursor: pointer;
+
+    font-size: 2rem !important;
+    color: var(--primary-color-green0);
+}
+
+.btn-close-logout-modal:hover{
+    color: var(--primary-color-green2);
+    background-color: var(--decoration-colorRGBA1);
+    border-radius: 50px;
+
+    cursor: pointer;
+}
+
+.logout-modal-title{
+    font-family: var(--title-font);
+    color: var(--primary-color-green0);
+    font-weight: var(--semibold);
+    text-align: center;
+    margin: 0;
+}
+
+.logout-modal-content{
+    display: flex;
+    flex-direction: column;
+    font-family: var(--main-font);
+    font-size: 1.15rem;
+    font-weight: var(--regular);
+    color: var(--primary-color-green0);
+    text-align: justify;
+    padding: 2rem  var(--basic-frame-padding);
+    
+    gap: 1rem;
+}
+
+.btn-logout-modal-group{
+    display: flex;
+    gap: 1rem;
+    width: 100%;
+}
+
+.btn-logout-modal-confirm{
+    border: none;
+    background-color: var(--primary-color-green);
+    width: 40%;
+    margin-right: auto;
+}
+
+.btn-logout-modal-confirm:hover{
+    border: none;
+    background-color: var(--primary-color-green1);
+}
+
+.btn-logout-modal-confirm:not(:disabled):active{
+    background-color: var(--primary-color-green0);
+}
+
+.btn-logout-modal-cancel{
+    border-color: var(--primary-color-green0);
+    color: var(--primary-color-green0);
+    width: 60%;
+    margin-left: auto;
+}
+
+.btn-logout-modal-cancel:hover{
+    border-color: var(--decoration-colorRGBA0);
+    background-color: var(--decoration-colorRGBA0);
+}
+
+.btn-logout-modal-cancel:not(:disabled):active{
+    background-color: var(--primary-color-green1);
+}
+
+.modal-header{
+    border-radius: var(--basic-frame-def-radius);
+}
+
+.modal-content{
+    border-radius: var(--basic-frame-def-radius);
 }

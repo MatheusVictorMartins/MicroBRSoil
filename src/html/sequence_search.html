@@ -20,7 +20,7 @@
     <link rel="stylesheet" href="../static/css/header.css">
     <link rel="stylesheet" href="../static/css/footer.css">
     <link rel="stylesheet" href="../static/css/left_menu.css">
-    <link rel="stylesheet" href="../static/css/taxon_search.css">
+    <link rel="stylesheet" href="../static/css/sequence_search.css">
     <!--FONT IMPORT-->
     <!--INTER-->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -44,15 +44,35 @@
         <main class="main-content"> 
             <h1 class="main-title">SEQUENCE SEARCH</h1> 
             <div class="basic-frame">
-               <form action="" class="select-sh-form">
-                    <label for="tselect_sh" class="text-input-label">PASTE YOUR SEQUENCE</label>
-                    <input type="text" name="tselect_sh" id="tselect_sh" class="text-input register-text-input" placeholder="Enter SH">
+               <form action="" class="sequence-search-form">
+                    <div class="mb-3">
+                        <label for="exampleFormControlTextarea1" class="form-label text-input-label">PASTE YOUR SEQUENCE</label>
+                        <textarea class="form-control text-area" id="exampleFormControlTextarea1" rows="5"
+                         placeholder="CCGAAAAGTACAGGCCCTCTCGTAGGGCTAAACTTCCAAAAAGTACAGGCCCTCTCGTAGGGCTAAACTTCCACCCCTTTTCCCCTTTTCGAAAAGTACAGGCCCTCTC"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="formFile" class="form-label text-input-label">SELECT A <span class="bold-text">FASTA</span> FILE</label>
+                        <input class="form-control dropfile-input" type="file" id="formFile" accept=".fasta, .fa, .fas">
+                    </div> 
+
+                        <label for="srch_type_grp" class="form-label text-input-label">SELECT A SEARCH TYPE</label>
+
+                    <div class="btn-group search-type-group" id="srch_type_grp" role="group" aria-label="Basic radio toggle button group">
+                        <div class="searchtype-subgroup">
+                            <input type="radio" class="btn-check" name="btnradio" id="btnradio1" autocomplete="off" checked>
+                            <label class="btn btn-outline-primary btn-search-type" for="btnradio1">EXACT HIT</label>
+
+                            <input type="radio" class="btn-check" name="btnradio" id="btnradio2" autocomplete="off">
+                            <label class="btn btn-outline-primary btn-search-type" for="btnradio2">BLAST - Best Hit</label>
+
+                            <input type="radio" class="btn-check" name="btnradio" id="btnradio3" autocomplete="off">
+                            <label class="btn btn-outline-primary btn-search-type" for="btnradio3">BLAST - Group Results</label>
+                        </div>
+                        <div id="searchtype-text"></div>
+                    </div>
+
                </form>
-               <div class="input-group" id="csvdrop">
-                <input type="file" class="form-control" id="inputGroupFile04" aria-describedby="inputGroupFileAddon04" aria-label="Upload">
-                <button class="btn btn-outline-secondary" type="button" id="inputGroupFileAddon04">Button</button>
-                </div>
-               <button type="button" class="btn btn-success btn-taxon-search">SEARCH</button>
+               <button type="button" class="btn btn-success btn-sequence-search"><span class="material-symbols-rounded btn-icon">search</span>SEARCH</button>
             </div>
         </main>
     </div>
@@ -73,6 +93,32 @@
     <!--===================================================================================================================================-->
     <!--#endregion-->
 
-    <script src="../static/js/sequence_search.js"></script>
+    <script>
+        const radios = document.querySelectorAll('input[name="btnradio"]')
+        const text = document.getElementById("searchtype-text");
+
+        function changeTextByChecked(){
+            const selected = document.querySelector('input[name="btnradio"]:checked');
+            let html_text = "";
+
+            if(!selected){
+                return;
+            }
+            switch(selected.id){
+                case "btnradio1":
+                    html_text = `<p class="description-text searchtype-des-text">*input 1-100 sequences; only complete ITS1 or ITS2</p>`;
+                    break;
+                case "btnradio2":
+                    html_text = `<p class="description-text searchtype-des-text">*input 1-100 sequences; ITS1 or ITS2</p>`;
+                    break;
+                case "btnradio3":
+                    html_text = `<p class="description-text searchtype-des-text">*input 1 sequence; ITS1 or ITS2</p>`;
+                    break;
+            }
+            text.innerHTML = html_text;
+        }
+        radios.forEach(r => r.addEventListener("change", changeTextByChecked));
+        changeTextByChecked();
+    </script>
 </body>
 </html>

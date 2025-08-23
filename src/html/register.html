@@ -45,15 +45,15 @@
             <h1 class="main-title">NEW USER</h1> 
             <div class="register-frames">
                 <div class="basic-frame register-frame">
-                    <form action="/auth/register" method="POST" class="register-form">
-                        <label for="temail" class="text-input-label">NAME</label>
-                        <input type="text" name="temail" id="temail" class="text-input register-text-input" placeholder="NAME">
+                    <form action="/auth/register" class="register-form">
+                        <label for="tname" class="text-input-label">NAME</label>
+                        <input type="text" name="tname" id="tname" class="text-input register-text-input" placeholder="NAME">
                         <label for="tpassword" class="text-input-label">PASSWORD</label>
                         <input type="password" name="tpassword" id="tpassword" class="text-input register-text-input" placeholder="PASSWORD">
                         <label for="tconfpassword" class="text-input-label">CONFIRM PASSWORD</label>
                         <input type="password" name="tconfpassword" id="tconfpassword" class="text-input register-text-input" placeholder="CONFIRM PASSWORD">
-                        <button type="submit" class="btn btn-primary btn-register"><span class="material-symbols-rounded btn-icon">person_add</span>REGISTER</button>
                     </form>
+                    <button type="button" class="btn btn-primary btn-register"><span class="material-symbols-rounded btn-icon">person_add</span>REGISTER</button>
                 </div>
 
                 <div class="register-users-table table-responsive basic-frame ">
@@ -149,7 +149,5 @@
     <script src="../static/js/bootstrap.bundle.min.js"></script>
     <!--===================================================================================================================================-->
     <!--#endregion-->
-
-    <script src="../static/js/register.js"></script>
 </body>
 </html>

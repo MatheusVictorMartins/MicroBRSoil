@@ -45,14 +45,20 @@
             <h1 class="main-title">TAXON SEARCH</h1> 
             <div class="basic-frame">
                <form action="" class="select-sh-form">
-                    <label for="tselect_sh" class="text-input-label">SELECT SH</label>
-                    <input type="text" name="tselect_sh" id="tselect_sh" class="text-input register-text-input" placeholder="Enter SH">
+                <span id="search-inputs">
+                    <span id="search-menu"> 
+                        <h2 class="second-title search-title text-input-label">SEARCH BY:</h2>
+                        <!--TAXON SEARCH SELECT-->
+                        <select id="tx_srh_select"class="form-select taxon-search-select" aria-label="Default select example">
+                        <option value="sh" selected>SH</option>
+                        <option value="species">SPECIES</option>
+                        <option value="genus">GENUS</option>
+                        </select>
+                    </span>
+                        <div id="search-box"></div>
+                </span>
+                <button type="button" class="btn btn-success btn-taxon-search">SEARCH</button>
                </form>
-               <button type="button" class="btn btn-success btn-taxon-search">SEARCH</button>
-            </div>
-
-            <div class="basic-frame graphic-frame">
-                <img src="../static/assets/figures/graphic_placeholder.png" alt="">
             </div>
         </main>
     </div>
@@ -72,6 +78,35 @@
     <script src="../static/js/bootstrap.bundle.min.js"></script>
     <!--===================================================================================================================================-->
     <!--#endregion-->
-    <script src = "../static/js/taxon_search.js"></script>
+
+    <script>
+        const search_select = document.getElementById("tx_srh_select");
+        const search_box = document.getElementById("search-box");
+
+        function updateSearchBox(){
+            const value = search_select.value;
+            let html = "";
+            if(value == "sh"){
+                    html = `<input type="text" name="tselect_sh" id="tselect_sh" class="text-input register-text-input" placeholder="Enter SH">`;
+            }
+                else if(value == "species"){
+                        html = `<select class="form-select species-select search-select" aria-label="Default select example">
+                                <option value="" selected disabled>Choose a specie...</option>
+                                <option value="#">Item</option>
+                                </select>`;
+                }
+                    else if(value == "genus"){
+                        html = `<select class="form-select genus-select search-select" aria-label="Default select example">
+                                <option value="" selected disabled>Choose a genus...</option>
+                                <option value="#">Item</option>
+                                </select>`;
+                    }
+
+            search_box.innerHTML = html;
+        }
+
+        updateSearchBox();
+        search_select.addEventListener("change",updateSearchBox);
+    </script>
 </body>
 </html>
