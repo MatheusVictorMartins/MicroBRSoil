@@ -137,3 +137,9 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# FASTQ Datas
+.fastq
+.fastq.gz
+.fastq.bz2
+.fastq.xz
