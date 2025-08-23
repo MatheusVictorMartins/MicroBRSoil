@@ -143,3 +143,10 @@ vite.config.ts.timestamp-*
 .fastq.gz
 .fastq.bz2
 .fastq.xz
+
+# FASTA Files
+.fasta
+.fasta.gz
+.fasta.bz2
+.fasta.xz
+.fa
