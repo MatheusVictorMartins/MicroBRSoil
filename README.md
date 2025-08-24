@@ -32,17 +32,17 @@ Este sistema web tem como objetivo processar, analisar e visualizar dados de amo
 
 projeto-microbioma/
 ├── backend/                      
-│   ├──</br>             
-│   ├──</br>                  
-│   ├──</br> 
-│   ├──</br> 
-│   ├── 
-│   ├── 
-│   ├── 
-│   ├── 
-│   ├── 
-│   ├── 
-│   └── 
+│   ├──/         
+│   ├──/                
+│   ├──/
+│   ├──/
+│   ├──/
+│   ├──/
+│   ├──/
+│   ├──/
+│   ├──/
+│   ├──/
+│   └──/
 │
 ├── frontend/                    # Arquivos estáticos e UI
 │   ├── 
