@@ -30,39 +30,38 @@ Este sistema web tem como objetivo processar, analisar e visualizar dados de amo
 
 ## 📁 Estrutura do Projeto
 
-projeto-microbioma/
-├── backend/                      
-│   ├──/         
-│   ├──/                
-│   ├──/ 
-│   ├──/ 
-│   ├──/ 
-│   ├──/ 
-│   ├──/ 
-│   ├──/ 
-│   ├──/ 
-│   ├──/ 
-│   └──/ 
+projeto-microbioma\
+├── backend/\
+│   ├──\
+│   ├──\
+│   ├──\
+│   ├──\
+│   ├──\
+│   ├──\
+│   ├──\
+│   ├──\
+│   ├──\
+│   ├──\
+│   └──\
 │
-├── frontend/                    # Arquivos estáticos e UI
-│   ├── 
-│   ├── 
-│   ├── 
-│   ├── 
-│   ├── css/
-│   │   └── 
-│   ├── js/
-│   │   ├── 
-│   │   ├── 
-│   │   ├── 
-│   │   └── 
+├── frontend/                    # Arquivos estáticos e UI\
+│   ├──\
+│   ├──\
+│   ├──\
+│   ├──\
+│   ├── css/\
+│   │   └──\
+│   ├── js/\
+│   │   ├──\
+│   │   ├──\
+│   │   ├──\
+│   │   └──\
+│\
+├── pipeline/                  # Scripts R e arquivos de teste\
+│   ├──\
+│   └──\
 │
-├── pipeline/                    # Scripts R e arquivos de teste
-│   ├── 
-│   └── 
-│
-│
-├── .env.example                 # Exemplo de variáveis de ambiente
-├── README.md                    # Documentação geral do projeto
-├── package.json                 # Dependências do Node.js
+├── .env.example                 # Exemplo de variáveis de ambiente\
+├── README.md                    # Documentação geral do projeto\
+├── package.json                 # Dependências do Node.js\
 └── .gitignore                   # Arquivos ignorados pelo Git
