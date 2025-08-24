@@ -31,7 +31,7 @@ Este sistema web tem como objetivo processar, analisar e visualizar dados de amo
 ## 📁 Estrutura do Projeto
 
 projeto-microbioma/
-├── backend/                      
+---├── backend/                      
 │   ├──             
 │   ├──                  
 │   ├── 
