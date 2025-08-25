@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>microBRsoil</title>
+    <!--
+    Fala pessoal, o motivo de eu estar utilizando o bootstrap minimal é que eu não vejo muito motivo para utilizar
+    a versão mais "robusta" que o bootstrap possui, muito menos toda a pasta de módulos dele, entã optei pelo minimal que
+    tira alguns whitespaces, deixa uns comandos mais simples e diminui alguns MBs do projeto, deixando ele mais leve.
+
+    *Um adendo é sobre as versões CDN(CSS e JS) e Locais, onde optei por deixar a local pois caso tenha algum problema de conexão enquanto
+    eu ou alguém do grupo estiver mexendo com o front-end no geral, o bootstrap continue funcionando sem problemas. Caso alguém ache melhor
+    e tenha algum motivo que seja realmente benéfico utilizar o CDN ao invés do local(que particularmente eu não consigo ver nenhum)
+    por favor me avisa que a gente discute e muda isso. Mas creio eu que o local está de bom tamanho e não vejo algum malefício
+    em utilizar ele a não ser facilidade de instalação(que é 100% porque não precisa instalar nada :P), mas posso estar errado.
+    Mas caso queira utilizar a versão CDN(Tanto CSS quanto JS), ela já está pronta no projeto, basta comentar a versão local e 
+    descomentar a versão CDN, mas se for fazer isso por favor avise o grupo antes de fazer isso.
+
+    Ass.: Matheus(non-regular-bootstrapuser-sorry)
+    -->
+
+    <!--#region BOOTSTRAP CSS IMPORT-->
+    <!--===================================================================================================================================-->
+    <!--BOOTSTRAP CDN CSS IMPORT *USE IF YOU NEED IT; **COMMENT THE BOOTSTRAP LOCAL CSS IMPORT BELOW BEFORE USE CDN-->
+    <!--<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-SgOJa3DmI69IUzQ2PVdRZhwQ+dy64/BUtbMJw1MZ8t5HZApcHrRKUc4W0kG879m7" crossorigin="anonymous">-->
+
+    <!--BOOTSTRAP MINIMAL LOCAL CSS IMPORT-->
+    <link rel="stylesheet" href="../static/css/bootstrap.min.css">
+    <!--===================================================================================================================================-->
+    <!--#endregion-->
+    
+    <!--LOCAL CSS IMPORT-->
+    <link rel="stylesheet" href="../static/css/reset.css">
+    <link rel="stylesheet" href="../static/css/style.css">
+    <link rel="stylesheet" href="../static/css/header.css">
+    <link rel="stylesheet" href="../static/css/footer.css">
+    <link rel="stylesheet" href="../static/css/about.css">
+    <link rel="stylesheet" href="../static/css/left_menu.css">
+    <!--FONT IMPORT-->
+    <!--INTER-->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap" rel="stylesheet">
+    <!--TIENNE-->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tienne:wght@400;700;900&display=swap" rel="stylesheet">
+    <!--ICONS IMPORT-->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:wght@300" rel="stylesheet" />
+  </head>
+  
+<body>
+  <!--HEADER PLACEHOLDER-->
+  <div id="header-placeholder"></div>
+  
+  <!--#region LAYOUT-->
+  <div class="layout">
+    <!--LEFT MENU PLACEHOLDER-->
+    <div id="leftmenu-placeholder"></div>
+    <!--#region MAIN -->
+    <main class="main-content">
+        <h1 class="main-title">ABOUT</h1> 
+        
+        <h2 class="topic-title">How can I search in the GlobalFungi database?</h2>
+        <p class="basic-text">The web-based user interface at <a href="./">https://microbrsoil.com</a> provides a quick yet
+         complex access to the data in the GlobalFungi Database. It provides search in the database by name of a 
+         fungal taxon on species or genus level or the search for a Species Hypothesis number. 
+         Besides that, users can also BLAST their own ITS1 or ITS2 sequences
+          against the database and to retrieve best hits. The complete list of studies included in the database is provided as well. 
+          For those interested in regional mycoflora, the function geosearch provides list of SHs occurring in all samples within 
+          geographically defined area. Finally, for those who want to contribute, there is the Submit your study option.
+        For more details, please, see below.</p>
+
+        <h2 class="topic-title">Taxon search</h2>
+        <p class="basic-text">Sequence variants within the GlobalFungi Database are assigned to three levels taxonomy: 
+        <span class="topic-index">i)</span> fungal Species Hypothesis (based on UNITE, 1.5% dissimilarity threshold), 
+        <span class="topic-index">ii)</span> fungal species (if available) and <span class="topic-index">iii)</span> fungal genus (if available).
+         The fungal taxonomy was adopted from the UNITE, which represents curated and currently one of the most commonly used databases 
+         for identification of fungal ITS sequences. You can search for fungal taxa on all the three taxonomic levels by typing the 
+         SH number or the taxon name. Page with results based on taxonomy search provides similar outputs for all three taxonomic levels.
+          In the uppermost part of the web page, you can find the full taxonomy based on UNITE and a button to download all 
+          sequence variants belonging to the corresponding taxon in the FASTA format. Note that, in this FASTA file, each sequence 
+          variant is presented with the same structure, i.e.,
+           a sequence identifier specific to each variant (e.g., “38f412f89f7ed93a08e5f0ffd84ae2c7”),
+            an identifier of the sample in which the sequence variant is found (e.g., “SampleID_1311”, similar to the one that you can 
+            find in the metadata table in the bottom window of the web page), the taxonomic level and name of the taxon
+             corresponding to this sequence variant (e.g., “genus_Penicillium”), the molecular marker used to obtain this
+              sequence variant from the sample (e.g., “marker_ITS1”), and the abundance of this sequence variant within the
+               sample together with the total number of full ITS sequences extracted from the sample (including both ITS1 and ITS2 markers)
+                (e.g., “abund_1_total_197270”). Besides that you can use various filters (e.g. biome, source type, sampling year) to display
+                 only subset of samples with appearance of the searched taxon. Environmental characteristics together with geographical 
+                 distribution of the selected samples are then displayed in a bottom window. In this section you can find distribution 
+                 of the searched taxon in samples based on environmental characteristics (biome, climate and soil pH) and geography
+                  (global map, distribution on continents). Alongside the characteristics of the selected samples, we also provide 
+                  biogeographical and environmental characteristics for all samples included in the GlobalFungi Database to get better
+                   perspective about the environmental preferences or geographical distribution of the searched taxa.</p>
+        <p class="basic-text">Results of samples that were subject to experimental manipulation are by
+             default excluded from taxon searches, but results can be retrieved in the next step when 
+             the initial search results for the taxon of interest is completed. In bargraphs showing the 
+             results of taxon distribution across the ranges of environmental conditions, samples from 
+             manipulated studies are indicated in yellow.</p>
+
+        <h2 class="topic-title">Sequence search</h2>
+
+        <p class="basic-text">Our sequence search tool enables to submit user’s own sequences and:
+            <span class="topic-index">i)</span> search for exact hits in the database for up to 100 sequences, 
+            <span class="topic-index">ii)</span> run a BLAST search for the best hit for up to 100 sequences or
+            <span class="topic-index">iii)</span> run a BLAST search for a single sequence with the option to display results for one, 
+            10, 50, 100 or 500 best hits. In case of the best hit search, resulting page provides the best 
+            hit sequence with possibility to display characteristics of the samples with appearance of the
+            sequence variant similar to results of “Taxon search”. BLAST group results provide standard BLAST 
+            results with a possibility to filter them according to similarity threshold. Samples harbouring the
+            closest BLAST hits can be subsequently displayed together with environmental and geographical characteristics
+            similar to results of “Taxon search” in section “Results”.</p>
+    </main>
+    <!--#endregion-->
+  </div>
+  <!--#endregion-->
+
+  <!--#region HEADER INCLUDE-->
+    <script src="../static/js/include_elements.js"></script>
+  <!--#endregion-->
+  <!--#region BOOTSTRAP JS LINK-->
+    <script src="../static/js/button.js"></script>
+    <!--===================================================================================================================================-->
+    <!--BOOTSTRAP CDN JAVASCRIPT IMPORT *USE IF YOU NEED IT; **COMMENT THE "BOOTSTRAP LOCAL JAVASCRIPT IMPORT" BELOW BEFORE USE CDN-->
+    <!--
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js" integrity="sha384-k6d4wzSIapyDyv1kpU366/PK5hCdSbCRGRCMv+eplOQJWyd1fbcAu9OCUj5zNLiq" crossorigin="anonymous"></script>
+    -->
+
+    <!--BOOSTRAP MINIMAL LOCAL JAVASCRIPT IMPORT-->
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <!--===================================================================================================================================-->
+  <!--#endregion-->
+  <!--Auth user script(placeholder)-->
+  <script src="../static/js/auth_user.js"></script>
+</body>
+</html>
