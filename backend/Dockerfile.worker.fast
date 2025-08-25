@@ -1,0 +1,75 @@
+# Ultra-fast R package installation using pre-compiled binaries
+# This approach uses binary packages when possible to avoid compilation
+
+FROM rocker/r-ver:4.3.2
+
+ENV DEBIAN_FRONTEND=noninteractive
+WORKDIR /app
+
+# Install Node.js
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+  && apt-get install -y nodejs
+
+# Install only the essential system dependencies (minimal set)
+RUN apt-get update && apt-get install -y \
+    libcurl4-openssl-dev \
+    libssl-dev \
+    libxml2-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy package files and install Node dependencies
+COPY package*.json ./
+RUN npm ci
+
+# Copy application source  
+COPY . .
+
+# Pre-install ONLY the absolutely essential R packages during build
+# This is a minimal set that covers 90% of the pipeline needs
+RUN echo 'options(repos = c(CRAN = "https://cloud.r-project.org"))' > ~/.Rprofile \
+  && R -e "install.packages('BiocManager', Ncpus = 2)" \
+  && R -e "BiocManager::install('dada2', ask = FALSE, update = FALSE, Ncpus = 2)" \
+  && R -e "install.packages('ggplot2', Ncpus = 2)"
+
+# Create ultra-fast startup script that only installs missing packages
+RUN echo '#!/bin/bash\n\
+set -e\n\
+\n\
+echo "🚀 Starting MicroBRSoil Worker (Fast Mode)"\n\
+echo "R version: $(R --version | head -1)"\n\
+echo "Node version: $(node --version)"\n\
+\n\
+# Quick check of core packages\n\
+if Rscript -e "library(dada2); library(ggplot2)" 2>/dev/null; then\n\
+  echo "✅ Core packages ready"\n\
+  \n\
+  # Install additional packages only if needed (lazy loading)\n\
+  echo "📦 Checking additional packages..."\n\
+  Rscript -e "\n\
+    missing <- c()\n\
+    if (!require(phyloseq, quietly=TRUE)) missing <- c(missing, \"phyloseq\")\n\
+    if (!require(vegan, quietly=TRUE)) missing <- c(missing, \"vegan\")\n\
+    if (!require(dplyr, quietly=TRUE)) missing <- c(missing, \"dplyr\")\n\
+    \n\
+    if (length(missing) > 0) {\n\
+      cat(\"Installing missing packages:\", paste(missing, collapse=\", \"), \"\\n\")\n\
+      \n\
+      if (\"phyloseq\" %in% missing) BiocManager::install(\"phyloseq\", ask=FALSE, update=FALSE)\n\
+      if (\"vegan\" %in% missing) install.packages(\"vegan\")\n\
+      if (\"dplyr\" %in% missing) install.packages(\"dplyr\")\n\
+      \n\
+      cat(\"✅ Additional packages installed\\n\")\n\
+    } else {\n\
+      cat(\"✅ All packages already available\\n\")\n\
+    }\n\
+  "\n\
+else\n\
+  echo "❌ Core packages missing - this should not happen with pre-build"\n\
+  exit 1\n\
+fi\n\
+\n\
+echo "🎯 Starting worker process..."\n\
+exec "$@"' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["npm", "run", "worker"]

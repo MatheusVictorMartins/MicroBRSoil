@@ -8,13 +8,21 @@ const execAsync = promisify(exec);
 async function checkRPackages() {
   try {
     console.log('🔍 Quick R packages check...');
-    const { stdout, stderr } = await execAsync('Rscript -e "library(dada2); cat(\'OK\')" 2>/dev/null || echo "MISSING"', { timeout: 5000 });
-    if (stdout.includes('OK')) {
-      console.log('✅ R packages are ready');
+    
+    // Check if core packages are available
+    const { stdout, stderr } = await execAsync('Rscript -e "library(dada2); library(ggplot2); cat(\'CORE_OK\')" 2>/dev/null || echo "MISSING"', { timeout: 10000 });
+    
+    if (stdout.includes('CORE_OK')) {
+      console.log('✅ Core R packages are ready');
+      
+      // Install additional packages on-demand for Illumina pipeline
+      console.log('📦 Installing additional packages for Illumina pipeline...');
+      await execAsync('Rscript -e "if (!require(phyloseq, quietly=TRUE)) BiocManager::install(\'phyloseq\', ask=FALSE, update=FALSE); if (!require(vegan, quietly=TRUE)) install.packages(\'vegan\'); if (!require(microbiome, quietly=TRUE)) install.packages(\'microbiome\')"', { timeout: 120000 });
+      
       return true;
     } else {
-      console.log('⚠️ dada2 not immediately available, but will be handled by entrypoint');
-      return true; // Let the entrypoint handle it
+      console.log('⚠️ Core packages not ready, will be handled by entrypoint');
+      return true; // Let the entrypoint handle core installation
     }
   } catch (error) {
     console.log('⚠️ R packages check skipped (will be handled by entrypoint)');

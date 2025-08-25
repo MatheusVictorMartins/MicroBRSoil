@@ -1,84 +1,95 @@
-# Use Node.js base image
-FROM node:20-bullseye
+# Optimized R package installation - uses binaries when possible
+FROM rocker/r-ver:4.3.2
 
 ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /app
 
-# Install R 4.3.x (newer version) and essential libraries
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends \
-     software-properties-common \
-     dirmngr \
-     wget \
-     ca-certificates \
-     gnupg2 \
-  && wget -qO- https://cloud.r-project.org/bin/linux/debian/marutter_pubkey.asc | tee -a /etc/apt/trusted.gpg.d/cran_debian_key.asc \
-  && echo "deb https://cloud.r-project.org/bin/linux/debian bullseye-cran40/" | tee -a /etc/apt/sources.list.d/cran.list \
-  && apt-get update \
-  && apt-get install -y --no-install-recommends \
-     r-base \
-     r-base-dev \
-     libcurl4-openssl-dev \
-     libssl-dev \
-     libxml2-dev \
-     libgit2-dev \
-     libfontconfig1-dev \
-     libharfbuzz-dev \
-     libfribidi-dev \
-     libfreetype6-dev \
-     libpng-dev \
-     libtiff5-dev \
-     libjpeg-dev \
-     build-essential \
-     gfortran \
-  && rm -rf /var/lib/apt/lists/*
+# Install curl and other essential tools first
+RUN apt-get update && apt-get install -y \
+    curl \
+    gnupg \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install system dependencies required for R package compilation
+RUN apt-get update && apt-get install -y \
+    curl \
+    ca-certificates \
+    gnupg \
+    lsb-release \
+    build-essential \
+    gfortran \
+    libbz2-dev \
+    liblzma-dev \
+    libpcre2-dev \
+    libcurl4-openssl-dev \
+    libssl-dev \
+    zlib1g-dev \
+    libxml2-dev \
+    libgit2-dev \
+    libfontconfig1-dev \
+    libcairo2-dev \
+    libharfbuzz-dev \
+    libfribidi-dev \
+    libfreetype6-dev \
+    libpng-dev \
+    libtiff5-dev \
+    libjpeg-dev \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy package files and install Node dependencies
 COPY package*.json ./
-RUN if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then \
-      npm ci ; \
-    else \
-      npm install ; \
-    fi
+RUN npm ci
 
 # Copy application source
 COPY . .
 
-# Create a startup script that handles R packages efficiently with proper dependency order
+# Create optimized startup script - installs packages FAST
 RUN echo '#!/bin/bash\n\
 set -e\n\
 \n\
-echo "🚀 Starting MicroBRSoil Worker"\n\
+echo "🚀 Starting MicroBRSoil Worker (Optimized)"\n\
 echo "R version: $(R --version | head -1)"\n\
+echo "Node version: $(node --version)"\n\
 \n\
-# Quick check if dada2 is available\n\
+# Check if dada2 is available (core requirement)\n\
 if Rscript -e "library(dada2)" 2>/dev/null; then\n\
-  echo "✅ R packages are ready"\n\
+  echo "✅ Core packages ready"\n\
 else\n\
-  echo "⚠️ Installing R packages (this may take a few minutes on first run)..."\n\
+  echo "📦 Installing R packages (optimized for speed)..."\n\
   \n\
-  # Install packages in correct dependency order\n\
-  echo "📦 Installing BiocManager..."\n\
-  Rscript -e "if (!require(BiocManager, quietly=TRUE)) install.packages(\"BiocManager\", repos=\"https://cloud.r-project.org\")"\n\
+  # Use parallel installation and binary packages when possible\n\
+  export R_INSTALL_OPTS="--byte-compile"\n\
   \n\
-  echo "📦 Installing base dependencies..."\n\
-  Rscript -e "install.packages(c(\"scales\", \"farver\", \"labeling\"), repos=\"https://cloud.r-project.org\")"\n\
-  \n\
-  echo "📦 Installing CRAN packages..."\n\
-  Rscript -e "install.packages(c(\"ggplot2\", \"dplyr\", \"vegan\"), repos=\"https://cloud.r-project.org\", dependencies=TRUE)"\n\
-  \n\
-  echo "📦 Installing Bioconductor packages..."\n\
-  Rscript -e "BiocManager::install(c(\"dada2\", \"phyloseq\"), ask=FALSE, update=FALSE)"\n\
-  \n\
-  # Verify installation\n\
-  if Rscript -e "library(dada2); library(phyloseq); library(ggplot2)" 2>/dev/null; then\n\
-    echo "✅ R packages installed successfully"\n\
-  else\n\
-    echo "❌ Failed to install R packages"\n\
-    echo "Attempting to check what went wrong..."\n\
-    Rscript -e "cat(\"Installed packages:\n\"); cat(paste(rownames(installed.packages()), collapse=\", \"))"\n\
+  echo "Installing BiocManager..."\n\
+  if ! Rscript -e "install.packages(\"BiocManager\", repos=\"https://cloud.r-project.org\")"; then\n\
+    echo "❌ Failed to install BiocManager"\n\
     exit 1\n\
   fi\n\
+  \n\
+  echo "Installing MINIMAL core packages only..."\n\
+  # Install ONLY the absolute essentials first - NO PARALLEL to avoid lock conflicts\n\
+  if ! Rscript -e "BiocManager::install(\"dada2\", ask=FALSE, update=FALSE)"; then\n\
+    echo "❌ Failed to install dada2"\n\
+    exit 1\n\
+  fi\n\
+  \n\
+  if ! Rscript -e "install.packages(\"ggplot2\", repos=\"https://cloud.r-project.org\")"; then\n\
+    echo "❌ Failed to install ggplot2"\n\
+    exit 1\n\
+  fi\n\
+  \n\
+  # Verify installation worked\n\
+  if ! Rscript -e "library(dada2)"; then\n\
+    echo "❌ dada2 installation verification failed"\n\
+    exit 1\n\
+  fi\n\
+  \n\
+  echo "✅ Core packages installed successfully!"\n\
+  echo "📝 Additional packages will be installed on-demand during first pipeline run"\n\
 fi\n\
 \n\
 echo "🎯 Starting worker process..."\n\
