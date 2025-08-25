@@ -1,3 +1,5 @@
+<html lang="pt-br">
+<body>
 <!-- LEFT MENU -->
  <!--LOGOUT MODAL-->
     <div id="logout_modal" class="modal fade" tabindex="-1" aria-hidden="true">
@@ -16,7 +18,7 @@
                         administrator-provided email and password</span>.
                     </p>
                     <div class="btn-logout-modal-group">
-                        <button onclick="ButtonGoTo('login.html')" type="button" class="btn btn-primary btn-logout-modal-confirm">CONFIRM</button>
+                        <button  type="button" onclick="logoutUser()" class="btn btn-primary btn-logout-modal-confirm">CONFIRM</button>
                         <button type="button" class="btn btn-outline-secondary btn-logout-modal-cancel" data-bs-dismiss="modal"
                         aria-label="Close">CANCEL</button>
                     </div>
@@ -36,6 +38,6 @@
         <button onclick="ButtonGoTo('./')" type="button" class="btn btn-outline-light btn-left-menu"><span class="material-symbols-rounded btn_left_menu_icon btn-icon">eco</span>ABOUT</button>
 
         <button type="button" id="btn-left-menu-logout" class="btn btn-outline-light btn-left-menu" data-bs-toggle="modal" data-bs-target="#logout_modal"><span class="material-symbols-rounded btn_left_menu_icon btn-icon">door_open</span>LOGOUT</button>
-        
-
     </aside>
+</body>
+</html>

@@ -52,6 +52,9 @@
     --decoration-colorRGBA1: rgba(60, 105, 96, 0.15);
     --decoration-colorRGBA2: rgba(64, 135, 87, 0.3);
     --decoration-colorRGBA3: rgba(248, 255, 250, 0.3);
+    --decoration-shadow-color0: rgba(43, 55, 61, 0.5);
+    --decoration-light-color0: rgba(147,228,77,0.8);
+    --decoration-light-color1: rgba(67,179,71,0.8);
     --decoration-complementary-colorRGBA0: rgba(138, 45, 41, 0.2);
     --decoration-complementary-colorRGBA1: rgba(170, 82, 60, 0.2);
 
@@ -75,6 +78,10 @@ body{
 
     overflow-x: hidden;
     overflow-y: hidden;
+}
+
+.table>:not(caption)>*>*{
+    background-color: #F8FFFA;
 }
 
 h1, .main-title{

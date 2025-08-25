@@ -50,8 +50,8 @@
                     <h1 class="login-welcome-message">WELCOME BACK</h1>
                     <form action="/auth/login" class="login-form was-validated" novalidate>
                         <div class="form-input-area">
-                            <label for="user" class="login-input-label form-label">E-MAIL</label>
-                            <input type="email" name="user" id="user" class="login-text-input form-control" placeholder="E-MAIL" required>
+                            <label for="temail" class="login-input-label form-label">E-MAIL</label>
+                            <input type="email" name="temail" id="temail" class="login-text-input form-control" placeholder="E-MAIL" required>
                         </div>
                         <div class="form-input-area">
                             <label for="tpassword" class="login-input-label form-label">PASSWORD</label>
@@ -61,12 +61,11 @@
                                 data-bs-content="This system does not allow users to create their own passwords. If you forgot or don’t know yours,
                                 please reach out to the administrator responsible for your account.">Don't know your password?</button>
                         </div>
-                        <button type="button" class="btn btn-primary btn-lg"><span class="material-symbols-rounded btn-login-icon">login</span>LOG IN</button>
+                        <button type="button" onclick="loginUser()" class="btn btn-primary btn-lg"><span class="material-symbols-rounded btn-login-icon">login</span>LOGIN</button>
                     </form>
                     
                 </span>
             </div>
-            <table id=""></table>
         </main>
     <!--#region TRANSLATE WRAPPER-->
         <!--<div class="gtranslate_wrapper"></div>
@@ -86,8 +85,17 @@
     <!--===================================================================================================================================-->
     <!--#endregion-->
     <script>
-        const popoverTriggerList = document.querySelectorAll('[data-bs-toggle="popover"]')
-        const popoverList = [...popoverTriggerList].map(popoverTriggerEl => new bootstrap.Popover(popoverTriggerEl))
+        const popoverTriggerList = document.querySelectorAll('[data-bs-toggle="popover"]');
+        const popoverList = [...popoverTriggerList].map(popoverTriggerEl => new bootstrap.Popover(popoverTriggerEl));
+
+        function loginUser(){
+            const email = document.getElementById("temail").value;
+            const password = document.getElementById("tpassword").value;
+            if(localStorage.getItem("logged") === 'false'){
+                localStorage.setItem("logged",'true');
+                window.location.href = "../html/index.html";
+            }
+        }
     </script>    
 </body>
 </html>

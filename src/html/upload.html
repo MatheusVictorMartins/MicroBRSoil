@@ -209,13 +209,13 @@
     }   else if(value == "iontorrent"){
             html = `<div class="iontorrent-fileinputs">
                       <div class="upload-inputfile">
-                      <label for="formFile" class="form-label text-input-label">CHOOSE A BARCODES(.fa) FILE</label>
-                      <input class="form-control dropfile-input" type="file" id="formFile">
+                      <label for="formFile0" class="form-label text-input-label">CHOOSE A BARCODES(.fa) FILE</label>
+                      <input class="form-control dropfile-input" type="file" id="formFile0">
                       </div>
 
                       <div class="upload-inputfile">
-                      <label for="formFile" class="form-label text-input-label">CHOOSE A FASTQ(.fastq) FILE</label>
-                      <input class="form-control dropfile-input" type="file" id="formFile">
+                      <label for="formFile1" class="form-label text-input-label">CHOOSE A FASTQ(.fastq) FILE</label>
+                      <input class="form-control dropfile-input" type="file" id="formFile1">
                       </div>
                     </div>`;
         }
@@ -228,5 +228,7 @@
   analysis_select.addEventListener("change",controlUploadInputs);
 
   </script>
+  <!--Auth user script(placeholder)-->
+  <script src="../static/js/auth_user.js"></script>
 </body>
 </html>
