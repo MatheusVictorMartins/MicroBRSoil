@@ -125,10 +125,31 @@ const illuminaUpload = multer({
   storage: createStorage('illumina'),
   limits: {
     fileSize: 2 * 1024 * 1024 * 1024, // 2GB per file
-    files: 20 // Maximum 20 files
+    files: 50, // Maximum 50 files (increased from 20)
+    fieldSize: 100 * 1024 * 1024, // 100MB for field data
+    fieldNameSize: 100, // Max field name size
+    fieldSize: 100 * 1024 * 1024, // Max field value size
+    fields: 1000 // Max number of non-file fields
   }
 });
-router.post('/illumina', illuminaUpload.array('files'), async (req, res) => {
+router.post('/illumina', illuminaUpload.array('files'), (error, req, res, next) => {
+  if (error instanceof multer.MulterError) {
+    console.error('Multer error:', error);
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ error: 'File too large. Maximum file size is 2GB.' });
+    } else if (error.code === 'LIMIT_FILE_COUNT') {
+      return res.status(413).json({ error: 'Too many files. Maximum is 50 files.' });
+    } else if (error.code === 'LIMIT_FIELD_VALUE') {
+      return res.status(413).json({ error: 'Field value too large.' });
+    } else {
+      return res.status(400).json({ error: 'Upload error: ' + error.message });
+    }
+  } else if (error) {
+    console.error('Upload error:', error);
+    return res.status(500).json({ error: 'Upload failed: ' + error.message });
+  }
+  next();
+}, async (req, res) => {
   await handleUpload(req, res, 'illumina');
 });
 
@@ -137,10 +158,31 @@ const iontorrentUpload = multer({
   storage: createStorage('iontorrent'),
   limits: {
     fileSize: 2 * 1024 * 1024 * 1024, // 2GB per file
-    files: 20 // Maximum 20 files
+    files: 50, // Maximum 50 files (increased from 20)
+    fieldSize: 100 * 1024 * 1024, // 100MB for field data
+    fieldNameSize: 100, // Max field name size
+    fieldSize: 100 * 1024 * 1024, // Max field value size
+    fields: 1000 // Max number of non-file fields
   }
 });
-router.post('/iontorrent', iontorrentUpload.array('files'), async (req, res) => {
+router.post('/iontorrent', iontorrentUpload.array('files'), (error, req, res, next) => {
+  if (error instanceof multer.MulterError) {
+    console.error('Multer error:', error);
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ error: 'File too large. Maximum file size is 2GB.' });
+    } else if (error.code === 'LIMIT_FILE_COUNT') {
+      return res.status(413).json({ error: 'Too many files. Maximum is 50 files.' });
+    } else if (error.code === 'LIMIT_FIELD_VALUE') {
+      return res.status(413).json({ error: 'Field value too large.' });
+    } else {
+      return res.status(400).json({ error: 'Upload error: ' + error.message });
+    }
+  } else if (error) {
+    console.error('Upload error:', error);
+    return res.status(500).json({ error: 'Upload failed: ' + error.message });
+  }
+  next();
+}, async (req, res) => {
   await handleUpload(req, res, 'iontorrent');
 });
 
@@ -149,10 +191,31 @@ const itsUpload = multer({
   storage: createStorage('its'),
   limits: {
     fileSize: 2 * 1024 * 1024 * 1024, // 2GB per file
-    files: 20 // Maximum 20 files
+    files: 50, // Maximum 50 files (increased from 20)
+    fieldSize: 100 * 1024 * 1024, // 100MB for field data
+    fieldNameSize: 100, // Max field name size
+    fieldSize: 100 * 1024 * 1024, // Max field value size
+    fields: 1000 // Max number of non-file fields
   }
 });
-router.post('/its', itsUpload.array('files'), async (req, res) => {
+router.post('/its', itsUpload.array('files'), (error, req, res, next) => {
+  if (error instanceof multer.MulterError) {
+    console.error('Multer error:', error);
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ error: 'File too large. Maximum file size is 2GB.' });
+    } else if (error.code === 'LIMIT_FILE_COUNT') {
+      return res.status(413).json({ error: 'Too many files. Maximum is 50 files.' });
+    } else if (error.code === 'LIMIT_FIELD_VALUE') {
+      return res.status(413).json({ error: 'Field value too large.' });
+    } else {
+      return res.status(400).json({ error: 'Upload error: ' + error.message });
+    }
+  } else if (error) {
+    console.error('Upload error:', error);
+    return res.status(500).json({ error: 'Upload failed: ' + error.message });
+  }
+  next();
+}, async (req, res) => {
   await handleUpload(req, res, 'its');
 });
 
@@ -161,7 +224,11 @@ const legacyUpload = multer({
   storage: createStorage('default'),
   limits: {
     fileSize: 2 * 1024 * 1024 * 1024, // 2GB per file
-    files: 20 // Maximum 20 files
+    files: 50, // Maximum 50 files (increased from 20)
+    fieldSize: 100 * 1024 * 1024, // 100MB for field data
+    fieldNameSize: 100, // Max field name size
+    fieldSize: 100 * 1024 * 1024, // Max field value size
+    fields: 1000 // Max number of non-file fields
   }
 });
 router.post('/file', legacyUpload.single('file'), async (req, res) => {
