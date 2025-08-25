@@ -66,7 +66,7 @@ services:
   worker:
     build:
       context: ./backend
-      dockerfile: Dockerfile.worker
+      dockerfile: ${WORKER_DOCKERFILE:-Dockerfile.worker}
     container_name: microbrsoil-worker
     env_file:
       - .env
@@ -88,7 +88,7 @@ services:
       - ./mock_results_csv:/app/mock_results_csv
       - ./pipeline-r:/app/pipeline-r:ro
       - ./db:/app/db:ro
-    command: ["node", "src/workers/pipeline.worker.js"]
+      - r-packages:/usr/local/lib/R/site-library
     networks:
       - backnet
 
@@ -109,6 +109,7 @@ services:
 volumes:
   db-data:
   redis-data:
+  r-packages:
 
 networks:
   backnet:

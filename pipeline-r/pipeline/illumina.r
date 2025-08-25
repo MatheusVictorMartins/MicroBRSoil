@@ -1,4 +1,4 @@
-run_dada2_pipeline <- function(path1, path2) {
+run_dada2_pipeline <- function(path1, path2 = "/app/pipeline-r/references/silva_nr99_v138.1_train_set.fa", outdir = NULL, type = "illumina") {
   # Carregar pacotes necessários
   library(dada2)
   library(phyloseq)
@@ -12,8 +12,8 @@ run_dada2_pipeline <- function(path1, path2) {
   fnRs <- sort(list.files(path, pattern = "_R2_001.fastq.gz", full.names = TRUE))
   sample.names <- sapply(strsplit(basename(fnFs), "_"), `[`, 1)
 
-  # Diretório raiz de resultados
-  result_path <- file.path(getwd(), "resultados")
+  # Diretório raiz de resultados  
+  result_path <- if (!is.null(outdir)) outdir else file.path(getwd(), "resultados")
   dir.create(result_path, showWarnings = FALSE)
 
   # Subpasta de arquivos filtrados

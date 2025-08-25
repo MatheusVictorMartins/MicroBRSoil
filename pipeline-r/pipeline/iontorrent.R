@@ -1,6 +1,12 @@
-run_dada2_pipeline <- function(path1, barcodes_path) {
+run_dada2_pipeline <- function(path1, barcodes_path = "/app/pipeline-r/barcodes/barcodes_16S.fa", outdir = NULL, type = "iontorrent") {
   path <- dirname(path1)
-  log_file <- file.path( "log.txt")
+  
+  # Set working directory to outdir if provided
+  if (!is.null(outdir)) {
+    setwd(outdir)
+  }
+  
+  log_file <- file.path(getwd(), "log.txt")
 
   tryCatch({
     #  Carregando pacotes

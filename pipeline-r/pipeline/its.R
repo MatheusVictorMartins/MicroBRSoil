@@ -1,11 +1,11 @@
-run_pipeline_its <- function(path1, path2) {
+run_pipeline_its <- function(path1, path2 = "/app/pipeline-r/references/sh_general_release_dynamic_19.02.2025.fasta", outdir = NULL, type = "its") {
   library(dada2)
   library(phyloseq)
   library(ggplot2)
   library(vegan)
 
   input_path <- dirname(path1)
-  root_path <- normalizePath(".")
+  root_path <- if (!is.null(outdir)) outdir else normalizePath(".")
 
   filtered_path <- file.path(root_path, "filtered")
   output_path <- file.path(root_path, "output")

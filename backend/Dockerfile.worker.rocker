@@ -1,0 +1,73 @@
+# Alternative Dockerfile using Rocker as base (more reliable for R packages)
+FROM rocker/r-ver:4.3.2
+
+ENV DEBIAN_FRONTEND=noninteractive
+WORKDIR /app
+
+# Install Node.js on the R-based image
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+  && apt-get install -y nodejs
+
+# Install system dependencies for R packages
+RUN apt-get update && apt-get install -y \
+    libcurl4-openssl-dev \
+    libssl-dev \
+    libxml2-dev \
+    libgit2-dev \
+    libfontconfig1-dev \
+    libharfbuzz-dev \
+    libfribidi-dev \
+    libfreetype6-dev \
+    libpng-dev \
+    libtiff5-dev \
+    libjpeg-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy package files and install Node dependencies
+COPY package*.json ./
+RUN npm ci
+
+# Copy application source
+COPY . .
+
+# Create startup script with better R package management
+RUN echo '#!/bin/bash\n\
+set -e\n\
+\n\
+echo "🚀 Starting MicroBRSoil Worker"\n\
+echo "R version: $(R --version | head -1)"\n\
+echo "Node version: $(node --version)"\n\
+\n\
+# Check if dada2 is available\n\
+if Rscript -e "library(dada2)" 2>/dev/null; then\n\
+  echo "✅ R packages are ready"\n\
+else\n\
+  echo "⚠️ Installing R packages..."\n\
+  \n\
+  # Install in proper order to avoid dependency issues\n\
+  echo "Installing BiocManager..."\n\
+  Rscript -e "install.packages(\"BiocManager\", repos=\"https://cloud.r-project.org\")"\n\
+  \n\
+  echo "Installing basic dependencies..."\n\
+  Rscript -e "install.packages(c(\"scales\", \"farver\", \"labeling\", \"colorspace\", \"munsell\", \"RColorBrewer\", \"viridisLite\"), repos=\"https://cloud.r-project.org\")"\n\
+  \n\
+  echo "Installing ggplot2 and related..."\n\
+  Rscript -e "install.packages(c(\"ggplot2\", \"dplyr\", \"vegan\"), repos=\"https://cloud.r-project.org\")"\n\
+  \n\
+  echo "Installing Bioconductor packages..."\n\
+  Rscript -e "BiocManager::install(c(\"dada2\", \"phyloseq\"), ask=FALSE, update=FALSE)"\n\
+  \n\
+  # Verify installation\n\
+  if Rscript -e "library(dada2); library(phyloseq); library(ggplot2); cat(\"✅ All packages loaded successfully\n\")" 2>/dev/null; then\n\
+    echo "✅ R packages installed and verified successfully"\n\
+  else\n\
+    echo "❌ Package installation or verification failed"\n\
+    exit 1\n\
+  fi\n\
+fi\n\
+\n\
+echo "🎯 Starting worker process..."\n\
+exec "$@"' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["npm", "run", "worker"]
