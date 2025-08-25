@@ -9,9 +9,11 @@
     "dev": "node src/index.js",
     "worker": "node src/workers/pipeline.worker.js",
     "test-queue": "node test-queue.js",
-    "test-modules": "node test-modules.js"
+    "test-modules": "node test-modules.js",
+    "test-upload": "node test-upload-endpoints.js"
   },
   "dependencies": {
+    "axios": "^1.6.0",
     "bcrypt": "^5.1.0",
     "bullmq": "^5.8.3",
     "callsite": "^1.0.0",
@@ -19,6 +21,7 @@
     "csv-parser": "^3.2.0",
     "dotenv": "^16.0.3",
     "express": "^4.19.2",
+    "form-data": "^4.0.0",
     "ioredis": "^5.3.3",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",

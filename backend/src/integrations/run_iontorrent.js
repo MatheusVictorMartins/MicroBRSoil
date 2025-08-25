@@ -1,41 +1,41 @@
 const path = require("path");
 const R = require("r-integration");
 
-async function runITSPipeline(fastqPath, outputDir = null) {
+async function runIonTorrentPipeline(fastqPath, outputDir = null) {
   try {
-    console.log('Starting ITS pipeline...');
+    console.log('Starting IonTorrent pipeline...');
     console.log(`Input: ${fastqPath}`);
     console.log(`Output: ${outputDir || 'default'}`);
 
     const fastq = path.resolve(fastqPath).replace(/\\/g, "/");
     
     // Use Docker path for R script
-    const scriptPath = "/app/pipeline-r/pipeline/its.R";
+    const scriptPath = "/app/pipeline-r/pipeline/iontorrent.R";
 
     console.log(`📜 R Script: ${scriptPath}`);
 
     const result = await R.callMethod(
       scriptPath,
-      "run_pipeline_its",
+      "run_dada2_pipeline",
       {
         path1: fastq,
         outdir: outputDir || "/app/results",
-        type: "its"
+        type: "iontorrent"
       }
     );
 
-    console.log('✅ ITS pipeline completed successfully');
+    console.log('✅ IonTorrent pipeline completed successfully');
     return {
       success: true,
-      type: 'its',
+      type: 'iontorrent',
       inputFile: fastq,
       outputDir: outputDir,
       result: result
     };
   } catch (error) {
-    console.error("❌ Error executing ITS pipeline:", error);
+    console.error("❌ Error executing IonTorrent pipeline:", error);
     throw error;
   }
 }
 
-module.exports = runITSPipeline;
+module.exports = runIonTorrentPipeline;

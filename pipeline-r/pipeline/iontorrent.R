@@ -2,7 +2,6 @@ run_dada2_pipeline <- function(path1, barcodes_path) {
   path <- dirname(path1)
   log_file <- file.path( "log.txt")
 
-
   tryCatch({
     #  Carregando pacotes
     library(dada2)

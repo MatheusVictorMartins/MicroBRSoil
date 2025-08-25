@@ -74,7 +74,7 @@ body{
     background-color: var(--background-color0);
 
     overflow-x: hidden;
-    overflow-y: hidden;
+    overflow-y: auto;
 }
 
 h1, .main-title{
@@ -84,8 +84,8 @@ h1, .main-title{
 }
 
 .layout{
-    display: flex
-    
+    display: flex;
+    min-height: 100vh;
 }
 
 .basic-frame{
@@ -97,8 +97,10 @@ h1, .main-title{
 }
 
 .main-content{
-    padding: 5.25vh 2.6vw 0 2.6vw;
+    padding: 5.25vh 2.6vw 2.6vw 2.6vw;
     max-width: 85vw;
+    min-height: 100vh;
+    box-sizing: border-box;
 }
 
 .text-input-label{

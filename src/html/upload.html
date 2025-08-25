@@ -70,12 +70,46 @@
             <label for="upload_select" class="form-label text-input-label">SELECT THE ANALYSIS TYPE</label>
             <select id="upload_select" class="form-select" aria-label="Default select example">
               <option selected disabled>Choose an analysis...</option>
-              <option value="ilumina">Ilumina - FASTQ(.fastq)</option>
+              <option value="illumina">Illumina - FASTQ(.fastq)</option>
               <option value="iontorrent">Iontorrent - BARCODES(.fa) + FASTQ(.fastq)</option>
               <option value="its">ITS - FASTQ(.fastq)</option>
             </select>
           </div>
-          <div id="inputfile_dropdown"></div>
+          
+          <!-- Unified Upload Area -->
+          <div id="unified-upload-area" class="upload-area-container" style="display: none;">
+            <form id="unifiedUploadForm" class="upload-form">
+              <div class="upload-inputfile">
+                <label class="form-label text-input-label">UPLOAD FILES</label>
+                <div class="file-drop-zone" id="fileDropZone">
+                  <div class="drop-zone-content">
+                    <span class="material-symbols-rounded upload-icon">cloud_upload</span>
+                    <h4>Drag and drop files here</h4>
+                    <p>or click to browse files</p>
+                    <p class="file-types" id="acceptedFileTypes">Accepted file types will be shown here</p>
+                  </div>
+                  <input class="form-control dropfile-input" type="file" name="files" id="fileInput" multiple required style="display: none;" />
+                </div>
+                <div class="form-text" id="uploadHelpText">Select files for analysis</div>
+              </div>
+              
+              <div class="selected-files" id="selectedFiles"></div>
+              
+              <div class="upload-progress" id="uploadProgress" style="display: none;">
+                <div class="progress">
+                  <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                </div>
+                <div class="progress-text">0%</div>
+              </div>
+              
+              <div class="upload-status" id="uploadStatus"></div>
+              
+              <button type="submit" class="btn btn-primary upload-btn" id="uploadBtn" disabled>
+                <span class="material-symbols-rounded">upload</span>
+                Upload Files
+              </button>
+            </form>
+          </div>
         </div>
         <div class="dashboard-table table-responsive basic-frame">
           <table class="table">
@@ -195,37 +229,312 @@
 
   <script>
     const analysis_select = document.getElementById("upload_select");
-    const input_file = document.getElementById("inputfile_dropdown");
+    const uploadArea = document.getElementById("unified-upload-area");
+    const fileInput = document.getElementById("fileInput");
+    const fileDropZone = document.getElementById("fileDropZone");
+    const uploadForm = document.getElementById("unifiedUploadForm");
+    const uploadBtn = document.getElementById("uploadBtn");
+    const acceptedFileTypes = document.getElementById("acceptedFileTypes");
+    const uploadHelpText = document.getElementById("uploadHelpText");
 
-    function controlUploadInputs(){
-    let html = "";
-    const value = analysis_select.value;
+    // Upload state management
+    let currentUpload = {
+      isUploading: false,
+      progress: 0,
+      selectedPipeline: null
+    };
 
-    if(value == "ilumina" || value == "its"){
-        html = `<div class="upload-inputfile ilumina-inputfile">
-                <label for="formFile" class="form-label text-input-label">CHOOSE A FASTQ(.fastq) FILE</label>
-                <input class="form-control dropfile-input" type="file" id="formFile">
-                </div>`;
-    }   else if(value == "iontorrent"){
-            html = `<div class="iontorrent-fileinputs">
-                      <div class="upload-inputfile">
-                      <label for="formFile" class="form-label text-input-label">CHOOSE A BARCODES(.fa) FILE</label>
-                      <input class="form-control dropfile-input" type="file" id="formFile">
-                      </div>
+    // Pipeline configurations
+    const pipelineConfigs = {
+      illumina: {
+        accept: ".fastq,.fq,.fastq.gz,.fa",
+        helpText: "Select FASTQ files for Illumina sequencing analysis",
+        fileTypes: "FASTQ (.fastq, .fq, .fastq.gz), FASTA (.fa)",
+        endpoint: "/upload/illumina"
+      },
+      iontorrent: {
+        accept: ".fastq,.fq,.fastq.gz,.fa",
+        helpText: "Select FASTQ and BARCODE files for IonTorrent analysis",
+        fileTypes: "FASTQ (.fastq, .fq, .fastq.gz), FASTA (.fa)",
+        endpoint: "/upload/iontorrent"
+      },
+      its: {
+        accept: ".fastq,.fq,.fastq.gz,.fa",
+        helpText: "Select FASTQ files for ITS analysis",
+        fileTypes: "FASTQ (.fastq, .fq, .fastq.gz), FASTA (.fa)",
+        endpoint: "/upload/its"
+      }
+    };
 
-                      <div class="upload-inputfile">
-                      <label for="formFile" class="form-label text-input-label">CHOOSE A FASTQ(.fastq) FILE</label>
-                      <input class="form-control dropfile-input" type="file" id="formFile">
-                      </div>
-                    </div>`;
-        }
-          else{
-            html = "";
+    function handlePipelineSelection() {
+      const selectedPipeline = analysis_select.value;
+      
+      if (!selectedPipeline || selectedPipeline === "Choose an analysis...") {
+        uploadArea.style.display = "none";
+        currentUpload.selectedPipeline = null;
+        return;
+      }
+
+      const config = pipelineConfigs[selectedPipeline];
+      if (!config) return;
+
+      // Update pipeline selection
+      currentUpload.selectedPipeline = selectedPipeline;
+      
+      // Update UI elements
+      fileInput.accept = config.accept;
+      acceptedFileTypes.textContent = config.fileTypes;
+      uploadHelpText.textContent = config.helpText;
+      uploadBtn.innerHTML = `<span class="material-symbols-rounded">upload</span> Upload ${selectedPipeline.toUpperCase()}`;
+      
+      // Show upload area
+      uploadArea.style.display = "block";
+      
+      // Reset form
+      resetForm();
+    }
+
+    function resetForm() {
+      fileInput.value = "";
+      document.getElementById("selectedFiles").innerHTML = "";
+      uploadBtn.disabled = true;
+      showStatus("", "");
+      showProgress(false);
+    }
+
+    // Drag and drop functionality
+    function initializeDragAndDrop() {
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        fileDropZone.addEventListener(eventName, preventDefaults, false);
+      });
+
+      function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+
+      ['dragenter', 'dragover'].forEach(eventName => {
+        fileDropZone.addEventListener(eventName, () => {
+          fileDropZone.classList.add('drag-active');
+        }, false);
+      });
+
+      ['dragleave', 'drop'].forEach(eventName => {
+        fileDropZone.addEventListener(eventName, () => {
+          fileDropZone.classList.remove('drag-active');
+        }, false);
+      });
+
+      fileDropZone.addEventListener('drop', handleDrop, false);
+      fileDropZone.addEventListener('click', () => fileInput.click());
+    }
+
+    function handleDrop(e) {
+      const dt = e.dataTransfer;
+      const files = dt.files;
+      
+      // Update file input with dropped files
+      fileInput.files = files;
+      handleFileSelection();
+    }
+
+    function handleFileSelection() {
+      const files = fileInput.files;
+      
+      if (files.length === 0) {
+        uploadBtn.disabled = true;
+        document.getElementById("selectedFiles").innerHTML = "";
+        return;
+      }
+
+      uploadBtn.disabled = false;
+      displaySelectedFiles(files);
+    }
+
+    function displaySelectedFiles(files) {
+      const selectedFilesDiv = document.getElementById('selectedFiles');
+      
+      if (files.length === 0) {
+        selectedFilesDiv.innerHTML = '';
+        return;
+      }
+      
+      let html = '<div class="mt-3"><strong>Selected Files:</strong><ul class="list-group mt-2">';
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const size = formatFileSize(file.size);
+        const icon = getFileIcon(file.name);
+        html += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                   <span><span class="material-symbols-rounded file-icon">${icon}</span> ${file.name}</span>
+                   <span class="badge bg-secondary">${size}</span>
+                 </li>`;
+      }
+      
+      html += '</ul></div>';
+      selectedFilesDiv.innerHTML = html;
+    }
+
+    function getFileIcon(filename) {
+      const ext = filename.split('.').pop().toLowerCase();
+      switch(ext) {
+        case 'fastq':
+        case 'fq':
+          return 'description';
+        case 'gz':
+          return 'folder_zip';
+        case 'fa':
+        case 'fasta':
+          return 'code';
+        default:
+          return 'insert_drive_file';
+      }
+    }
+
+    // Upload handler function
+    async function handleUpload(event) {
+      event.preventDefault();
+      
+      if (currentUpload.isUploading || !currentUpload.selectedPipeline) return;
+
+      const files = fileInput.files;
+
+      if (!files || files.length === 0) {
+        showStatus('Please select at least one file', 'error');
+        return;
+      }
+
+      const formData = new FormData();
+      
+      // Add all files to FormData
+      for (let i = 0; i < files.length; i++) {
+        formData.append('files', files[i]);
+      }
+
+      const config = pipelineConfigs[currentUpload.selectedPipeline];
+      if (!config) {
+        showStatus('Invalid analysis type', 'error');
+        return;
+      }
+
+      try {
+        currentUpload.isUploading = true;
+        uploadBtn.disabled = true;
+        uploadBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Uploading...';
+
+        showProgress(true);
+        showStatus(`Starting upload of ${files.length} file(s)...`, 'info');
+
+        // Create XMLHttpRequest for progress tracking
+        const xhr = new XMLHttpRequest();
+        
+        // Progress tracking
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            const percentComplete = (event.loaded / event.total) * 100;
+            updateProgress(percentComplete);
           }
-        input_file.innerHTML = html;
-  }
-  controlUploadInputs();
-  analysis_select.addEventListener("change",controlUploadInputs);
+        });
+
+        // Upload completion
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            const result = JSON.parse(xhr.responseText);
+            showStatus(`Upload successful! ${result.filesUploaded} file(s) uploaded. ID: ${result.runId}`, 'success');
+            console.log('Upload result:', result);
+            
+            // Reset form
+            resetForm();
+          } else {
+            const error = JSON.parse(xhr.responseText);
+            showStatus(`Upload error: ${error.error || 'Unknown error'}`, 'error');
+          }
+        });
+
+        // Error handling
+        xhr.addEventListener('error', () => {
+          showStatus('Connection error during upload', 'error');
+        });
+
+        // Send request
+        xhr.open('POST', config.endpoint);
+        
+        // Add auth header if token exists
+        const token = localStorage.getItem('token');
+        if (token) {
+          xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        }
+        
+        xhr.send(formData);
+
+      } catch (error) {
+        console.error('Upload error:', error);
+        showStatus(`Upload error: ${error.message}`, 'error');
+      } finally {
+        currentUpload.isUploading = false;
+        uploadBtn.disabled = false;
+        uploadBtn.innerHTML = `<span class="material-symbols-rounded">upload</span> Upload ${currentUpload.selectedPipeline.toUpperCase()}`;
+        
+        setTimeout(() => {
+          if (!currentUpload.isUploading) {
+            showProgress(false);
+            updateProgress(0);
+          }
+        }, 2000);
+      }
+    }
+
+    // Helper functions
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    function showProgress(show) {
+      const progressDiv = document.getElementById('uploadProgress');
+      if (progressDiv) {
+        progressDiv.style.display = show ? 'block' : 'none';
+      }
+    }
+
+    function updateProgress(percent) {
+      const progressBar = document.querySelector('.progress-bar');
+      const progressText = document.querySelector('.progress-text');
+      
+      if (progressBar) {
+        progressBar.style.width = `${percent}%`;
+      }
+      if (progressText) {
+        progressText.textContent = `${Math.round(percent)}%`;
+      }
+    }
+
+    function showStatus(message, type) {
+      const statusDiv = document.getElementById('uploadStatus');
+      if (statusDiv) {
+        statusDiv.textContent = message;
+        statusDiv.className = `upload-status ${type}`;
+        
+        // Auto-hide success messages after 5 seconds
+        if (type === 'success') {
+          setTimeout(() => {
+            statusDiv.textContent = '';
+            statusDiv.className = 'upload-status';
+          }, 5000);
+        }
+      }
+    }
+
+    // Initialize
+    analysis_select.addEventListener("change", handlePipelineSelection);
+    fileInput.addEventListener("change", handleFileSelection);
+    uploadForm.addEventListener("submit", handleUpload);
+    
+    // Initialize drag and drop
+    initializeDragAndDrop();
 
   </script>
 </body>

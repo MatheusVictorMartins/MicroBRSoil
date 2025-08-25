@@ -8,7 +8,6 @@ const { v4: uuidv4 } = require('uuid');
 
 // Use dynamic paths that work in both local development and Docker
 const PIPELINE_FUNCTIONS_PATH = '/app/db/db_functions/pipeline_functions';
-
 const DB_PATH = '/app/db/db';
 
 const { createPipelineRun, updatePipelineRunStatus } = require(PIPELINE_FUNCTIONS_PATH);
@@ -18,29 +17,57 @@ const router = express.Router();
 const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(__dirname, '../../uploads');
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOADS_DIR),
-  filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
-});
-const upload = multer({ storage });
+// Helper function to create upload-specific directory
+const createUploadDirectory = (uploadId) => {
+  const uploadDir = path.join(UPLOADS_DIR, uploadId);
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+  return uploadDir;
+};
 
-router.post('/file', upload.single('file'), async (req, res) => {
+// Configure multer storage to use upload_id directory
+const createStorage = (pipelineType) => {
+  return multer.diskStorage({
+    destination: (req, file, cb) => {
+      const uploadId = req.uploadId || uuidv4();
+      req.uploadId = uploadId;
+      const uploadDir = createUploadDirectory(uploadId);
+      cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+      // Keep original filename for easier identification
+      cb(null, file.originalname);
+    },
+  });
+};
+
+// Common upload handler function
+async function handleUpload(req, res, pipelineType) {
   try {
-    const file = req.file;
-    if (!file) return res.status(400).json({ error: 'No file uploaded' });
+    const files = req.files || [req.file];
+    if (!files || files.length === 0) return res.status(400).json({ error: 'No files uploaded' });
 
-    const runId = uuidv4();
-    const filePath = path.join(UPLOADS_DIR, file.filename);
-    const pipelineType = req.body.pipelineType || 'default';
+    const runId = req.uploadId;
     const userId = req.user?.id || null;
+    
+    // Create array of file info
+    const uploadedFiles = files.map(file => ({
+      name: file.originalname,
+      path: file.path,
+      size: file.size
+    }));
+
+    // Use the first file path as the main input path (for compatibility)
+    const mainFilePath = files[0].path;
 
     // Store in fakeDB for compatibility
     pipelines[runId] = {
       id: runId,
       status: 'queued',
       createdAt: new Date().toISOString(),
-      file: file.filename,
-      filePath,
+      files: uploadedFiles,
+      filePath: mainFilePath, // Keep for backward compatibility
       pipelineType,
       logs: [],
     };
@@ -50,14 +77,17 @@ router.post('/file', upload.single('file'), async (req, res) => {
       runId,
       userId,
       pipelineType,
-      inputFilePath: filePath
+      inputFilePath: mainFilePath
     });
 
     const job = await addPipelineJob({
       runId,
-      fastqPath: filePath,
+      fastqPath: mainFilePath,
       pipelineType,
-      meta: { uploadedBy: userId || 'anonymous' },
+      meta: { 
+        uploadedBy: userId || 'anonymous',
+        allFiles: uploadedFiles
+      },
     });
 
     pipelines[runId].jobId = job.id;
@@ -75,12 +105,68 @@ router.post('/file', upload.single('file'), async (req, res) => {
       success: true,
       runId, 
       jobId: job.id,
-      message: 'File uploaded and pipeline job queued successfully'
+      pipelineType,
+      uploadPath: `uploads/${runId}`,
+      filesUploaded: uploadedFiles.length,
+      files: uploadedFiles,
+      message: `${uploadedFiles.length} file(s) uploaded and ${pipelineType} pipeline job queued successfully`
     });
   } catch (err) {
-    console.error('upload error', err);
-    res.status(500).json({ error: 'upload failed', details: err.message });
+    console.error(`${pipelineType} upload error`, err);
+    res.status(500).json({ 
+      error: `${pipelineType} upload failed`, 
+      details: err.message 
+    });
   }
+}
+
+// Illumina endpoint
+const illuminaUpload = multer({ 
+  storage: createStorage('illumina'),
+  limits: {
+    fileSize: 2 * 1024 * 1024 * 1024, // 2GB per file
+    files: 20 // Maximum 20 files
+  }
+});
+router.post('/illumina', illuminaUpload.array('files'), async (req, res) => {
+  await handleUpload(req, res, 'illumina');
+});
+
+// IonTorrent endpoint  
+const iontorrentUpload = multer({ 
+  storage: createStorage('iontorrent'),
+  limits: {
+    fileSize: 2 * 1024 * 1024 * 1024, // 2GB per file
+    files: 20 // Maximum 20 files
+  }
+});
+router.post('/iontorrent', iontorrentUpload.array('files'), async (req, res) => {
+  await handleUpload(req, res, 'iontorrent');
+});
+
+// ITS endpoint
+const itsUpload = multer({ 
+  storage: createStorage('its'),
+  limits: {
+    fileSize: 2 * 1024 * 1024 * 1024, // 2GB per file
+    files: 20 // Maximum 20 files
+  }
+});
+router.post('/its', itsUpload.array('files'), async (req, res) => {
+  await handleUpload(req, res, 'its');
+});
+
+// Legacy endpoint for backward compatibility
+const legacyUpload = multer({ 
+  storage: createStorage('default'),
+  limits: {
+    fileSize: 2 * 1024 * 1024 * 1024, // 2GB per file
+    files: 20 // Maximum 20 files
+  }
+});
+router.post('/file', legacyUpload.single('file'), async (req, res) => {
+  const pipelineType = req.body.pipelineType || 'illumina';
+  await handleUpload(req, res, pipelineType);
 });
 
 module.exports = router;

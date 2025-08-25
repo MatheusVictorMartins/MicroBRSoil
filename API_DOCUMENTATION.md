@@ -10,7 +10,71 @@ The complete file flow from upload to database storage follows this sequence:
 
 ### Upload Endpoints
 
-#### POST /upload/file
+#### POST /upload/illumina
+Upload FASTQ files for Illumina/16S rRNA pipeline processing.
+
+**Request:**
+- Method: POST
+- Content-Type: multipart/form-data
+- Body:
+  - `fastq`: FASTQ file (required)
+
+**Response:**
+```json
+{
+  "success": true,
+  "uploadId": "uuid-v4",
+  "jobId": "bullmq-job-id",
+  "pipelineType": "illumina",
+  "uploadedFiles": ["fastq"],
+  "message": "illumina pipeline job queued successfully"
+}
+```
+
+#### POST /upload/its
+Upload FASTQ files for ITS/Fungi pipeline processing.
+
+**Request:**
+- Method: POST
+- Content-Type: multipart/form-data
+- Body:
+  - `fastq`: FASTQ file (required)
+
+**Response:**
+```json
+{
+  "success": true,
+  "uploadId": "uuid-v4",
+  "jobId": "bullmq-job-id",
+  "pipelineType": "its",
+  "uploadedFiles": ["fastq"],
+  "message": "its pipeline job queued successfully"
+}
+```
+
+#### POST /upload/barcode
+Upload FASTQ and barcode files for barcode demultiplexing pipeline processing.
+
+**Request:**
+- Method: POST
+- Content-Type: multipart/form-data
+- Body:
+  - `fastq`: FASTQ file (required)
+  - `barcodes`: Barcode file (required)
+
+**Response:**
+```json
+{
+  "success": true,
+  "uploadId": "uuid-v4",
+  "jobId": "bullmq-job-id",
+  "pipelineType": "barcode",
+  "uploadedFiles": ["fastq", "barcodes"],
+  "message": "barcode pipeline job queued successfully"
+}
+```
+
+#### POST /upload/file (Legacy)
 Upload a FASTQ file and queue it for pipeline processing.
 
 **Request:**
@@ -18,13 +82,13 @@ Upload a FASTQ file and queue it for pipeline processing.
 - Content-Type: multipart/form-data
 - Body:
   - `file`: FASTQ file (required)
-  - `pipelineType`: Pipeline type (optional, default: "default")
+  - `pipelineType`: Pipeline type (optional, default: "illumina")
 
 **Response:**
 ```json
 {
   "success": true,
-  "runId": "uuid-v4",
+  "uploadId": "uuid-v4",
   "jobId": "bullmq-job-id",
   "message": "File uploaded and pipeline job queued successfully"
 }
@@ -122,6 +186,126 @@ Download a specific result file.
 - Content-Type: text/csv
 - Content-Disposition: attachment; filename="filename.csv"
 - Body: CSV file content
+
+### Geosearch Endpoints
+
+#### GET /api/geosearch
+Get all soil samples with their geographic and metadata information for map visualization.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "sampleName": "SAMPLE_001",
+      "latitude": -15.794229,
+      "longitude": -47.882166,
+      "collectionDate": "2024-06-15T10:30:00Z",
+      "soilDepth": "25cm",
+      "soilType": "Latossolo Vermelho",
+      "soilTexture": "Argiloso",
+      "pH": 6.2,
+      "elevation": 1147,
+      "geoLocation": "Brasília, DF",
+      "currentLandUse": "Cerrado nativo",
+      "currentVegetation": "Vegetação de cerrado",
+      "soilHorizon": "A",
+      "totalNitrogen": 1.8,
+      "totalOrganicCarbon": 34.5,
+      "microbialBiomass": 285.7,
+      "envBroadScale": "terrestrial biome",
+      "envLocalScale": "cerrado",
+      "envMedium": "soil",
+      "description": "Sample collected from preserved cerrado area",
+      "createdAt": "2024-06-15T12:00:00Z"
+    }
+  ],
+  "total": 1,
+  "message": "Retrieved 1 soil samples for mapping"
+}
+```
+
+**Error Response:**
+```json
+{
+  "success": false,
+  "message": "No soil samples found"
+}
+```
+
+#### GET /api/geosearch/:id
+Get detailed information for a specific soil sample by ID.
+
+**Parameters:**
+- `id`: Soil sample ID (integer)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "sampleName": "SAMPLE_001",
+    "coordinates": {
+      "latitude": -15.794229,
+      "longitude": -47.882166
+    },
+    "collectionDate": "2024-06-15T10:30:00Z",
+    "soilDepth": 25,
+    "elevation": 1147,
+    "geoLocation": "Brasília, DF",
+    "soilType": "Latossolo Vermelho",
+    "soilTexture": "Argiloso",
+    "soilHorizon": "A",
+    "pH": 6.2,
+    "totalNitrogen": 1.8,
+    "totalOrganicCarbon": 34.5,
+    "microbialBiomass": 285.7,
+    "envBroadScale": "terrestrial biome",
+    "envLocalScale": "cerrado",
+    "envMedium": "soil",
+    "currentLandUse": "Cerrado nativo",
+    "currentVegetation": "Vegetação de cerrado",
+    "cropRotation": null,
+    "tillage": null,
+    "previousLandUse": "Cerrado nativo",
+    "agrochemAddition": "none",
+    "enzymeAril": 45.2,
+    "enzymeBeta": 12.8,
+    "enzymeFosf": 23.1,
+    "aluminumSaturation": 8.5,
+    "altitude": 1147,
+    "annualPrecipitation": 1200.5,
+    "annualTemperature": 22.8,
+    "extremeEvent": "drought",
+    "fire": "none",
+    "flooding": "none",
+    "heavyMetals": "below detection limit",
+    "faoClass": "Ferralsols",
+    "localClass": "Latossolo Vermelho distrófico",
+    "description": "Sample collected from preserved cerrado area for biodiversity study",
+    "ownerId": 1,
+    "createdAt": "2024-06-15T12:00:00Z"
+  }
+}
+```
+
+**Error Responses:**
+```json
+{
+  "success": false,
+  "message": "Invalid soil sample ID"
+}
+```
+
+```json
+{
+  "success": false,
+  "message": "Soil sample not found"
+}
+```
 
 ## Database Schema
 

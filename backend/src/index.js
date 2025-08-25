@@ -12,10 +12,11 @@ const pipelineRoutes = require('./routes/pipeline');
 const resultsRoutes = require('./routes/results');
 const taxonSearch = require('./routes/taxon');
 const seqSearch = require('./routes/sequenceSearch');
+const geosearchRoutes = require('./routes/geosearch');
 
 const app = express();
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+app.use(express.urlencoded({ extended: true, limit: '2gb' }));
+app.use(express.json({ limit: '2gb' }));
 app.use(cookieParser());
 
 // Add logging middleware
@@ -34,6 +35,7 @@ app.use('/pipeline', pipelineRoutes);
 app.use('/results', resultsRoutes);
 app.use('/taxon_search', taxonSearch);
 app.use('/sequence_search', seqSearch);
+app.use('/api/geosearch', geosearchRoutes);
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
@@ -83,9 +85,34 @@ app.get('/geosearch', (req, res) => res.sendFile(path.join(htmlPath, 'geosearch.
 app.get('/header', (req, res) => res.sendFile(path.join(htmlPath, 'header.html')));
 app.get('/left_menu', (req, res) => res.sendFile(path.join(htmlPath, 'left_menu.html')));
 app.get('/help', (req, res) => res.sendFile(path.join(htmlPath, 'help.html')));
+app.get('/upload', (req, res) => res.sendFile(path.join(htmlPath, 'upload.html')));
 
 // STATIC - Fix the path to static files
 app.use('/static', express.static(path.join(__dirname, '..', '..', 'src', 'static')));
+
+// 404 handler for API routes
+app.use('/upload/*', (req, res) => {
+  res.status(404).json({ error: 'Upload endpoint not found', path: req.path });
+});
+
+app.use('/api/*', (req, res) => {
+  res.status(404).json({ error: 'API endpoint not found', path: req.path });
+});
+
+// Global error handler
+app.use((err, req, res, next) => {
+  apiLogger.error('Unhandled error', { 
+    error: err.message, 
+    stack: err.stack,
+    url: req.url,
+    method: req.method
+  });
+  
+  res.status(err.status || 500).json({ 
+    error: err.message || 'Internal server error',
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  });
+});
 
 // Start server when run directly and expose a health endpoint
 const PORT = process.env.PORT || 3000;

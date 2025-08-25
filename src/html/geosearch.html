@@ -20,7 +20,6 @@
     <link rel="stylesheet" href="../static/css/header.css">
     <link rel="stylesheet" href="../static/css/footer.css">
     <link rel="stylesheet" href="../static/css/left_menu.css">
-    <link rel="stylesheet" href="../static/css/geosearch.css">
     <!--FONT IMPORT-->
     <!--INTER-->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -32,6 +31,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Tienne:wght@400;700;900&display=swap" rel="stylesheet">
     <!--ICONS IMPORT-->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:wght@300" rel="stylesheet" />
+    <!--LEAFLET-->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+
+    <style>
+        #map { height: 70vh; width: 60vw; }
+    </style>
 </head>
 <body>
     <!--HEADER PLACEHOLDER-->
@@ -43,8 +50,37 @@
     <!--#region MAIN -->
         <main class="main-content"> 
             <h1 class="main-title">GEOSEARCH</h1> 
-            <div class="basic-frame">
-                <img src="../static/assets/figures/world.svg" alt="">
+            
+            <!-- Map Controls -->
+            <div class="map-controls">
+                <div class="sample-count">
+                    <span id="sample-count">Loading samples...</span>
+                </div>
+                <button class="btn refresh-btn" onclick="refreshSamples()">
+                    <span class="material-symbols-rounded">refresh</span>
+                    Refresh Map
+                </button>
+            </div>
+            
+            <!-- Loading/Error Messages -->
+            <div id="message-container"></div>
+            
+            <!-- Map Container -->
+            <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+            <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+            <div id="map"></div>
+            
+            <div class="basic-frame mt-3">
+                <div class="row">
+                    <div class="col-12">
+                        <p class="text-muted">
+                            <small>
+                                <strong>Legend:</strong> Each marker represents a soil sample location. 
+                                Click on markers to view sample details. Markers are clustered for better visualization at different zoom levels.
+                            </small>
+                        </p>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -64,5 +100,8 @@
     <script src="../static/js/bootstrap.bundle.min.js"></script>
     <!--===================================================================================================================================-->
     <!--#endregion-->
+
+    <script src="../static/js/geosearch.js"></script>
+    <link rel="stylesheet" href="../static/css/geosearch.css">
 </body>
 </html>

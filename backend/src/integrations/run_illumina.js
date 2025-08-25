@@ -10,7 +10,7 @@ async function runIlluminaPipeline(fastqPath, outputDir = null) {
     const fastq = path.resolve(fastqPath).replace(/\\/g, "/");
     
     // Use Docker path for R script
-    const scriptPath = "/app/pipeline-r/pipeline/16silumina.r";
+    const scriptPath = "/app/pipeline-r/pipeline/illumina.r";
 
     console.log(`📜 R Script: ${scriptPath}`);
 

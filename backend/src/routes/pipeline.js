@@ -82,9 +82,9 @@ router.get('/runs', async (req, res) => {
 });
 
 // Legacy routes (kept for compatibility)
-const runIllumina = require("../integrations/run_illumina");
-const runITS = require("../integrations/run_its");
-const runBarcodePipeline = require("../integrations/index2"); 
+const runIllumina = require("../integrations/run_illumina.js");
+const runITS = require("../integrations/run_its.js");
+const runIontorrent = require("../integrations/run_iontorrent.js"); 
 
 router.post("/illumina", async (req, res) => {
   try {
@@ -114,7 +114,7 @@ router.post("/barcodes", async (req, res) => {
       return res.status(400).json({ success: false, error: "fastqPath e barcodesPath são obrigatórios." });
     }
 
-    const result = await runBarcodePipeline(fastqPath, barcodesPath);
+    const result = await runIontorrent(fastqPath, barcodesPath);
     res.json({ success: true, result });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });

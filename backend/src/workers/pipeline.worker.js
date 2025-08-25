@@ -55,6 +55,12 @@ const worker = new Worker(QUEUE_NAME, async job => {
         result = await runIlluminaPipeline(fastqPath, runOutputDir);
         break;
         
+      case 'iontorrent':
+      case 'ion':
+        const runIonTorrentPipeline = require('../integrations/run_iontorrent');
+        result = await runIonTorrentPipeline(fastqPath, runOutputDir);
+        break;
+        
       case 'its':
       case 'fungi':
         const runITSPipeline = require('../integrations/run_its');
