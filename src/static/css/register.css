@@ -1,18 +1,9 @@
-:root{
-    --register-column-1: 45vw;
-    --register-column-2: 32vw;
-    --register-row: 68vh;
-}
-
 .register-frames{
-    display: grid;
-    grid-template-columns: var(--register-column-1) var(--register-column-2);
-    grid-template-rows: var(--register-row);
-    gap: 3vw;
+    display: flex;
 }
 
 .main-title{
-    margin-bottom: 5.25vh;
+    margin-bottom: var(--title-minor-margin-bottom);
 }
 
 .register-frame{
@@ -20,7 +11,7 @@
 
     flex-direction: column;
     padding: 3.125rem;
-    width: var(--register-column-1);
+    width: 50vw;
 }
 
 .register-form{
@@ -54,7 +45,7 @@
     font-size: 1.5rem;
     font-weight: 600;
 
-    margin-top: 1rem;
+    margin-top: 0.5rem;
 
     box-shadow: 0 1rem 1.5rem rgba(100,205,68,0.6);
 }
@@ -70,9 +61,9 @@
     box-shadow: 0 1rem 1.5rem rgba(100,205,68,0.6);
 }
 .register-users-table{
+    margin-left: auto;
     padding-top: 0;
-    max-width: var(--register-column-2);
-    max-height: var(--register-row);
+    max-height: 70vh;
 
     justify-content: center;
 
@@ -80,6 +71,20 @@
     overflow-y: auto;
 
     position: relative;
+}
+.name-inputs{
+    display: flex;
+}
+
+.name-input{
+    display: flex;
+    flex-direction: column;
+
+    width: 48%;
+}
+
+.last-name-input{
+    margin-left: auto;
 }
 
 .register-users-table table {
@@ -100,4 +105,8 @@
 
 .txt-icon{
     font-size: 1.3rem !important;
+}
+
+.register-text-input{
+    margin-bottom: 1.5rem;
 }
