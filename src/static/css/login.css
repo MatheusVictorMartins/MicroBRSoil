@@ -162,7 +162,7 @@
 
     margin-top: 2.5rem;
 
-    box-shadow: 0 1rem 1.5rem rgba(100,205,68,0.6);
+    box-shadow: 0 1rem 1.5rem var(--decoration-light-color1);
 
 }
 
@@ -172,10 +172,10 @@
 }
 
 .btn-lg:hover{
-    background-color: #93E44D;
+    background-color: var(--primary-color-green1);
     border: none;
     color: #fff;
-    box-shadow: 0 1rem 1.5rem rgba(199,255,120,0.9);
+    box-shadow: 0 1rem 1.5rem var(--decoration-shadow-color0);
 }
 .btn-lg:not(:disabled):active{
     background-color: #2A8A4C;

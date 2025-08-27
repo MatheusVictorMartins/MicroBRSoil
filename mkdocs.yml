@@ -1,0 +1,75 @@
+site_name: "MicroBRSoil Documentation"
+site_description: "Documentação completa do sistema MicroBRSoil"
+site_author: "Your Team"
+repo_url: "https://github.com/MatheusVictorMartins/MicroBRSoil/"
+repo_name: "MicroBRSoil"
+
+theme:
+  name: readthedocs
+  language: pt
+  features:
+    - navigation.instant
+    - navigation.expand
+    - navigation.sections
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+    - content.code.annotate
+    - content.code.copy
+
+# markdown_extensions:
+#   - toc:
+#       permalink: true
+#   - admonition
+#   - codehilite
+#   - footnotes
+#   - def_list
+#   - attr_list
+#   - md_in_html
+#   - pymdownx.details
+#   - pymdownx.superfences
+#   - pymdownx.tasklist
+#   - pymdownx.tabbed:
+#       alternate_style: true
+#   - pymdownx.emoji
+#   - pymdownx.magiclink
+#   - pymdownx.arithmatex:
+#       generic: true
+
+# plugins:
+#   - search
+#   - tags
+#   # Swagger / Redoc plugins can be added here if you want API autogen
+#   # - swagger-ui:
+#   #     spec: openapi.yaml
+
+nav:
+  - Home: index.md
+  - Architecture: architecture.md
+  - Setup & Usage:
+      - Setup: setup.md
+      - Usage: usage.md
+  - API:
+      - Overview: api/index.md
+      - Authentication: api/auth.md
+      - Users: api/users.md
+      - Files: api/files.md
+      - Pipeline: api/pipeline.md
+  - Database:
+      - Overview: database/index.md
+      - Schema: database/schema.md
+      - Tables:
+          - Users: database/tables/users.md
+          - Files: database/tables/files.md
+          - Results: database/tables/results.md
+          - Queue: database/tables/queue.md
+  - Pipeline:
+      - Overview: pipeline/index.md
+      - Dependencies: pipeline/dependencies.md
+      - Workflow: pipeline/workflow.md
+      - Errors & Troubleshooting: pipeline/errors.md
+  - Development:
+      - Contributing: dev/contributing.md
+      - Docker Notes: dev/docker.md
+      - Roadmap: dev/roadmap.md
+      - Changelog: dev/changelog.md

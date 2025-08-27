@@ -178,6 +178,7 @@ class UserDataManager {
             return;
         }
 
+        console.log(name, password, confirmPassword);
         try {
             const response = await fetch('/auth/register', {
                 method: 'POST',

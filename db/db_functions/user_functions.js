@@ -19,7 +19,7 @@ fluxo das functions:
  */
 
 //cria user e retorna a linha criada
-const createUser = async ({ email, password, role = 2 }) => {
+const createUser = async ({ email, password, role = 1 }) => {
     const values = [email, password, role];
     try {
         if (email == null || email === "" || typeof (email) != "string" || password == null || password === "" || typeof (password) != "string" || role == null || typeof (role) != "number" || role === "") {//validador de entrada, devem respeitar o tipo e não pode ser undefined
