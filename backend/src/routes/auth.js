@@ -79,7 +79,7 @@ router.post('/login', async (req, res) => {
 // REGISTER (somente simulação, sem autenticação de admin ainda)
 router.post('/register', async (req, res) => {
   const { temail, tpassword, tconfpassword } = req.body;
-
+  console.log(temail, tpassword, tconfpassword);
   if (!temail || !tpassword || !tconfpassword) {
     return res.status(400).send('Todos os campos são obrigatórios.');
   }

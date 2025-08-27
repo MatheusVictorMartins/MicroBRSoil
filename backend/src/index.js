@@ -13,6 +13,7 @@ const resultsRoutes = require('./routes/results');
 const taxonSearch = require('./routes/taxon');
 const seqSearch = require('./routes/sequenceSearch');
 const geosearchRoutes = require('./routes/geosearch');
+const tableRoutes = require('./routes/table');
 
 const app = express();
 app.use(express.urlencoded({ extended: true, limit: '2gb' }));
@@ -36,6 +37,7 @@ app.use('/results', resultsRoutes);
 app.use('/taxon_search', taxonSearch);
 app.use('/sequence_search', seqSearch);
 app.use('/api/geosearch', geosearchRoutes);
+app.use('/api/table', tableRoutes);
 
 // Health check endpoint
 app.get('/health', async (req, res) => {

@@ -21,6 +21,7 @@
     <link rel="stylesheet" href="../static/css/footer.css">
     <link rel="stylesheet" href="../static/css/left_menu.css">
     <link rel="stylesheet" href="../static/css/register.css">
+    <link rel="stylesheet" href="../static/css/dynamic-content.css">
     <!--FONT IMPORT-->
     <!--INTER-->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -46,11 +47,11 @@
             <div class="register-frames">
                 <div class="basic-frame register-frame">
                     <form action="/auth/register" class="register-form">
-                        <label for="tname" class="text-input-label">NAME</label>
-                        <input type="text" name="tname" id="tname" class="text-input register-text-input" placeholder="NAME">
-                        <label for="tpassword" class="text-input-label">PASSWORD</label>
+                        <label for="temail" class="text-input-label">EMAIL</label>
+                        <input type="text" name="temail" id="temail" class="text-input register-text-input" placeholder="EMAIL">
+                        <label for="tpassword" class="text-input-label">SENHA</label>
                         <input type="password" name="tpassword" id="tpassword" class="text-input register-text-input" placeholder="PASSWORD">
-                        <label for="tconfpassword" class="text-input-label">CONFIRM PASSWORD</label>
+                        <label for="tconfpassword" class="text-input-label">CONFIRMAR SENHA</label>
                         <input type="password" name="tconfpassword" id="tconfpassword" class="text-input register-text-input" placeholder="CONFIRM PASSWORD">
                     </form>
                     <button type="button" class="btn btn-primary btn-register"><span class="material-symbols-rounded btn-icon">person_add</span>REGISTER</button>
@@ -137,6 +138,10 @@
     <!--#region HEADER INCLUDE-->
     <script src="../static/js/include_elements.js"></script>
     <!--#endregion-->
+    
+    <!--USER DATA MANAGER-->
+    <script src="../static/js/user_data_manager.js"></script>
+    
     <!--#region BOOTSTRAP JS LINK-->
     <script src="../static/js/button.js"></script>
     <!--===================================================================================================================================-->

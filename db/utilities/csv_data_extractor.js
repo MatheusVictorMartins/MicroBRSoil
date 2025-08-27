@@ -137,3 +137,9 @@ const dataFormater = async (tax, alpha, otu, metadata) => {
 
 
 // workplace("D:/utfpr - atual/CRUD/TESTING FOLDER/MicroBRSoil/mock_results_csv");//PARA FINS DE TESTE
+
+// Export functions for use in other modules
+module.exports = {
+    dataExtractor,
+    dataFormater
+};

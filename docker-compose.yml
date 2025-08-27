@@ -65,8 +65,8 @@ services:
   # Worker: Node + R to run the pipeline in background via BullMQ
   worker:
     build:
-      context: ./backend
-      dockerfile: ${WORKER_DOCKERFILE:-Dockerfile.worker}
+      context: .
+      dockerfile: backend/${WORKER_DOCKERFILE:-Dockerfile.worker}
     container_name: microbrsoil-worker
     env_file:
       - .env

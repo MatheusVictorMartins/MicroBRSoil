@@ -38,6 +38,7 @@
     <link rel="stylesheet" href="../static/css/home.css">
     <link rel="stylesheet" href="../static/css/left_menu.css">
     <link rel="stylesheet" href="../static/css/home-filter.css">
+    <link rel="stylesheet" href="../static/css/dynamic-content.css">
     <!--FONT IMPORT-->
     <!--INTER-->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -67,6 +68,14 @@
           <h1 class="main-title">HOME</h1>
         </span>
         <div class="dashboard-actions">
+          <div class="search-container me-3">
+            <div class="input-group">
+              <span class="input-group-text">
+                <span class="material-symbols-rounded">search</span>
+              </span>
+              <input type="text" id="searchInput" class="form-control" placeholder="Search samples...">
+            </div>
+          </div>
           <button type="button" onclick="createFilterDropDown()" class="btn btn-outline-primary btn-filters btn-actions"><span class="material-symbols-rounded btn_left_menu_icon">filter_list</span>FILTERS</button>
           <button onclick="ButtonGoTo('../html/upload.html')" type="button" class="btn btn-outline-primary btn-upload btn-actions"><span class="material-symbols-rounded btn_left_menu_icon">upload_file</span>UPLOAD</button>
         </div>
@@ -201,6 +210,9 @@
 
   <!--DYNAMIC TABLE INCLUDE(TESTS)-->
   <script src="/src/static/js/dynamic_table.js"></script>
+  
+  <!--SOIL DATA MANAGER-->
+  <script src="../static/js/soil_data_manager.js"></script>
   <!--#endregion-->
 
 </body>

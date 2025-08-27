@@ -1,4 +1,4 @@
-# Optimized R package installation - uses binaries when possible
+# Ultra-Fast R Package Installation - Minimal build time approach
 FROM rocker/r-ver:4.3.2
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -24,8 +24,11 @@ RUN apt-get update && apt-get install -y \
     libpcre2-dev \
     libcurl4-openssl-dev \
     libssl-dev \
+    libssl3 \
+    openssl \
     zlib1g-dev \
     libxml2-dev \
+    libxml2-utils \
     libgit2-dev \
     libfontconfig1-dev \
     libcairo2-dev \
@@ -35,65 +38,62 @@ RUN apt-get update && apt-get install -y \
     libpng-dev \
     libtiff5-dev \
     libjpeg-dev \
+    libgsl-dev \
+    libgmp-dev \
+    libmpfr-dev \
+    libglpk-dev \
+    libudunits2-dev \
+    libgdal-dev \
+    libproj-dev \
+    pkg-config \
+    cmake \
+    make \
+    gcc \
+    g++ \
+    libc6-dev \
+    libsodium-dev \
+    libssh2-1-dev \
+    libpq-dev \
+    unixodbc-dev \
+    python3 \
+    python3-dev \
+    python-is-python3 \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy package files and install Node dependencies
-COPY package*.json ./
-RUN npm ci
+COPY backend/package*.json ./
+# Install Node dependencies and ensure native modules are built for Linux
+RUN npm ci --only=production && \
+    npm rebuild bcrypt --build-from-source && \
+    echo "Node.js dependencies installed and native modules rebuilt"
 
-# Copy application source
-COPY . .
+# Copy backend application source (excluding node_modules via .dockerignore)
+COPY backend/ .
 
-# Create optimized startup script - installs packages FAST
-RUN echo '#!/bin/bash\n\
-set -e\n\
-\n\
-echo "🚀 Starting MicroBRSoil Worker (Optimized)"\n\
-echo "R version: $(R --version | head -1)"\n\
-echo "Node version: $(node --version)"\n\
-\n\
-# Check if dada2 is available (core requirement)\n\
-if Rscript -e "library(dada2)" 2>/dev/null; then\n\
-  echo "✅ Core packages ready"\n\
-else\n\
-  echo "📦 Installing R packages (optimized for speed)..."\n\
-  \n\
-  # Use parallel installation and binary packages when possible\n\
-  export R_INSTALL_OPTS="--byte-compile"\n\
-  \n\
-  echo "Installing BiocManager..."\n\
-  if ! Rscript -e "install.packages(\"BiocManager\", repos=\"https://cloud.r-project.org\")"; then\n\
-    echo "❌ Failed to install BiocManager"\n\
-    exit 1\n\
-  fi\n\
-  \n\
-  echo "Installing MINIMAL core packages only..."\n\
-  # Install ONLY the absolute essentials first - NO PARALLEL to avoid lock conflicts\n\
-  if ! Rscript -e "BiocManager::install(\"dada2\", ask=FALSE, update=FALSE)"; then\n\
-    echo "❌ Failed to install dada2"\n\
-    exit 1\n\
-  fi\n\
-  \n\
-  if ! Rscript -e "install.packages(\"ggplot2\", repos=\"https://cloud.r-project.org\")"; then\n\
-    echo "❌ Failed to install ggplot2"\n\
-    exit 1\n\
-  fi\n\
-  \n\
-  # Verify installation worked\n\
-  if ! Rscript -e "library(dada2)"; then\n\
-    echo "❌ dada2 installation verification failed"\n\
-    exit 1\n\
-  fi\n\
-  \n\
-  echo "✅ Core packages installed successfully!"\n\
-  echo "📝 Additional packages will be installed on-demand during first pipeline run"\n\
-fi\n\
-\n\
-echo "🎯 Starting worker process..."\n\
-exec "$@"' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
+# Copy required R scripts from pipeline-r directory for build-time package installation
+RUN mkdir -p /app/pipeline-r
+COPY pipeline-r/ultra_fast_install_r_packages.R /app/pipeline-r/
+COPY pipeline-r/verify_r_packages.R /app/pipeline-r/
+COPY pipeline-r/check_system_deps.R /app/pipeline-r/
+
+# Run system dependency check for debugging
+RUN echo "🔍 Checking system dependencies for R packages..." && \
+    Rscript /app/pipeline-r/check_system_deps.R
+
+# Install ONLY BiocManager at build time (< 30 seconds target)
+# All other packages will be installed at runtime and cached in volume
+RUN echo "⚡ Installing BiocManager only (ultra-fast build)..." && \
+    Rscript -e "options(repos = c(CRAN = 'https://cloud.r-project.org')); \
+    install.packages('BiocManager'); \
+    cat('✅ BiocManager installed - other packages deferred to runtime\\n');" && \
+    echo "✅ Build-time R setup completed (ultra-fast mode)"
+
+# Copy and set up entrypoint script
+COPY backend/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["npm", "run", "worker"]
