@@ -46,15 +46,18 @@
             <h1 class="main-title">NEW USER</h1> 
             <div class="register-frames">
                 <div class="basic-frame register-frame">
-                    <form action="/auth/register" class="register-form">
+                    <form action="/auth/register" method="POST" class="login-form was-validated" novalidate>
                         <label for="temail" class="text-input-label">EMAIL</label>
                         <input type="text" name="temail" id="temail" class="text-input register-text-input" placeholder="EMAIL">
                         <label for="tpassword" class="text-input-label">SENHA</label>
                         <input type="password" name="tpassword" id="tpassword" class="text-input register-text-input" placeholder="PASSWORD">
                         <label for="tconfpassword" class="text-input-label">CONFIRMAR SENHA</label>
                         <input type="password" name="tconfpassword" id="tconfpassword" class="text-input register-text-input" placeholder="CONFIRM PASSWORD">
+                        <button type="submit" class="btn btn-primary btn-register">
+	                        <span class="material-symbols-rounded btn-icon">person_add</span>REGISTER
+                        </button>
                     </form>
-                    <button type="button" class="btn btn-primary btn-register"><span class="material-symbols-rounded btn-icon">person_add</span>REGISTER</button>
+
                 </div>
 
                 <div class="register-users-table table-responsive basic-frame ">

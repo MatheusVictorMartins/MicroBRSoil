@@ -20,6 +20,20 @@ app.use(express.urlencoded({ extended: true, limit: '2gb' }));
 app.use(express.json({ limit: '2gb' }));
 app.use(cookieParser());
 
+// Add CORS headers to allow cross-origin requests
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*'); // Allow all origins
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
+
 // Add logging middleware
 app.use(apiLogger.httpMiddleware());
 
@@ -79,15 +93,21 @@ app.get('/health', async (req, res) => {
 // JOINS - Fix the path to HTML files (they're in the parent src directory, not a subdirectory)
 const htmlPath = path.join(__dirname, '..', '..', 'src', 'html');
 
+app.get('/header', (req, res) => res.sendFile(path.join(htmlPath, 'header.html')));
+app.get('/left_menu', (req, res) => res.sendFile(path.join(htmlPath, 'left_menu.html')));
+
 app.get('/', (req, res) => res.sendFile(path.join(htmlPath, 'index.html')));
 app.get('/login', (req, res) => res.sendFile(path.join(htmlPath, 'login.html')));
 app.get('/register', (req, res) => res.sendFile(path.join(htmlPath, 'register.html')));
+app.get('/taxon', (req, res) => res.sendFile(path.join(htmlPath, 'taxon_search.html')));
+app.get('/sequence', (req, res) => res.sendFile(path.join(htmlPath, 'sequence_search.html')));
 app.get('/geosearch', (req, res) => res.sendFile(path.join(htmlPath, 'geosearch.html')));
-//app.get('/sequence_search', (req, res) => res.sendFile(path.join(htmlPath, 'sequence_search.html')));
-app.get('/header', (req, res) => res.sendFile(path.join(htmlPath, 'header.html')));
-app.get('/left_menu', (req, res) => res.sendFile(path.join(htmlPath, 'left_menu.html')));
-app.get('/help', (req, res) => res.sendFile(path.join(htmlPath, 'help.html')));
+
 app.get('/upload', (req, res) => res.sendFile(path.join(htmlPath, 'upload.html')));
+
+app.get('/help', (req, res) => res.sendFile(path.join(htmlPath, 'help.html')));
+app.get('/about', (req, res) => res.sendFile(path.join(htmlPath, 'about.html')));
+app.get('/collaborators', (req, res) => res.sendFile(path.join(htmlPath, 'collaborators.html')));
 
 // STATIC - Fix the path to static files
 app.use('/static', express.static(path.join(__dirname, '..', '..', 'src', 'static')));

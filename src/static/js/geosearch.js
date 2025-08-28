@@ -10,9 +10,19 @@ const markers = L.markerClusterGroup();
 // Function to load soil samples from API
 async function loadSoilSamples() {
   try {
-    const response = await fetch('/api/geosearch');
-    const result = await response.json();
+    console.log('Starting fetch to backend API...');
+    // Call backend directly to bypass nginx routing issues
+    const response = await fetch('http://localhost:3000/api/geosearch');
+    console.log('Response received:', response);
+
+    // Check if response is ok before parsing JSON
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
     
+    const result = await response.json();
+    console.log('Parsed JSON result:', result);
+
     if (!result.success) {
       console.error('Error loading soil samples:', result.message);
       alert('Error loading soil samples: ' + result.message);
@@ -82,7 +92,7 @@ function updateSampleCount(count) {
 // Function to view sample details
 window.verDetalhes = async function(id) {
   try {
-    const response = await fetch(`/api/geosearch/${id}`);
+    const response = await fetch(`http://localhost:3000/api/geosearch/${id}`);
     const result = await response.json();
     
     if (!result.success) {
