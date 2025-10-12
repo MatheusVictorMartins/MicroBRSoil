@@ -70,5 +70,46 @@ run_pipeline_its <- function(path1, path2 = "/app/pipeline-r/references/sh_gener
            theme_minimal() +
            theme(axis.text.x = element_text(angle = 90, hjust = 1)))
 
+  # === Exportações adicionais ===
+  # Rename alpha diversity file to match expected name
+  file.rename(file.path(output_path, "alpha_diversity.csv"), 
+              file.path(output_path, "alpha_diversity_metrics.csv"))
+  
+  # Export additional required files
+  write.csv(as.data.frame(otu_table(ps)), file.path(output_path, "otu_table.csv"))
+  write.csv(as.data.frame(tax_table(ps)), file.path(output_path, "tax_table.csv"))
+  write.csv(as.data.frame(sample_data(ps)), file.path(output_path, "sample_metadata.csv"))
+
+  # Create success status file to indicate pipeline completed without errors
+  success_status <- list(
+    status = "success",
+    message = "Pipeline ITS executado com sucesso",
+    timestamp = Sys.time(),
+    pipeline_type = "its",
+    files_created = c(
+      "alpha_diversity_metrics.csv",
+      "otu_table.csv", 
+      "tax_table.csv",
+      "sample_metadata.csv"
+    )
+  )
+  
+  # Write status file as JSON-like format
+  writeLines(
+    c(
+      "{",
+      paste0('  "status": "', success_status$status, '",'),
+      paste0('  "message": "', success_status$message, '",'),
+      paste0('  "timestamp": "', success_status$timestamp, '",'),
+      paste0('  "pipeline_type": "', success_status$pipeline_type, '",'),
+      '  "files_created": [',
+      paste0('    "', success_status$files_created, '"', collapse = ",\n"),
+      '  ]',
+      "}"
+    ),
+    file.path(output_path, "pipeline_status.json")
+  )
+
+  cat("Pipeline completed successfully - no errors detected\n")
   return("Pipeline ITS executado com sucesso.")
 }

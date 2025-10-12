@@ -17,6 +17,7 @@ if (!fs.existsSync(RESULTS_DIR)) fs.mkdirSync(RESULTS_DIR, { recursive: true });
 
 const worker = new Worker(QUEUE_NAME, async job => {
   const { runId, fastqPath, pipelineType, meta } = job.data;
+  let lockRenewalInterval; // Declare the interval variable in the job scope
   
   workerLogger.info('Processing pipeline job', {
     jobId: job.id,
@@ -26,6 +27,16 @@ const worker = new Worker(QUEUE_NAME, async job => {
   });
 
   try {
+    // Renew job lock periodically for long-running processes
+    lockRenewalInterval = setInterval(async () => {
+      try {
+        await job.updateProgress(50); // Keep job alive
+        workerLogger.info(`Renewed lock for job ${job.id}`, { runId });
+      } catch (error) {
+        workerLogger.warn(`Failed to renew lock for job ${job.id}`, { error: error.message, runId });
+      }
+    }, 30000); // Renew every 30 seconds
+
     // Update status in both fakeDB and database
     if (!pipelines[runId]) {
       pipelines[runId] = { id: runId, status: 'running', createdAt: new Date().toISOString(), logs: [] };
@@ -82,9 +93,12 @@ const worker = new Worker(QUEUE_NAME, async job => {
     console.log('✅ Pipeline execution completed');
     pipelines[runId].logs.push('Pipeline execution completed successfully');
 
+    // Clear the lock renewal interval
+    clearInterval(lockRenewalInterval);
+
     // Process results and store in database
     const userId = meta?.uploadedBy && meta.uploadedBy !== 'anonymous' ? meta.uploadedBy : null;
-    await processPipelineResults(runId, runOutputDir, userId);
+    await processPipelineResults(runId, runOutputDir, userId, pipelineType);
     
     // Update database status
     pipelines[runId].status = 'completed';
@@ -96,6 +110,9 @@ const worker = new Worker(QUEUE_NAME, async job => {
     
   } catch (error) {
     console.error('Pipeline worker error:', error);
+    
+    // Clear the lock renewal interval on error
+    if (lockRenewalInterval) clearInterval(lockRenewalInterval);
     
     // Update status in fakeDB and database
     pipelines[runId].status = 'failed';
@@ -109,7 +126,13 @@ const worker = new Worker(QUEUE_NAME, async job => {
     
     throw error;
   }
-}, { connection });
+}, { 
+  connection,
+  concurrency: 1, // Process one job at a time to avoid resource conflicts
+  stalledInterval: 60 * 1000, // 60 seconds
+  maxStalledCount: 3, // Allow up to 3 stalls before considering failed
+  lockDuration: 120 * 1000, // 2 minutes lock duration
+});
 
 worker.on('completed', async (job) => {
   console.log('worker completed job', job.id);

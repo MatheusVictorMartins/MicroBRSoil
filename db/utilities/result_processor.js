@@ -14,16 +14,36 @@ function requireDbModule(modulePath) {
 
 const pool = requireDbModule('../db');
 const { createPipelineResult } = requireDbModule('../db_functions/pipeline_functions');
+const { processPipelineResults: processNewPipelineResults } = requireDbModule('../db_functions/pipeline_data_functions');
 const sampleFunctions = requireDbModule('../db_functions/sample_funtion');
 const alphaFunctions = requireDbModule('../db_functions/alpha_functions');
 const soilFunctions = requireDbModule('../db_functions/soil_funtions');
 
 // Process pipeline results and store in database
-const processPipelineResults = async (runId, outputDirectory, userId = null) => {
+const processPipelineResults = async (runId, outputDirectory, userId = null, pipelineType = 'default') => {
     try {
-        writeLog(`\n[INFO] Processando resultados do pipeline para run ${runId}`);
+        writeLog(`\n[INFO] Processing pipeline results using new pipeline data functions for run ${runId}`);
         
-        // Expected result files
+        // Use the new comprehensive pipeline data processing function
+        const result = await processNewPipelineResults(runId, outputDirectory, pipelineType, userId);
+        
+        writeLog(`\n[SUCCESS] Pipeline results processed successfully using new system`);
+        return result;
+
+    } catch (error) {
+        writeLog(`\n[ERROR] New pipeline processing failed, falling back to legacy method: ${error.message}`);
+        
+        // Fallback to legacy processing if new method fails
+        return await processPipelineResultsLegacy(runId, outputDirectory, userId);
+    }
+};
+
+// Legacy processing method (renamed from original)
+const processPipelineResultsLegacy = async (runId, outputDirectory, userId = null) => {
+    try {
+        writeLog(`\n[INFO] Using legacy pipeline processing for run ${runId}`);
+        
+        // Expected result files (legacy names)
         const expectedFiles = {
             alpha: 'alpha_diversity_metrics.csv',
             otu: 'otu_table.csv',
@@ -63,7 +83,7 @@ const processPipelineResults = async (runId, outputDirectory, userId = null) => 
         
         if (resultFiles.alpha && resultFiles.otu && resultFiles.taxonomy) {
             try {
-                soilId = await processAndStoreData(resultFiles, userId, runId);
+                soilId = await processAndStoreDataLegacy(resultFiles, userId, runId);
                 
                 // Update pipeline result with soil_id if created
                 if (soilId) {
@@ -78,17 +98,17 @@ const processPipelineResults = async (runId, outputDirectory, userId = null) => 
             }
         }
 
-        writeLog(`\n[SUCCESS] Resultados processados com sucesso para run ${runId}`);
+        writeLog(`\n[SUCCESS] Legacy pipeline processing completed for run ${runId}`);
         return pipelineResult;
 
     } catch (error) {
-        writeLog(`\n[ERROR] Erro ao processar resultados do pipeline: ${error.message}`);
+        writeLog(`\n[ERROR] Erro ao processar resultados do pipeline (legacy): ${error.message}`);
         throw error;
     }
 };
 
-// Process CSV files and store data in database
-const processAndStoreData = async (resultFiles, userId, runId) => {
+// Legacy process CSV files and store data in database
+const processAndStoreDataLegacy = async (resultFiles, userId, runId) => {
     try {
         // Read CSV files
         const alphaData = await readCSV(resultFiles.alpha);
@@ -218,6 +238,7 @@ const readCSV = (filePath) => {
 
 module.exports = {
     processPipelineResults,
-    processAndStoreData,
+    processPipelineResultsLegacy,
+    processAndStoreDataLegacy,
     readCSV
 };

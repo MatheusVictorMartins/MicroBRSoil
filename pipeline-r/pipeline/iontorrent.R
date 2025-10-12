@@ -176,7 +176,7 @@ run_dada2_pipeline <- function(path1, barcodes_path = "/app/pipeline-r/barcodes/
       mutate(across(c(Breakaway, Breakaway_se), ~ round(.x, 4)))
     
     
-    write.csv(alpha, file.path(path, "alpha_diversity_metrics.csv"))
+    write.csv(alpha, file.path(getwd(), "alpha_diversity_metrics.csv"))
 
     write(paste(Sys.time(), "- Diversidade beta"),
           file = log_file, append = TRUE)
@@ -202,8 +202,54 @@ run_dada2_pipeline <- function(path1, barcodes_path = "/app/pipeline-r/barcodes/
           theme(axis.text.x = element_text(angle = 90, hjust = 1))
     ggsave("taxa_barplot.png", p3)
 
+    # === Exportações adicionais ===
+    write(paste(Sys.time(), "- Exportando tabelas CSV"),
+          file = log_file, append = TRUE)
+    output_dir <- getwd()  # Use current working directory (outdir)
+    write.csv(as.data.frame(otu_table(ps)), file.path(output_dir, "otu_table.csv"))
+    write.csv(as.data.frame(tax_table(ps)), file.path(output_dir, "tax_table.csv"))
+    
+    # Create sample metadata (minimal since IonTorrent doesn't have built-in sample data)
+    sample_names <- sample_names(ps)
+    sample_metadata <- data.frame(
+      sample = sample_names,
+      row.names = sample_names
+    )
+    write.csv(sample_metadata, file.path(output_dir, "sample_metadata.csv"))
+
+    # Create success status file to indicate pipeline completed without errors
+    success_status <- list(
+      status = "success",
+      message = "Pipeline concluído com sucesso",
+      timestamp = Sys.time(),
+      pipeline_type = "iontorrent",
+      files_created = c(
+        "alpha_diversity_metrics.csv",
+        "otu_table.csv", 
+        "tax_table.csv",
+        "sample_metadata.csv"
+      )
+    )
+    
+    # Write status file as JSON-like format
+    writeLines(
+      c(
+        "{",
+        paste0('  "status": "', success_status$status, '",'),
+        paste0('  "message": "', success_status$message, '",'),
+        paste0('  "timestamp": "', success_status$timestamp, '",'),
+        paste0('  "pipeline_type": "', success_status$pipeline_type, '",'),
+        '  "files_created": [',
+        paste0('    "', success_status$files_created, '"', collapse = ",\n"),
+        '  ]',
+        "}"
+      ),
+      file.path(output_dir, "pipeline_status.json")
+    )
+
     write(paste(Sys.time(), "- PIPELINE CONCLUÍDO COM SUCESSO"),
           file = log_file, append = TRUE)
+    cat("Pipeline completed successfully - no errors detected\n")
     return("Pipeline concluído com sucesso.")
 
   }, error = function(e) {
