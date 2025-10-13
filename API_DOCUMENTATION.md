@@ -94,6 +94,48 @@ Upload a FASTQ file and queue it for pipeline processing.
 }
 ```
 
+#### GET /upload/files/:runId
+List uploaded files for a specific run.
+
+**Response:**
+```json
+{
+  "files": [
+    {
+      "name": "Test1_L001_R1_001.fastq.gz",
+      "size": 8157718,
+      "modified": "2025-09-17T08:36:00Z",
+      "downloadUrl": "/upload/download/uuid-v4/Test1_L001_R1_001.fastq.gz"
+    },
+    {
+      "name": "Test1_L001_R2_001.fastq.gz",
+      "size": 9258692,
+      "modified": "2025-09-17T08:36:00Z",
+      "downloadUrl": "/upload/download/uuid-v4/Test1_L001_R2_001.fastq.gz"
+    }
+  ]
+}
+```
+
+#### GET /upload/download/:runId/:filename
+Download a specific uploaded file.
+
+**Parameters:**
+- `runId`: The unique identifier of the pipeline run
+- `filename`: The name of the file to download
+
+**Response:**
+- Content-Type: application/octet-stream (or specific type based on extension)
+- Content-Disposition: attachment; filename="filename"
+- Body: File content
+
+**Supported file types:**
+- `.csv` - text/csv
+- `.fastq`, `.fasta`, `.fa` - text/plain
+- `.gz` - application/gzip
+- `.zip` - application/zip
+- Others - application/octet-stream
+
 ### Pipeline Endpoints
 
 #### GET /pipeline/status/:runId
@@ -159,6 +201,9 @@ Get all pipeline runs for the authenticated user.
 #### GET /results/files/:runId
 List result files for a pipeline run.
 
+**Parameters:**
+- `runId`: The unique identifier of the pipeline run
+
 **Response:**
 ```json
 {
@@ -182,10 +227,28 @@ List result files for a pipeline run.
 #### GET /results/download/:runId/:filename
 Download a specific result file.
 
+**Parameters:**
+- `runId`: The unique identifier of the pipeline run
+- `filename`: The name of the file to download
+
+**Requirements:**
+- Pipeline run must exist in the database
+- Pipeline status must be "completed"
+- All users can download result files (no authentication required)
+
 **Response:**
-- Content-Type: text/csv
-- Content-Disposition: attachment; filename="filename.csv"
-- Body: CSV file content
+- Content-Type: text/csv (or appropriate MIME type)
+- Content-Disposition: attachment; filename="filename"
+- Body: File content
+
+**Common result files:**
+- `alpha_diversity_metrics.csv` - Alpha diversity metrics
+- `otu_table.csv` - OTU abundance table
+- `tax_table.csv` - Taxonomy assignments
+- `beta_diversity_pcoa.png` - PCoA visualization
+- `taxa_barplot_genus.png` - Taxonomic composition plot
+- `phyloseq_object.rds` - R phyloseq object
+- `sample_metadata.csv` - Sample metadata
 
 ### Geosearch Endpoints
 

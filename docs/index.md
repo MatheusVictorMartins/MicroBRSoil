@@ -1,9 +1,7 @@
 ### MicroBRSoil - Documentação
 
-Bem vindo à documentação completa do sistema MicroBRSoil.
-
 O **MicroBRSoil** é um sistema **fullstack** para gerenciamento e análise de dados genéticos.
-Seu objetivo é oferecer uma plataforma centralizada para **armazenamento, processamento e consulta de amostras biológicas**, integrando **upload de dados**, execução de **pipelines em R** e **visualização interativa**.
+O objetivo do serviço é oferecer uma plataforma centralizada para **armazenamento, processamento e consulta de amostras biológicas de solo**, integrando uma **arquitetura CRUD**, execução de **R pipelines** e **visualização interativa dos dados**.
 
 ## Casos de Uso
 - **Consulta de dados** armazenados, com filtros simples, busca taxonômica, busca por sequência e localização geográfica (mapa interativo).
@@ -19,4 +17,3 @@ Seu objetivo é oferecer uma plataforma centralizada para **armazenamento, proce
   - métricas de diversidade alfa,
   - CSVs e gráficos (incluindo PNG para ITS),
   - demultiplexação no caso do Ion Torrent.
-- Tempo médio de execução: **X minutos**.

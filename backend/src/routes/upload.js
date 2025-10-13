@@ -236,4 +236,84 @@ router.post('/file', legacyUpload.single('file'), async (req, res) => {
   await handleUpload(req, res, pipelineType);
 });
 
+// List uploaded files for a run
+router.get('/files/:runId', async (req, res) => {
+  try {
+    const { runId } = req.params;
+    
+    const runUploadDir = path.join(UPLOADS_DIR, runId);
+    
+    if (!fs.existsSync(runUploadDir)) {
+      return res.status(404).json({ error: 'Upload directory not found' });
+    }
+    
+    const files = fs.readdirSync(runUploadDir)
+      .filter(file => fs.statSync(path.join(runUploadDir, file)).isFile())
+      .map(file => {
+        const filePath = path.join(runUploadDir, file);
+        const stats = fs.statSync(filePath);
+        return {
+          name: file,
+          size: stats.size,
+          modified: stats.mtime,
+          downloadUrl: `/upload/download/${runId}/${file}`
+        };
+      });
+    
+    res.json({ files });
+    
+  } catch (error) {
+    console.error('Error listing uploaded files:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Download uploaded files
+router.get('/download/:runId/:filename', async (req, res) => {
+  try {
+    const { runId, filename } = req.params;
+    
+    const filePath = path.join(UPLOADS_DIR, runId, filename);
+    
+    // Security check: ensure file is within the uploads directory
+    const normalizedFilePath = path.normalize(filePath);
+    const normalizedUploadDir = path.normalize(path.join(UPLOADS_DIR, runId));
+    
+    if (!normalizedFilePath.startsWith(normalizedUploadDir)) {
+      return res.status(400).json({ error: 'Invalid file path' });
+    }
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    
+    // Determine content type based on file extension
+    const ext = path.extname(filename).toLowerCase();
+    let contentType = 'application/octet-stream';
+    
+    if (ext === '.csv') {
+      contentType = 'text/csv';
+    } else if (ext === '.fastq' || ext === '.fasta' || ext === '.fa') {
+      contentType = 'text/plain';
+    } else if (ext === '.gz') {
+      contentType = 'application/gzip';
+    } else if (ext === '.zip') {
+      contentType = 'application/zip';
+    }
+    
+    // Set appropriate headers
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', contentType);
+    
+    // Stream the file
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+    
+  } catch (error) {
+    console.error('Error serving uploaded file:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;

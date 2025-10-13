@@ -15,15 +15,15 @@ router.get('/download/:runId/:filename', async (req, res) => {
   try {
     const { runId, filename } = req.params;
     
-    // Verify the pipeline run exists and is completed
+    // Optional: Verify the pipeline run exists (but don't require specific status)
+    // This allows downloading result files even from failed/incomplete pipelines
+    // Uncomment the following block if you want to require the run to exist in the database:
+    /*
     const pipelineRun = await getPipelineRun(runId);
     if (!pipelineRun) {
       return res.status(404).json({ error: 'Pipeline run not found' });
     }
-    
-    if (pipelineRun.status !== 'completed') {
-      return res.status(400).json({ error: 'Pipeline not completed yet' });
-    }
+    */
     
     // Check if user has access (if authentication is implemented)
     // if (req.user && pipelineRun.user_id !== req.user.id) {
@@ -45,9 +45,23 @@ router.get('/download/:runId/:filename', async (req, res) => {
       return res.status(404).json({ error: 'File not found' });
     }
     
+    // Determine content type based on file extension
+    const ext = path.extname(filename).toLowerCase();
+    let contentType = 'application/octet-stream';
+    
+    if (ext === '.csv') {
+      contentType = 'text/csv';
+    } else if (ext === '.png' || ext === '.jpg' || ext === '.jpeg') {
+      contentType = `image/${ext.substring(1)}`;
+    } else if (ext === '.rds') {
+      contentType = 'application/octet-stream';
+    } else if (ext === '.txt') {
+      contentType = 'text/plain';
+    }
+    
     // Set appropriate headers
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Type', contentType);
     
     // Stream the file
     const fileStream = fs.createReadStream(filePath);

@@ -112,11 +112,7 @@ app.get('/collaborators', (req, res) => res.sendFile(path.join(htmlPath, 'collab
 // STATIC - Fix the path to static files
 app.use('/static', express.static(path.join(__dirname, '..', '..', 'src', 'static')));
 
-// 404 handler for API routes
-app.use('/upload/*', (req, res) => {
-  res.status(404).json({ error: 'Upload endpoint not found', path: req.path });
-});
-
+// 404 handler for API routes - Removed the /upload/* handler to allow download endpoints
 app.use('/api/*', (req, res) => {
   res.status(404).json({ error: 'API endpoint not found', path: req.path });
 });
