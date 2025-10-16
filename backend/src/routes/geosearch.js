@@ -29,12 +29,12 @@ router.get('/', async (req, res) => {
                 if (typeof sample.lat_lon === 'string') {
                     // Format: "(longitude,latitude)" - PostgreSQL POINT follows (x,y) convention
                     const coords = sample.lat_lon.replace(/[()]/g, '').split(',');
-                    longitude = parseFloat(coords[1]); // x = longitude
-                    latitude = parseFloat(coords[0]);  // y = latitude
+                    longitude = parseFloat(coords[0]); // x = longitude
+                    latitude = parseFloat(coords[1]);  // y = latitude
                 } else if (sample.lat_lon.x !== undefined && sample.lat_lon.y !== undefined) {
                     // Format: {x: lon, y: lat} - PostgreSQL POINT object format
-                    latitude = sample.lat_lon.x;   // y = latitude
-                    longitude = sample.lat_lon.y;  // x = longitude
+                    longitude = sample.lat_lon.x;  // x = longitude
+                    latitude = sample.lat_lon.y;   // y = latitude
                 } else {
                     // Fallback - try to parse as object with lat/lon properties
                     latitude = sample.lat_lon.latitude || sample.lat_lon.lat;
@@ -130,8 +130,8 @@ router.get('/:id', async (req, res) => {
                 latitude = parseFloat(coords[1]);  // y = latitude
             } else if (sample.lat_lon.x !== undefined && sample.lat_lon.y !== undefined) {
                 // Format: {x: lon, y: lat} - PostgreSQL POINT object format
-                latitude = sample.lat_lon.y;   // y = latitude
                 longitude = sample.lat_lon.x;  // x = longitude
+                latitude = sample.lat_lon.y;   // y = latitude
             }
         }
 
