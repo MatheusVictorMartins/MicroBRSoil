@@ -61,7 +61,7 @@ async function loadSoilSamples() {
             ${sample.currentVegetation ? `<strong>Vegetation:</strong> ${sample.currentVegetation}<br/>` : ''}
           </div>
           <div class="popup-actions">
-            <button class="btn btn-primary btn-sm" onclick="window.location.href='/html/individual_page.html?soilId=${sample.id}'">Ver detalhes</button>
+            <button class="btn btn-primary btn-sm" onclick="verDetalhes('${sample.id}')">Ver detalhes</button>
           </div>
         </div>
       `;
