@@ -109,6 +109,9 @@ app.get('/help', (req, res) => res.sendFile(path.join(htmlPath, 'help.html')));
 app.get('/about', (req, res) => res.sendFile(path.join(htmlPath, 'about.html')));
 app.get('/collaborators', (req, res) => res.sendFile(path.join(htmlPath, 'collaborators.html')));
 
+// Individual soil sample page
+app.get('/html/individual_page.html', (req, res) => res.sendFile(path.join(htmlPath, 'individual_page.html')));
+
 // STATIC - Fix the path to static files
 app.use('/static', express.static(path.join(__dirname, '..', '..', 'src', 'static')));
 

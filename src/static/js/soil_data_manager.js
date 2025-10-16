@@ -138,9 +138,11 @@ class SoilDataManager {
                 <td>${soil.creation_date || 'N/A'}</td>
             `;
             
-            // Add click event to show details
+            // Make row clickable to navigate to individual page
             row.style.cursor = 'pointer';
-            row.addEventListener('click', () => this.showSoilDetails(soil.id));
+            row.addEventListener('click', () => {
+                window.location.href = `/individual_page?soilId=${soil.id}`;
+            });
             
             tableBody.appendChild(row);
         });

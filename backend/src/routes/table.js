@@ -146,24 +146,39 @@ router.get('/soil/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
+    // Validate ID
+    const soilId = parseInt(id, 10);
+    if (isNaN(soilId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid soil ID - must be a number'
+      });
+    }
+
     const query = `
       SELECT 
-        s.*,
+        s.soil_id,
+        s.sample_name,
+        s.collection_date,
+        s.soil_depth,
+        s.elev,
+        s.env_broad_scale,
+        s.env_local_scale,
+        s.env_medium as material,
+        s.geo_loc_name as location,
+        s.ph,
+        s.soil_type,
+        s.tot_org_carb,
+        s.tot_nitro,
+        s.created_at,
         u.user_email as owner,
-        CASE 
-          WHEN s.lat_lon IS NOT NULL 
-          THEN json_build_object(
-            'latitude', ST_Y(s.lat_lon),
-            'longitude', ST_X(s.lat_lon)
-          )
-          ELSE NULL
-        END as coordinates
+        s.lat_lon::text as lat_lon_text
       FROM microbrsoil_db.soil s
       LEFT JOIN microbrsoil_db.users u ON s.owner_id = u.user_id
       WHERE s.soil_id = $1
     `;
 
-    const result = await pool.query(query, [id]);
+    const result = await pool.query(query, [soilId]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -172,9 +187,27 @@ router.get('/soil/:id', async (req, res) => {
       });
     }
 
+    // Parse lat_lon if exists
+    const row = result.rows[0];
+    if (row.lat_lon_text) {
+      try {
+        // Format is "(x,y)" - parse it
+        const match = row.lat_lon_text.match(/\(([^,]+),([^)]+)\)/);
+        if (match) {
+          row.coordinates = {
+            longitude: parseFloat(match[1]),
+            latitude: parseFloat(match[2])
+          };
+        }
+      } catch (e) {
+        console.error('Error parsing coordinates:', e);
+      }
+    }
+    delete row.lat_lon_text;
+
     res.json({
       success: true,
-      data: result.rows[0]
+      data: row
     });
 
   } catch (error) {
@@ -183,6 +216,7 @@ router.get('/soil/:id', async (req, res) => {
       stack: error.stack,
       soilId: req.params.id
     });
+    console.error('Soil detail error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch soil detail',
@@ -384,6 +418,97 @@ router.get('/stats', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch statistics',
+      message: error.message
+    });
+  }
+});
+
+// Get alpha diversity tests by soil ID
+router.get('/alpha/soil/:soilId', async (req, res) => {
+  try {
+    const { soilId } = req.params;
+    
+    // Validate ID
+    const id = parseInt(soilId, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid soil ID - must be a number'
+      });
+    }
+
+    const query = `
+      SELECT 
+        alpha_id,
+        soil_id,
+        alpha_observed,
+        alpha_shannon,
+        alpha_simpson,
+        alpha_chao1,
+        alpha_goods
+      FROM microbrsoil_db.alpha_tests
+      WHERE soil_id = $1
+      ORDER BY alpha_id DESC
+    `;
+
+    const result = await pool.query(query, [id]);
+
+    res.json({
+      success: true,
+      data: result.rows
+    });
+
+  } catch (error) {
+    req.logger?.error('Error fetching alpha tests for soil', { 
+      error: error.message, 
+      stack: error.stack,
+      soilId: req.params.soilId
+    });
+    console.error('Alpha tests fetch error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch alpha tests',
+      message: error.message
+    });
+  }
+});
+
+// Get all alpha diversity tests (with optional pagination)
+router.get('/alpha', async (req, res) => {
+  try {
+    const { page = 1, limit = 100 } = req.query;
+    const offset = (page - 1) * limit;
+
+    const query = `
+      SELECT 
+        alpha_id,
+        soil_id,
+        alpha_observed,
+        alpha_shannon,
+        alpha_simpson,
+        alpha_chao1,
+        alpha_goods
+      FROM microbrsoil_db.alpha_tests
+      ORDER BY alpha_id DESC
+      LIMIT $1 OFFSET $2
+    `;
+
+    const result = await pool.query(query, [limit, offset]);
+
+    res.json({
+      success: true,
+      data: result.rows
+    });
+
+  } catch (error) {
+    req.logger?.error('Error fetching all alpha tests', { 
+      error: error.message, 
+      stack: error.stack 
+    });
+    console.error('Alpha tests fetch error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch alpha tests',
       message: error.message
     });
   }

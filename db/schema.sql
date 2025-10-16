@@ -135,3 +135,33 @@ CREATE TABLE IF NOT EXISTS pipeline_results (
     CONSTRAINT fk_results_run FOREIGN KEY (run_id) REFERENCES pipeline_runs(run_id) ON DELETE CASCADE,
     CONSTRAINT fk_results_soil FOREIGN KEY (soil_id) REFERENCES soil(soil_id) ON DELETE SET NULL
 );
+
+-- Tabela de metadados de amostras (sample metadata)
+CREATE TABLE IF NOT EXISTS sample_metadata (
+    metadata_id SERIAL PRIMARY KEY,
+    soil_id INTEGER NOT NULL,
+    run_id UUID NOT NULL,
+    sample_id VARCHAR(255) NOT NULL,
+    
+    -- Common metadata fields
+    treatment VARCHAR(255),
+    site VARCHAR(255),
+    condition VARCHAR(255),
+    replicate VARCHAR(50),
+    group_name VARCHAR(255),
+    
+    -- Environmental/soil data
+    ph FLOAT,
+    temperature FLOAT,
+    soil_depth INTEGER,
+    moisture FLOAT,
+    
+    -- Flexible storage for any custom fields from metadata.csv
+    custom_fields JSONB,
+    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    CONSTRAINT fk_sample_metadata_soil FOREIGN KEY (soil_id) REFERENCES soil(soil_id) ON DELETE CASCADE,
+    CONSTRAINT fk_sample_metadata_run FOREIGN KEY (run_id) REFERENCES pipeline_runs(run_id) ON DELETE CASCADE,
+    CONSTRAINT unique_sample_per_run UNIQUE (run_id, sample_id)
+);

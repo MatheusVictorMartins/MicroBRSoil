@@ -48,6 +48,11 @@ async function handleUpload(req, res, pipelineType) {
     const files = req.files || [req.file];
     if (!files || files.length === 0) return res.status(400).json({ error: 'No files uploaded' });
 
+    // Sort files by originalname to ensure consistent order
+    files.sort((a, b) => {
+      return a.originalname.localeCompare(b.originalname, undefined, { numeric: true, sensitivity: 'base' });
+    });
+
     const runId = req.uploadId;
     const userId = req.user?.id || null;
     

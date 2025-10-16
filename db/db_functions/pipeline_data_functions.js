@@ -126,6 +126,155 @@ const processPipelineResults = async (runId, outputDirectory, pipelineType, user
 };
 
 /**
+ * Parse metadata CSV row and map to soil table structure
+ * @param {Object} metadataRow - First row from sample_metadata.csv
+ * @param {string} pipelineType - Type of pipeline
+ * @param {string} runId - Pipeline run ID
+ * @returns {Object} Soil data object
+ */
+const parseMetadataForSoil = (metadataRow, pipelineType, runId) => {
+    // Helper function to safely parse numeric values
+    const parseNumeric = (value, defaultValue = 0) => {
+        if (value === null || value === undefined || value === '') return defaultValue;
+        const parsed = parseFloat(String(value).replace(',', '.'));
+        return isNaN(parsed) ? defaultValue : parsed;
+    };
+
+    // Helper function to safely parse integer values
+    const parseInt = (value, defaultValue = 0) => {
+        if (value === null || value === undefined || value === '') return defaultValue;
+        const parsed = Number.parseInt(String(value).replace(',', ''));
+        return isNaN(parsed) ? defaultValue : parsed;
+    };
+
+    // Helper function to parse lat/lon coordinates
+    const parseLatLon = (latLonString) => {
+        if (!latLonString || latLonString === '') return { x: 0, y: 0 };
+        
+        try {
+            // Handle different formats: "21.2345 S 44.9802 W" or "21.2345,-44.9802" or "(21.2345,-44.9802)"
+            const cleaned = String(latLonString).trim().replace(/[()]/g, '');
+            
+            // Format 1: "21.2345 S 44.9802 W"
+            if (cleaned.includes(' S ') || cleaned.includes(' N ')) {
+                const parts = cleaned.split(/\s+/);
+                let lat = parseFloat(parts[0]);
+                let lon = parseFloat(parts[2]);
+                
+                if (cleaned.includes(' S')) lat = -Math.abs(lat);
+                if (cleaned.includes(' N')) lat = Math.abs(lat);
+                if (cleaned.includes(' W')) lon = -Math.abs(lon);
+                if (cleaned.includes(' E')) lon = Math.abs(lon);
+                
+                return { x: lon, y: lat };
+            }
+            
+            // Format 2: "21.2345,-44.9802" or "21.2345, -44.9802"
+            if (cleaned.includes(',')) {
+                const [lat, lon] = cleaned.split(',').map(s => parseFloat(s.trim()));
+                if (!isNaN(lat) && !isNaN(lon)) {
+                    return { x: lon, y: lat };
+                }
+            }
+            
+            return { x: 0, y: 0 };
+        } catch (err) {
+            writeLog(`\n[WARNING] Failed to parse lat_lon: ${latLonString}, error: ${err.message}`);
+            return { x: 0, y: 0 };
+        }
+    };
+
+    // Helper function to parse date
+    const parseDate = (dateString) => {
+        if (!dateString || dateString === '') return new Date();
+        
+        try {
+            // Try parsing as-is first
+            const parsed = new Date(dateString);
+            if (!isNaN(parsed.getTime())) return parsed;
+            
+            // Handle format like "15-Feb-2025"
+            const monthMap = {
+                'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
+                'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
+                'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+            };
+            
+            const match = String(dateString).match(/(\d+)-([A-Za-z]+)-(\d+)/);
+            if (match) {
+                const day = match[1].padStart(2, '0');
+                const month = monthMap[match[2]];
+                const year = match[3];
+                return new Date(`${year}-${month}-${day}`);
+            }
+            
+            return new Date();
+        } catch (err) {
+            writeLog(`\n[WARNING] Failed to parse date: ${dateString}, error: ${err.message}`);
+            return new Date();
+        }
+    };
+
+    // Map metadata columns to soil table columns
+    // Support multiple naming conventions (case-insensitive, with/without #)
+    const getValue = (possibleKeys, defaultValue = null) => {
+        for (const key of possibleKeys) {
+            const value = metadataRow[key] || metadataRow[key.toLowerCase()] || 
+                         metadataRow[`#${key}`] || metadataRow[`#${key.toLowerCase()}`];
+            if (value !== undefined && value !== null && value !== '') {
+                return value;
+            }
+        }
+        return defaultValue;
+    };
+
+    const soilData = {
+        sample_name: getValue(['SAMPLE_NAME', 'sample_name', 'SampleID', 'Sample', 'sample_id'], `Pipeline_${pipelineType}_${runId}`),
+        collection_date: parseDate(getValue(['collection_date', 'CollectionDate', 'date'])),
+        soil_depth: parseInt(getValue(['depth', 'soil_depth', 'Depth'], 0), 0),
+        elev: parseInt(getValue(['elev', 'elevation', 'Elevation'], 0), 0),
+        env_broad_scale: getValue(['env_broad_scale', 'Environment', 'environment'], `${pipelineType.toUpperCase()} Pipeline Results`) || 'Unknown',
+        env_local_scale: getValue(['env_local_scale', 'LocalScale'], 'Bioinformatics Processing') || 'Unknown',
+        env_medium: getValue(['env_medium', 'Medium'], 'Sequencing Data') || 'Unknown',
+        geo_loc_name: getValue(['geo_loc_name', 'Location', 'location', 'Site', 'site'], 'Unknown') || 'Unknown',
+        lat_lon: parseLatLon(getValue(['lat_lon', 'LatLon', 'coordinates', 'Coordinates'])),
+        Enz_Aril: parseNumeric(getValue(['Enz_Aril', 'EnzAril', 'arylsulfatase']), 0),
+        Enz_Beta: parseNumeric(getValue(['Enz_Beta', 'EnzBeta', 'beta_glucosidase']), 0),
+        Enz_Fosf: parseNumeric(getValue(['Enz_Fosf', 'EnzFosf', 'phosphatase']), 0),
+        
+        // Optional fields - only include if present
+        agrochem_addition: getValue(['agrochem_addition', 'AgrochemAddition', 'agrochemical']),
+        al_sat: parseNumeric(getValue(['al_sat', 'AlSat', 'aluminum_saturation']), null),
+        altitude: parseNumeric(getValue(['altitude', 'Altitude', 'alt']), null),
+        annual_precpt: parseNumeric(getValue(['annual_precpt', 'AnnualPrecipitation', 'precipitation']), null),
+        annual_temp: parseNumeric(getValue(['annual_temp', 'AnnualTemperature', 'temperature', 'Temperature']), null),
+        crop_rotation: getValue(['crop_rotation', 'CropRotation', 'rotation']),
+        cur_land_use: getValue(['cur_land_use', 'CurrentLandUse', 'land_use']),
+        cur_vegetation: getValue(['cur_vegetation', 'CurrentVegetation', 'vegetation']),
+        extreme_event: getValue(['extreme_event', 'ExtremeEvent', 'event']),
+        fao_class: getValue(['fao_class', 'FAOClass', 'fao']),
+        fire: getValue(['fire', 'Fire']),
+        flooding: getValue(['flooding', 'Flooding']),
+        heavy_metals: getValue(['heavy_metals', 'HeavyMetals', 'metals']),
+        local_class: getValue(['local_class', 'LocalClass', 'soil_class']),
+        microbial_biomass: parseNumeric(getValue(['microbial_biomass', 'MicrobialBiomass', 'biomass']), null),
+        ph: parseNumeric(getValue(['ph', 'pH', 'Soil_ph', 'soil_ph']), null),
+        previous_land_use: getValue(['previous_land_use', 'PreviousLandUse']),
+        soil_horizon: getValue(['soil_horizon', 'SoilHorizon', 'horizon']),
+        soil_text: getValue(['soil_text', 'SoilTexture', 'texture']),
+        soil_type: getValue(['soil_type', 'SoilType', 'type']),
+        tillage: getValue(['tillage', 'Tillage']),
+        tot_nitro: parseNumeric(getValue(['tot_nitro', 'TotalNitrogen', 'nitrogen', 'N']), null),
+        tot_org_carb: parseNumeric(getValue(['tot_org_carb', 'TotalOrganicCarbon', 'organic_carbon', 'C']), null),
+        metadata_description: getValue(['description', 'Description', 'metadata_description'], 
+                                       `Results from ${pipelineType} pipeline run ${runId}`) ||
+                            `Results from ${pipelineType} pipeline run ${runId}`
+    };
+
+    return soilData;
+};
+
+/**
  * Process CSV files and store data in database
  * @param {Object} resultFiles - Object containing file paths
  * @param {number} userId - User ID
@@ -141,18 +290,57 @@ const processAndStoreData = async (resultFiles, userId, runId, pipelineType) => 
         const alphaData = await readCSV(resultFiles.alpha);
         const otuData = await readCSV(resultFiles.otu);
         const taxonomyData = await readCSV(resultFiles.taxonomy);
-        const metadataData = resultFiles.metadata ? await readCSV(resultFiles.metadata) : [];
+        
+        // Try to find the original uploaded metadata.csv first (in uploads directory)
+        // This file has the rich metadata uploaded by the user
+        const uploadsDir = process.env.UPLOADS_DIR || path.join(__dirname, '../../uploads');
+        const uploadedMetadataPath = path.join(uploadsDir, runId, 'metadata.csv');
+        
+        let metadataData = [];
+        let metadataSource = 'none';
+        
+        if (fs.existsSync(uploadedMetadataPath)) {
+            // Use the original uploaded metadata (rich data)
+            metadataData = await readCSV(uploadedMetadataPath);
+            metadataSource = 'uploaded (original)';
+            writeLog(`\n[INFO] Found original uploaded metadata.csv with ${metadataData.length} records`);
+        } else if (resultFiles.metadata && fs.existsSync(resultFiles.metadata)) {
+            // Fall back to R-generated sample_metadata.csv (minimal data)
+            metadataData = await readCSV(resultFiles.metadata);
+            metadataSource = 'R-generated (minimal)';
+            writeLog(`\n[INFO] Using R-generated sample_metadata.csv with ${metadataData.length} records`);
+        } else {
+            writeLog(`\n[WARNING] No metadata file found in uploads or results directories`);
+        }
 
         writeLog(`\n[SUCCESS] CSV files read successfully`);
         writeLog(`\n[INFO] Alpha diversity records: ${alphaData.length}`);
         writeLog(`\n[INFO] OTU table records: ${otuData.length}`);
         writeLog(`\n[INFO] Taxonomy records: ${taxonomyData.length}`);
-        writeLog(`\n[INFO] Metadata records: ${metadataData.length}`);
+        writeLog(`\n[INFO] Metadata records: ${metadataData.length} (source: ${metadataSource})`);
+
+        // Parse metadata from CSV if available
+        let parsedMetadata = null;
+        if (metadataData.length > 0) {
+            writeLog(`\n[INFO] Parsing metadata from ${metadataSource} file...`);
+            try {
+                parsedMetadata = parseMetadataForSoil(metadataData[0], pipelineType, runId);
+                writeLog(`\n[SUCCESS] Metadata parsed successfully`);
+                writeLog(`\n[INFO] Sample name: ${parsedMetadata.sample_name}`);
+                writeLog(`\n[INFO] Location: ${parsedMetadata.geo_loc_name}`);
+                writeLog(`\n[INFO] pH: ${parsedMetadata.ph || 'N/A'}`);
+                writeLog(`\n[INFO] Coordinates: (${parsedMetadata.lat_lon.x}, ${parsedMetadata.lat_lon.y})`);
+            } catch (metaError) {
+                writeLog(`\n[WARNING] Failed to parse metadata: ${metaError.message}`);
+                writeLog(`\n[WARNING] Will use default values`);
+            }
+        }
 
         // Create a soil record for the pipeline results
         let soilRecord;
         try {
-            const soilData = {
+            // Use parsed metadata if available, otherwise use defaults
+            const soilData = parsedMetadata || {
                 sample_name: `Pipeline_${pipelineType}_${runId}`,
                 collection_date: new Date(),
                 soil_depth: 0,
@@ -169,8 +357,11 @@ const processAndStoreData = async (resultFiles, userId, runId, pipelineType) => 
                 owner_id: userId || 1
             };
 
+            // Ensure owner_id is set even when using parsed metadata
+            soilData.owner_id = userId || 1;
+
             soilRecord = await soilFunctions.createSoil(soilData);
-            writeLog(`\n[SUCCESS] Soil record created`);
+            writeLog(`\n[SUCCESS] Soil record created with ID: ${soilRecord.rows[0].soil_id}`);
         } catch (soilError) {
             writeLog(`\n[ERROR] Erro ao criar registro de solo: ${soilError.message}`);
             throw new Error(`Failed to create soil record: ${soilError.message}`);

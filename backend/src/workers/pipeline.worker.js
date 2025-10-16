@@ -27,15 +27,17 @@ const worker = new Worker(QUEUE_NAME, async job => {
   });
 
   try {
-    // Renew job lock periodically for long-running processes
+    // Renew job lock periodically for long-running processes (e.g., R pipelines)
+    // Increased frequency to every 15 seconds for better reliability
     lockRenewalInterval = setInterval(async () => {
       try {
         await job.updateProgress(50); // Keep job alive
-        workerLogger.info(`Renewed lock for job ${job.id}`, { runId });
+        await job.extendLock(job.token, 300000); // Extend lock by 5 minutes
+        workerLogger.debug(`Renewed lock for job ${job.id}`, { runId });
       } catch (error) {
         workerLogger.warn(`Failed to renew lock for job ${job.id}`, { error: error.message, runId });
       }
-    }, 30000); // Renew every 30 seconds
+    }, 15000); // Renew every 15 seconds (was 30 seconds)
 
     // Update status in both fakeDB and database
     if (!pipelines[runId]) {
@@ -93,10 +95,7 @@ const worker = new Worker(QUEUE_NAME, async job => {
     console.log('✅ Pipeline execution completed');
     pipelines[runId].logs.push('Pipeline execution completed successfully');
 
-    // Clear the lock renewal interval
-    clearInterval(lockRenewalInterval);
-
-    // Process results and store in database
+    // Process results and store in database (keep lock alive during this)
     const userId = meta?.uploadedBy && meta.uploadedBy !== 'anonymous' ? meta.uploadedBy : null;
     await processPipelineResults(runId, runOutputDir, userId, pipelineType);
     
@@ -106,6 +105,24 @@ const worker = new Worker(QUEUE_NAME, async job => {
     await updatePipelineRunStatus(runId, 'completed', null, pipelines[runId].logs);
     
     console.log(`✅ Pipeline job ${runId} completed successfully`);
+    
+    // Clear the lock renewal interval AFTER all async operations complete
+    // This ensures the lock remains valid while BullMQ finalizes the job
+    if (lockRenewalInterval) {
+      clearInterval(lockRenewalInterval);
+      workerLogger.debug(`Lock renewal stopped for completed job ${runId}`);
+    }
+    
+    // Final lock extension to ensure BullMQ has time to finalize the job
+    // This prevents "Missing lock" errors during job completion
+    try {
+      await job.extendLock(job.token, 60000); // Extend by 1 minute for finalization
+      workerLogger.debug(`Final lock extension for job ${runId} before return`);
+    } catch (lockError) {
+      workerLogger.warn(`Could not extend lock for final return: ${lockError.message}`);
+      // Not critical - just log it
+    }
+    
     return { success: true, runId, outputDir: runOutputDir, result };
     
   } catch (error) {
@@ -129,9 +146,10 @@ const worker = new Worker(QUEUE_NAME, async job => {
 }, { 
   connection,
   concurrency: 1, // Process one job at a time to avoid resource conflicts
-  stalledInterval: 60 * 1000, // 60 seconds
+  stalledInterval: 90 * 1000, // 90 seconds (increased from 60s)
   maxStalledCount: 3, // Allow up to 3 stalls before considering failed
-  lockDuration: 120 * 1000, // 2 minutes lock duration
+  lockDuration: 300 * 1000, // 5 minutes lock duration (increased from 2 minutes for long R jobs)
+  lockRenewTime: 150 * 1000, // Renew lock when half the duration has elapsed (2.5 minutes)
 });
 
 worker.on('completed', async (job) => {
