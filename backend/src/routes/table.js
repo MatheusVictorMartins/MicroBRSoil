@@ -514,4 +514,119 @@ router.get('/alpha', async (req, res) => {
   }
 });
 
+// Get samples by soil ID
+router.get('/samples/soil/:soilId', async (req, res) => {
+  try {
+    const { soilId } = req.params;
+    
+    // Validate ID
+    const id = parseInt(soilId, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid soil ID - must be a number'
+      });
+    }
+
+    const query = `
+      SELECT 
+        sample_id,
+        soil_id,
+        plant_sequence,
+        tax_kingdom,
+        tax_phylum,
+        tax_class,
+        tax_order,
+        tax_family,
+        tax_genus,
+        tax_species,
+        otu_test1,
+        otu_test2
+      FROM microbrsoil_db.sample
+      WHERE soil_id = $1
+      ORDER BY sample_id ASC
+    `;
+
+    const result = await pool.query(query, [id]);
+
+    res.json({
+      success: true,
+      data: result.rows,
+      count: result.rows.length
+    });
+
+  } catch (error) {
+    req.logger?.error('Error fetching samples for soil', { 
+      error: error.message, 
+      stack: error.stack,
+      soilId: req.params.soilId
+    });
+    console.error('Samples fetch error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch samples',
+      message: error.message
+    });
+  }
+});
+
+// Get pipeline runs by soil ID
+router.get('/pipeline-runs/soil/:soilId', async (req, res) => {
+  try {
+    const { soilId } = req.params;
+    
+    // Validate ID
+    const id = parseInt(soilId, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid soil ID - must be a number'
+      });
+    }
+
+    const query = `
+      SELECT 
+        pr.run_id,
+        pr.job_id,
+        pr.status,
+        pr.pipeline_type,
+        pr.created_at,
+        pr.started_at,
+        pr.finished_at,
+        pr.error_message,
+        pr.logs,
+        pres.alpha_diversity_file,
+        pres.otu_table_file,
+        pres.taxonomy_file,
+        pres.metadata_file,
+        pres.processed_at
+      FROM microbrsoil_db.pipeline_runs pr
+      LEFT JOIN microbrsoil_db.pipeline_results pres ON pr.run_id = pres.run_id
+      WHERE pres.soil_id = $1
+      ORDER BY pr.created_at DESC
+    `;
+
+    const result = await pool.query(query, [id]);
+
+    res.json({
+      success: true,
+      data: result.rows,
+      count: result.rows.length
+    });
+
+  } catch (error) {
+    req.logger?.error('Error fetching pipeline runs for soil', { 
+      error: error.message, 
+      stack: error.stack,
+      soilId: req.params.soilId
+    });
+    console.error('Pipeline runs fetch error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch pipeline runs',
+      message: error.message
+    });
+  }
+});
+
 module.exports = router;

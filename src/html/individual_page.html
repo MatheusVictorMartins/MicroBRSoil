@@ -53,6 +53,12 @@
               <h5>Alpha diversity tests</h5>
               <div id="alpha-tests">Loading alpha tests...</div>
             </div>
+
+            <div class="basic-frame p-3 mt-3">
+              <h5>Samples</h5>
+              <p class="muted">Biological samples associated with this soil.</p>
+              <div id="samples-list">Loading samples...</div>
+            </div>
           </div>
 
           <div class="col-md-5">
@@ -68,6 +74,12 @@
                 <h6 class="mt-3">Result files</h6>
                 <ul id="result-files" class="list-group files-list"></ul>
               </div>
+            </div>
+
+            <div class="basic-frame p-3 mt-3">
+              <h5>Pipeline runs</h5>
+              <p class="muted">Processing history and logs for this soil sample.</p>
+              <div id="pipeline-runs">Loading pipeline runs...</div>
             </div>
           </div>
         </div>
@@ -193,6 +205,111 @@
       return [];
     }
 
+    async function fetchSamplesBySoil(soilId) {
+      try {
+        const res = await fetch(`/api/table/samples/soil/${soilId}`);
+        if (res.ok) {
+          const d = await res.json();
+          console.log('Samples received:', d);
+          if (d.success) return d.data;
+        }
+      } catch (e) { 
+        console.warn('Samples fetch failed:', e);
+      }
+      return [];
+    }
+
+    async function fetchPipelineRunsBySoil(soilId) {
+      try {
+        const res = await fetch(`/api/table/pipeline-runs/soil/${soilId}`);
+        if (res.ok) {
+          const d = await res.json();
+          console.log('Pipeline runs received:', d);
+          if (d.success) return d.data;
+        }
+      } catch (e) { 
+        console.warn('Pipeline runs fetch failed:', e);
+      }
+      return [];
+    }
+
+    function renderSamples(samples) {
+      const container = document.getElementById('samples-list');
+      if (!samples || samples.length === 0) {
+        container.innerHTML = '<p class="muted">No samples found for this soil.</p>';
+        return;
+      }
+
+      let html = '<div class="table-responsive"><table class="table table-sm table-striped"><thead><tr>';
+      html += '<th>ID</th><th>Kingdom</th><th>Phylum</th><th>Class</th><th>Order</th><th>Family</th><th>Genus</th><th>Species</th>';
+      html += '</tr></thead><tbody>';
+      
+      samples.forEach(s => {
+        html += `<tr>
+          <td>${s.sample_id}</td>
+          <td>${s.tax_kingdom || '-'}</td>
+          <td>${s.tax_phylum || '-'}</td>
+          <td>${s.tax_class || '-'}</td>
+          <td>${s.tax_order || '-'}</td>
+          <td>${s.tax_family || '-'}</td>
+          <td>${s.tax_genus || '-'}</td>
+          <td>${s.tax_species || '-'}</td>
+        </tr>`;
+      });
+      
+      html += '</tbody></table></div>';
+      html += `<small class="muted">${samples.length} sample(s) total</small>`;
+      container.innerHTML = html;
+    }
+
+    function renderPipelineRuns(runs) {
+      const container = document.getElementById('pipeline-runs');
+      if (!runs || runs.length === 0) {
+        container.innerHTML = '<p class="muted">No pipeline runs found for this soil.</p>';
+        return;
+      }
+
+      let html = '';
+      runs.forEach(run => {
+        const statusClass = run.status === 'completed' ? 'success' : 
+                           run.status === 'failed' ? 'danger' : 
+                           run.status === 'running' ? 'primary' : 'secondary';
+        
+        const duration = run.started_at && run.finished_at ? 
+          Math.round((new Date(run.finished_at) - new Date(run.started_at)) / 1000) + 's' : 
+          'N/A';
+
+        html += `
+          <div class="card mb-2">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <span><strong>Run ${run.run_id.substring(0, 8)}</strong></span>
+              <span class="badge bg-${statusClass}">${run.status}</span>
+            </div>
+            <div class="card-body p-2">
+              <small>
+                <strong>Type:</strong> ${run.pipeline_type}<br>
+                <strong>Created:</strong> ${new Date(run.created_at).toLocaleString()}<br>
+                ${run.started_at ? `<strong>Started:</strong> ${new Date(run.started_at).toLocaleString()}<br>` : ''}
+                ${run.finished_at ? `<strong>Finished:</strong> ${new Date(run.finished_at).toLocaleString()}<br>` : ''}
+                <strong>Duration:</strong> ${duration}<br>
+                ${run.error_message ? `<strong class="text-danger">Error:</strong> ${run.error_message}<br>` : ''}
+              </small>
+              ${run.logs && run.logs.length > 0 ? `
+                <details class="mt-2">
+                  <summary class="btn btn-sm btn-outline-secondary">View logs (${run.logs.length} entries)</summary>
+                  <div class="mt-2 p-2" style="background: #f8f9fa; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.85em;">
+                    ${run.logs.map(log => `<div>${log}</div>`).join('')}
+                  </div>
+                </details>
+              ` : '<small class="muted">No logs available</small>'}
+            </div>
+          </div>
+        `;
+      });
+      
+      container.innerHTML = html;
+    }
+
     async function fetchFilesForRun(runId) {
       if (!runId) return { uploads: [], results: [] };
       const uploads = [];
@@ -227,12 +344,22 @@
         document.getElementById('sample-meta').textContent = '';
         document.getElementById('basic-info').innerHTML = '<div class="alert alert-danger"><strong>Soil data not found</strong><br>No soil sample found with ID <code>' + soilId + '</code>.</div>';
         document.getElementById('alpha-tests').innerHTML = '';
+        document.getElementById('samples-list').innerHTML = '';
+        document.getElementById('pipeline-runs').innerHTML = '';
         return;
       }
       renderBasicInfo(soil);
 
       const alphas = await fetchAlphaBySoil(soilId);
       renderAlphaTests(alphas);
+
+      // Fetch and render samples
+      const samples = await fetchSamplesBySoil(soilId);
+      renderSamples(samples);
+
+      // Fetch and render pipeline runs
+      const pipelineRuns = await fetchPipelineRunsBySoil(soilId);
+      renderPipelineRuns(pipelineRuns);
 
       // If soil has run_id or runId in response, try to fetch files
       const runId = soil.run_id || soil.runId || null;
