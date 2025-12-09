@@ -143,3 +143,6 @@ vite.config.ts.timestamp-*
 *.fastq.gz
 *.fastq.bz2
 *.fastq.xz
+
+# UNNECESSARY READMES
+unnecessary_readme/

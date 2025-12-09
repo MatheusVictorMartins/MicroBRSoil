@@ -1,4 +1,4 @@
-const { Worker } = require('bullmq');
+const { Worker, UnrecoverableError } = require('bullmq');
 const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs');
@@ -126,6 +126,25 @@ const worker = new Worker(QUEUE_NAME, async job => {
       await updatePipelineRunStatus(runId, 'failed', error.message, pipelines[runId].logs);
     } catch (dbError) {
       console.error('Database update error:', dbError);
+    }
+    
+    // Check if error is non-recoverable (should not retry)
+    const errorMsg = error.message || '';
+    const isNonRecoverable = 
+      errorMsg.includes('no package called') ||           // Missing R package
+      errorMsg.includes('there is no package called') ||  // Missing R package (alternate)
+      errorMsg.includes('could not find function') ||     // Missing R function
+      errorMsg.includes('Unknown pipeline type') ||       // Invalid pipeline type
+      errorMsg.includes('FASTQ files not found') ||       // Missing input files
+      errorMsg.includes('Metadata file not found') ||     // Missing metadata
+      errorMsg.includes('permission denied');             // Permission error
+    
+    if (isNonRecoverable) {
+      workerLogger.error('Non-recoverable error detected, will not retry', {
+        runId,
+        error: errorMsg
+      });
+      throw new UnrecoverableError(`Non-recoverable: ${errorMsg}`);
     }
     
     throw error;

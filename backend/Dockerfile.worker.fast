@@ -1,0 +1,137 @@
+# Optimized Dockerfile for MicroBRSoil Worker
+# Uses pre-built R binary packages from Posit Package Manager
+# Build time: ~10-15 minutes (vs 1 hour with source compilation)
+
+FROM rocker/r-ver:4.3.2
+
+ENV DEBIAN_FRONTEND=noninteractive
+WORKDIR /app
+
+# ============================================
+# STAGE 1: Install system dependencies
+# ============================================
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Essential build tools
+    build-essential \
+    gfortran \
+    pkg-config \
+    cmake \
+    make \
+    # SSL and network
+    curl \
+    ca-certificates \
+    gnupg \
+    libcurl4-openssl-dev \
+    libssl-dev \
+    # Compression libraries
+    libbz2-dev \
+    liblzma-dev \
+    zlib1g-dev \
+    # XML and text processing
+    libxml2-dev \
+    libpcre2-dev \
+    # Graphics libraries
+    libpng-dev \
+    libjpeg-dev \
+    libtiff5-dev \
+    libcairo2-dev \
+    libfontconfig1-dev \
+    libfreetype6-dev \
+    libharfbuzz-dev \
+    libfribidi-dev \
+    # Math and science libraries
+    libgsl-dev \
+    libgmp-dev \
+    libmpfr-dev \
+    libglpk-dev \
+    # Git
+    libgit2-dev \
+    libssh2-1-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# ============================================
+# STAGE 2: Install Node.js
+# ============================================
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# ============================================
+# STAGE 3: Configure R for fast package installation
+# Use Posit Public Package Manager (P3M) for pre-compiled binaries
+# ============================================
+RUN echo 'options(repos = c(CRAN = "https://packagemanager.posit.co/cran/__linux__/jammy/latest"))' >> /usr/local/lib/R/etc/Rprofile.site \
+    && echo 'options(Ncpus = parallel::detectCores())' >> /usr/local/lib/R/etc/Rprofile.site \
+    && echo 'options(timeout = 600)' >> /usr/local/lib/R/etc/Rprofile.site
+
+# ============================================
+# STAGE 4: Install R packages at BUILD TIME (cached in Docker layer)
+# This is the key optimization - packages are baked into the image
+# ============================================
+
+# Install BiocManager first
+RUN Rscript -e "install.packages('BiocManager')" \
+    && Rscript -e "BiocManager::install(version = '3.18', ask = FALSE, update = FALSE)"
+
+# Install CRAN packages (using P3M binaries - very fast)
+RUN Rscript -e "install.packages(c('ggplot2', 'dplyr', 'vegan'), dependencies = TRUE)" \
+    && echo "✅ CRAN packages installed"
+
+# Install Bioconductor core packages (dada2 and phyloseq)
+# These have pre-compiled binaries on P3M for Ubuntu 22.04/jammy
+RUN Rscript -e "BiocManager::install(c('dada2', 'phyloseq'), ask = FALSE, update = FALSE, force = TRUE)" \
+    && echo "✅ Bioconductor core packages installed"
+
+# Install optional Bioconductor packages (don't fail build if these fail)
+RUN Rscript -e "tryCatch(BiocManager::install(c('ShortRead', 'Biostrings'), ask = FALSE, update = FALSE), error = function(e) message('Optional packages skipped'))" \
+    && echo "✅ Optional packages attempted"
+
+# Verify installation
+RUN Rscript -e "\
+    required <- c('dada2', 'phyloseq', 'ggplot2', 'dplyr', 'vegan'); \
+    for (pkg in required) { \
+      if (!requireNamespace(pkg, quietly = TRUE)) stop(paste('Missing:', pkg)); \
+      cat(paste('✅', pkg, 'v', as.character(packageVersion(pkg)), '\n')); \
+    }; \
+    cat('🎉 All R packages verified!\n')"
+
+# ============================================
+# STAGE 5: Install Node.js dependencies
+# ============================================
+COPY backend/package*.json ./
+RUN npm ci --only=production \
+    && npm rebuild bcrypt --build-from-source \
+    && echo "✅ Node.js dependencies installed"
+
+# ============================================
+# STAGE 6: Copy application code
+# ============================================
+COPY backend/ .
+RUN mkdir -p /app/pipeline-r
+COPY pipeline-r/*.R /app/pipeline-r/
+
+# ============================================
+# STAGE 7: Create optimized entrypoint
+# ============================================
+RUN echo '#!/bin/bash\n\
+set -e\n\
+\n\
+echo "🚀 Starting MicroBRSoil Worker"\n\
+echo "R version: $(R --version | head -1)"\n\
+echo "Node version: $(node --version)"\n\
+\n\
+# Quick R package verification (should be instant since packages are pre-installed)\n\
+if Rscript -e "library(dada2); library(phyloseq); cat(\"✅ R packages ready\\n\")" 2>/dev/null; then\n\
+  echo "✅ All packages verified"\n\
+else\n\
+  echo "⚠️ Package verification failed, but continuing..."\n\
+fi\n\
+\n\
+# Rebuild bcrypt for current architecture\n\
+cd /app && npm rebuild bcrypt --build-from-source 2>/dev/null || true\n\
+\n\
+echo "🎯 Starting worker process..."\n\
+exec "$@"' > /app/entrypoint-fast.sh && chmod +x /app/entrypoint-fast.sh
+
+ENTRYPOINT ["/app/entrypoint-fast.sh"]
+CMD ["npm", "run", "worker"]
