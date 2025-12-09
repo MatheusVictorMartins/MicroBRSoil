@@ -27,17 +27,24 @@ const worker = new Worker(QUEUE_NAME, async job => {
   });
 
   try {
+    // Check if job is already completed (prevent retry-after-success)
+    const state = await job.getState();
+    if (state === 'completed') {
+      workerLogger.warn(`Job ${job.id} already completed, skipping execution`, { runId, state });
+      return { success: true, runId, skipped: true, reason: 'already_completed' };
+    }
+    
     // Renew job lock periodically for long-running processes (e.g., R pipelines)
-    // Increased frequency to every 15 seconds for better reliability
+    // Increased lock duration to 10 minutes and renewal interval to 30 seconds
     lockRenewalInterval = setInterval(async () => {
       try {
         await job.updateProgress(50); // Keep job alive
-        await job.extendLock(job.token, 300000); // Extend lock by 5 minutes
+        await job.extendLock(job.token, 600000); // Extend lock by 10 minutes (was 5)
         workerLogger.debug(`Renewed lock for job ${job.id}`, { runId });
       } catch (error) {
         workerLogger.warn(`Failed to renew lock for job ${job.id}`, { error: error.message, runId });
       }
-    }, 15000); // Renew every 15 seconds (was 30 seconds)
+    }, 30000); // Renew every 30 seconds (more stable than 15s)
 
     // Update status in both fakeDB and database
     if (!pipelines[runId]) {
@@ -106,30 +113,10 @@ const worker = new Worker(QUEUE_NAME, async job => {
     
     console.log(`✅ Pipeline job ${runId} completed successfully`);
     
-    // Clear the lock renewal interval AFTER all async operations complete
-    // This ensures the lock remains valid while BullMQ finalizes the job
-    if (lockRenewalInterval) {
-      clearInterval(lockRenewalInterval);
-      workerLogger.debug(`Lock renewal stopped for completed job ${runId}`);
-    }
-    
-    // Final lock extension to ensure BullMQ has time to finalize the job
-    // This prevents "Missing lock" errors during job completion
-    try {
-      await job.extendLock(job.token, 60000); // Extend by 1 minute for finalization
-      workerLogger.debug(`Final lock extension for job ${runId} before return`);
-    } catch (lockError) {
-      workerLogger.warn(`Could not extend lock for final return: ${lockError.message}`);
-      // Not critical - just log it
-    }
-    
     return { success: true, runId, outputDir: runOutputDir, result };
     
   } catch (error) {
     console.error('Pipeline worker error:', error);
-    
-    // Clear the lock renewal interval on error
-    if (lockRenewalInterval) clearInterval(lockRenewalInterval);
     
     // Update status in fakeDB and database
     pipelines[runId].status = 'failed';
@@ -142,14 +129,30 @@ const worker = new Worker(QUEUE_NAME, async job => {
     }
     
     throw error;
+  } finally {
+    // Always clear the lock renewal interval, regardless of success or failure
+    if (lockRenewalInterval) {
+      clearInterval(lockRenewalInterval);
+      workerLogger.debug(`Lock renewal interval cleared for job ${runId}`);
+    }
+    
+    // Extend lock one final time to allow BullMQ to finalize the job
+    // This prevents "Missing lock" errors during completion/failure handling
+    try {
+      await job.extendLock(job.token, 60000); // 1 minute for finalization
+      workerLogger.debug(`Final lock extension for job ${runId}`);
+    } catch (lockError) {
+      // Not critical - job may already be finalized
+      workerLogger.debug(`Could not extend lock during finalization: ${lockError.message}`);
+    }
   }
 }, { 
   connection,
   concurrency: 1, // Process one job at a time to avoid resource conflicts
-  stalledInterval: 90 * 1000, // 90 seconds (increased from 60s)
-  maxStalledCount: 3, // Allow up to 3 stalls before considering failed
-  lockDuration: 300 * 1000, // 5 minutes lock duration (increased from 2 minutes for long R jobs)
-  lockRenewTime: 150 * 1000, // Renew lock when half the duration has elapsed (2.5 minutes)
+  stalledInterval: 120 * 1000, // 120 seconds (2 minutes)
+  maxStalledCount: 2, // Allow up to 2 stalls before considering failed (reduced to prevent duplicates)
+  lockDuration: 600 * 1000, // 10 minutes lock duration (matches manual renewal interval)
+  lockRenewTime: 300 * 1000, // Renew lock when half the duration has elapsed (5 minutes)
 });
 
 worker.on('completed', async (job) => {

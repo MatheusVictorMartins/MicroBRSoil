@@ -117,24 +117,67 @@ async function runIlluminaPipeline(fastqPath, outputDir = null) {
       throw enhancedError;
     }
 
-    // Verify output files were created
+    // Verify output files were created and validate quality
     if (outputDir) {
       const expectedFiles = [
-        'otu_table.csv',
-        'tax_table.csv',
-        'sample_metadata.csv',
-        'phyloseq_object.rds'
+        { name: 'otu_table.csv', minSize: 500, minRows: 10 },
+        { name: 'tax_table.csv', minSize: 1000, minRows: 50 },
+        { name: 'sample_metadata.csv', minSize: 100, minRows: 2 },
+        { name: 'phyloseq_object.rds', minSize: 1000, minRows: null }
       ];
       
-      const missingFiles = expectedFiles.filter(f => !fs.existsSync(path.join(outputDir, f)));
+      const missingFiles = [];
+      const invalidFiles = [];
       
-      if (missingFiles.length > 0) {
-        console.warn(`\n⚠️  Warning: Some expected files were not created:`);
-        missingFiles.forEach(f => console.warn(`  - ${f}`));
-        console.warn('Pipeline may have completed with errors\n');
-      } else {
-        console.log('\n✅ All expected output files created successfully');
+      for (const fileSpec of expectedFiles) {
+        const filePath = path.join(outputDir, fileSpec.name);
+        
+        if (!fs.existsSync(filePath)) {
+          missingFiles.push(fileSpec.name);
+          continue;
+        }
+        
+        // Check file size
+        const stats = fs.statSync(filePath);
+        if (stats.size < fileSpec.minSize) {
+          invalidFiles.push(`${fileSpec.name} (only ${stats.size} bytes, expected >${fileSpec.minSize})`);
+          continue;
+        }
+        
+        // For CSV files, validate row count
+        if (fileSpec.minRows && fileSpec.name.endsWith('.csv')) {
+          try {
+            const content = fs.readFileSync(filePath, 'utf8');
+            const lines = content.trim().split('\n');
+            const dataRows = lines.length - 1; // Exclude header
+            
+            if (dataRows < fileSpec.minRows) {
+              invalidFiles.push(`${fileSpec.name} (only ${dataRows} rows, expected >${fileSpec.minRows})`);
+            }
+          } catch (readError) {
+            console.warn(`Could not validate ${fileSpec.name}: ${readError.message}`);
+          }
+        }
       }
+      
+      if (missingFiles.length > 0 || invalidFiles.length > 0) {
+        const errorMsg = [];
+        if (missingFiles.length > 0) {
+          errorMsg.push(`Missing files: ${missingFiles.join(', ')}`);
+        }
+        if (invalidFiles.length > 0) {
+          errorMsg.push(`Invalid/incomplete files: ${invalidFiles.join(', ')}`);
+        }
+        
+        console.error(`\n❌ Pipeline output validation FAILED:\n  ${errorMsg.join('\n  ')}`);
+        
+        const validationError = new Error('Pipeline completed but output files are missing or invalid. This usually indicates the input FASTQ files were empty, corrupted, or the pipeline failed during processing.');
+        validationError.missingFiles = missingFiles;
+        validationError.invalidFiles = invalidFiles;
+        throw validationError;
+      }
+      
+      console.log('\n✅ All expected output files created and validated successfully');
     }
 
     console.log('\n========================================');

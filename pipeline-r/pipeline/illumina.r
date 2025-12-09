@@ -20,11 +20,13 @@ run_dada2_pipeline <- function(path1, path2 = "/app/pipeline-r/references/silva_
 
   # Diretório base onde estão os arquivos FASTQ
   path <- dirname(path1)
-  fnFs <- sort(list.files(path, pattern = "_R1_001.fastq.gz", full.names = TRUE))
-  fnRs <- sort(list.files(path, pattern = "_R2_001.fastq.gz", full.names = TRUE))
+  # Support both Illumina patterns: *_R1_001.fastq.gz and *_L001_R1_001.fastq.gz (with lane number)
+  # Use [.] for literal dot in R regex (clearer than \\.)
+  fnFs <- sort(list.files(path, pattern = "_(L[0-9]{3}_)?R1_001[.]fastq([.]gz)?$", full.names = TRUE))
+  fnRs <- sort(list.files(path, pattern = "_(L[0-9]{3}_)?R2_001[.]fastq([.]gz)?$", full.names = TRUE))
   
   if (length(fnFs) == 0 || length(fnRs) == 0) {
-    stop("No FASTQ files found matching pattern _R1_001.fastq.gz and _R2_001.fastq.gz")
+    stop("No FASTQ files found matching pattern _R1_001.fastq.gz or _L001_R1_001.fastq.gz")
   }
   
   sample.names <- sapply(strsplit(basename(fnFs), "_"), `[`, 1)

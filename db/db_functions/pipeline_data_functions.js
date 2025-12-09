@@ -336,38 +336,72 @@ const processAndStoreData = async (resultFiles, userId, runId, pipelineType) => 
             }
         }
 
-        // Create a soil record for the pipeline results
-        let soilRecord;
+        // Check if soil record already exists for this run (idempotency check)
+        // If the pipeline was retried, we should reuse the existing soil record
+        let existingSoilId = null;
         try {
-            // Use parsed metadata if available, otherwise use defaults
-            const soilData = parsedMetadata || {
-                sample_name: `Pipeline_${pipelineType}_${runId}`,
-                collection_date: new Date(),
-                soil_depth: 0,
-                elev: 0,
-                env_broad_scale: `${pipelineType.toUpperCase()} Pipeline Results`,
-                env_local_scale: 'Bioinformatics Processing',
-                env_medium: 'Sequencing Data',
-                geo_loc_name: 'Unknown',
-                lat_lon: { x: 0, y: 0 },
-                Enz_Aril: 0,
-                Enz_Beta: 0,
-                Enz_Fosf: 0,
-                metadata_description: `Results from ${pipelineType} pipeline run ${runId}`,
-                owner_id: userId || 1
-            };
-
-            // Ensure owner_id is set even when using parsed metadata
-            soilData.owner_id = userId || 1;
-
-            soilRecord = await soilFunctions.createSoil(soilData);
-            writeLog(`\n[SUCCESS] Soil record created with ID: ${soilRecord.rows[0].soil_id}`);
-        } catch (soilError) {
-            writeLog(`\n[ERROR] Erro ao criar registro de solo: ${soilError.message}`);
-            throw new Error(`Failed to create soil record: ${soilError.message}`);
+            const existingResult = await pool.query(
+                'SELECT soil_id FROM microbrsoil_db.pipeline_results WHERE run_id = $1 AND soil_id IS NOT NULL',
+                [runId]
+            );
+            if (existingResult.rows.length > 0) {
+                existingSoilId = existingResult.rows[0].soil_id;
+                writeLog(`\n[INFO] Reusing existing soil_id ${existingSoilId} for retry of run ${runId}`);
+            }
+        } catch (checkError) {
+            writeLog(`\n[WARNING] Could not check for existing soil record: ${checkError.message}`);
         }
 
-        const soilId = soilRecord.rows[0].soil_id;
+        // Create a soil record for the pipeline results (only if one doesn't exist)
+        let soilRecord;
+        let soilId;
+        
+        if (existingSoilId) {
+            soilId = existingSoilId;
+            writeLog(`\n[INFO] Using existing soil record: ${soilId}`);
+        } else {
+            try {
+                // Use parsed metadata if available, otherwise use defaults
+                const soilData = parsedMetadata || {
+                    sample_name: `Pipeline_${pipelineType}_${runId}`,
+                    collection_date: new Date(),
+                    soil_depth: 0,
+                    elev: 0,
+                    env_broad_scale: `${pipelineType.toUpperCase()} Pipeline Results`,
+                    env_local_scale: 'Bioinformatics Processing',
+                    env_medium: 'Sequencing Data',
+                    geo_loc_name: 'Unknown',
+                    lat_lon: { x: 0, y: 0 },
+                    Enz_Aril: 0,
+                    Enz_Beta: 0,
+                    Enz_Fosf: 0,
+                    metadata_description: `Results from ${pipelineType} pipeline run ${runId}`,
+                    owner_id: userId || 1
+                };
+
+                // Ensure owner_id is set even when using parsed metadata
+                soilData.owner_id = userId || 1;
+
+                soilRecord = await soilFunctions.createSoil(soilData);
+                soilId = soilRecord.rows[0].soil_id;
+                writeLog(`\n[SUCCESS] Soil record created with ID: ${soilId}`);
+            } catch (soilError) {
+                writeLog(`\n[ERROR] Erro ao criar registro de solo: ${soilError.message}`);
+                throw new Error(`Failed to create soil record: ${soilError.message}`);
+            }
+        }
+        
+        // If this is a retry, delete old alpha/sample records to prevent duplicates
+        if (existingSoilId) {
+            try {
+                await pool.query('DELETE FROM microbrsoil_db.alpha_tests WHERE soil_id = $1', [soilId]);
+                await pool.query('DELETE FROM microbrsoil_db.sample WHERE soil_id = $1', [soilId]);
+                writeLog(`\n[INFO] Deleted old alpha_tests and sample records for soil_id ${soilId} (retry cleanup)`);
+            } catch (deleteError) {
+                writeLog(`\n[WARNING] Could not delete old records: ${deleteError.message}`);
+            }
+        }
+        
         let alphaRecords = 0;
         let sampleRecords = 0;
 

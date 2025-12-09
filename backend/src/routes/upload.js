@@ -63,8 +63,32 @@ async function handleUpload(req, res, pipelineType) {
       size: file.size
     }));
 
-    // Use the first file path as the main input path (for compatibility)
-    const mainFilePath = files[0].path;
+    // Determine input path based on pipeline type
+    let mainFilePath;
+    
+    if (pipelineType === 'illumina') {
+      // For Illumina: validate FASTQ files exist and use directory path
+      // Support both patterns: *_R1_001.fastq.gz and *_L001_R1_001.fastq.gz
+      const fastqFiles = uploadedFiles.filter(f => 
+        f.name.match(/_(L\d{3}_)?R[12]_001\.fastq(\.gz)?$/i)
+      );
+      
+      if (fastqFiles.length === 0) {
+        // Clean up uploaded files
+        const uploadDir = path.dirname(files[0].path);
+        fs.rmSync(uploadDir, { recursive: true, force: true });
+        return res.status(400).json({ 
+          error: 'No valid FASTQ files found. Illumina pipeline requires files matching pattern: *_R1_001.fastq.gz or *_L001_R1_001.fastq.gz',
+          filesReceived: uploadedFiles.map(f => f.name)
+        });
+      }
+      
+      // Use the directory path containing FASTQ files
+      mainFilePath = path.dirname(files[0].path);
+    } else {
+      // For other pipelines: use the first file path (legacy behavior)
+      mainFilePath = files[0].path;
+    }
 
     // Store in fakeDB for compatibility
     pipelines[runId] = {
