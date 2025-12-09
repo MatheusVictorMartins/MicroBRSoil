@@ -12,6 +12,13 @@ CREATE TABLE IF NOT EXISTS roles (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Inserir roles default
+INSERT INTO roles (role_name, description) VALUES 
+    ('admin', 'Administrador do sistema com acesso total'),
+    ('user', 'Usuário padrão com acesso limitado'),
+    ('researcher', 'Pesquisador com acesso a análises e resultados')
+ON CONFLICT (role_name) DO NOTHING;
+
 -- Tabela de usuários
 CREATE TABLE IF NOT EXISTS users (
     user_id SERIAL PRIMARY KEY,
@@ -23,6 +30,12 @@ CREATE TABLE IF NOT EXISTS users (
     is_active BOOLEAN DEFAULT TRUE,
     CONSTRAINT fk_users_role FOREIGN KEY (role_id) REFERENCES roles(role_id) ON DELETE CASCADE
 );
+
+-- Inserir usuário de sistema default (necessário para pipelines anônimas)
+-- Senha hash de 'system_password' - deve ser alterada em produção
+INSERT INTO users (user_email, password_hash, role_id) VALUES 
+    ('system@microbrsoil.local', '$2b$10$defaultsystemhashdonotuse', 1)
+ON CONFLICT (user_email) DO NOTHING;
 
 -- Tabela de solo (soil)
 CREATE TABLE IF NOT EXISTS soil (
