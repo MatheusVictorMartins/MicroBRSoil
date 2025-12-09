@@ -83,37 +83,13 @@ COPY pipeline-r/check_system_deps.R /app/pipeline-r/
 RUN echo "🔍 Checking system dependencies for R packages..." && \
     Rscript /app/pipeline-r/check_system_deps.R
 
-# ============================================
-# INSTALL ALL R PACKAGES AT BUILD TIME
-# Using P3M repository for pre-compiled binaries
-# ============================================
-
-# Configure P3M repository globally for faster binary downloads
-RUN echo 'options(repos = c(CRAN = "https://packagemanager.posit.co/cran/__linux__/jammy/latest"))' >> /usr/local/lib/R/etc/Rprofile.site && \
-    echo 'options(Ncpus = parallel::detectCores())' >> /usr/local/lib/R/etc/Rprofile.site && \
-    echo 'options(timeout = 600)' >> /usr/local/lib/R/etc/Rprofile.site
-
-# Install BiocManager and configure Bioconductor
-RUN echo "📦 Installing BiocManager..." && \
-    Rscript -e "install.packages('BiocManager')" && \
-    Rscript -e "BiocManager::install(version = '3.18', ask = FALSE, update = FALSE)"
-
-# Install CRAN packages
-RUN echo "📦 Installing CRAN packages (ggplot2, dplyr, vegan)..." && \
-    Rscript -e "install.packages(c('ggplot2', 'dplyr', 'vegan'), dependencies = TRUE)"
-
-# Install Bioconductor core packages (dada2, phyloseq, microbiome)
-RUN echo "📦 Installing Bioconductor packages (dada2, phyloseq, microbiome)..." && \
-    Rscript -e "BiocManager::install(c('dada2', 'phyloseq', 'microbiome'), ask = FALSE, update = FALSE, force = TRUE)"
-
-# Install optional packages (don't fail if these fail)
-RUN echo "📦 Installing optional packages..." && \
-    Rscript -e "tryCatch(BiocManager::install(c('ShortRead', 'Biostrings'), ask = FALSE, update = FALSE), error = function(e) message('Optional packages skipped: ', e\$message))" || true
-
-# Verify all required packages are installed
-RUN echo "🔍 Verifying R packages..." && \
-    Rscript -e "for(pkg in c('dada2','phyloseq','microbiome','ggplot2','dplyr','vegan')){library(pkg,character.only=TRUE);cat('✅',pkg,'v',as.character(packageVersion(pkg)),'\n')}" && \
-    echo "✅ All R packages installed and verified at build time!"
+# Install ONLY BiocManager at build time (< 30 seconds target)
+# All other packages will be installed at runtime and cached in volume
+RUN echo "⚡ Installing BiocManager only (ultra-fast build)..." && \
+    Rscript -e "options(repos = c(CRAN = 'https://cloud.r-project.org')); \
+    install.packages('BiocManager'); \
+    cat('✅ BiocManager installed - other packages deferred to runtime\\n');" && \
+    echo "✅ Build-time R setup completed (ultra-fast mode)"
 
 # Copy and set up entrypoint script
 COPY backend/entrypoint.sh /app/entrypoint.sh
