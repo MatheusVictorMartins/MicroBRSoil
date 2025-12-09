@@ -1,3 +1,8 @@
+.main-content{
+    display: flex;
+    flex-direction: column;   
+}
+
 .main-title{
     margin-bottom: var(--title-default-margin-bottom);
 }
@@ -19,4 +24,23 @@ img, .world-map{
 
 .refresh-btn:hover {
     background-color: darken(var(--primary-color), 10%);
+}
+
+.text-muted{
+    margin: 0;
+}
+
+.basic-frame{
+    padding: 0 0 0 1.5rem;
+    height: 10vh;
+    align-items: center;
+    width: 60vw;
+}
+
+#map{
+    display: flex;
+    height: 80vh;
+    width: 60vw;
+    border-radius: var(--basic-frame-def-radius);
+    border: solid 2px var(--primary-color-green0);
 }

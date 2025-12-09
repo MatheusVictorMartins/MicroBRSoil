@@ -140,11 +140,11 @@
 }
 
 /*DIVIDER*/
-#btn-left-menu-data-download, #btn-left-menu-help{
+#btn_left_menu_upload, #btn-left-menu-help{
     position: relative;
 }
 
-#btn-left-menu-data-download::before,#btn-left-menu-help::before{
+#btn_left_menu_upload::before,#btn-left-menu-help::before{
     content: '';
     top: 0;
     left: 0;
@@ -155,7 +155,7 @@
 }
 
 @media (max-width: 600px){
-    #btn-left-menu-data-download::before,#btn-left-menu-help::before{
+    #btn_left_menu_upload::before,#btn-left-menu-help::before{
         display: none;
     }
 }
