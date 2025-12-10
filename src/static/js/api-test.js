@@ -3,7 +3,7 @@
  */
 
 async function testAPIEndpoints() {
-    const baseURL = 'http://localhost:3000/api/table';
+    const baseURL = '/api/table';
     
     console.log('Testing Table API Endpoints...\n');
     
