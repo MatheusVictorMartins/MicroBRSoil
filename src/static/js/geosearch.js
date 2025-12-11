@@ -11,8 +11,8 @@ const markers = L.markerClusterGroup();
 async function loadSoilSamples() {
   try {
     console.log('Starting fetch to backend API...');
-    // Call backend directly to bypass nginx routing issues
-    const response = await fetch('http://localhost:3000/api/geosearch');
+    // Use relative URL - nginx will proxy to backend
+    const response = await fetch('/api/geosearch');
     console.log('Response received:', response);
 
     // Check if response is ok before parsing JSON
@@ -92,7 +92,7 @@ function updateSampleCount(count) {
 // Function to view sample details
 window.verDetalhes = async function(id) {
   try {
-    const response = await fetch(`http://localhost:3000/api/geosearch/${id}`);
+    const response = await fetch(`/api/geosearch/${id}`);
     const result = await response.json();
     
     if (!result.success) {
