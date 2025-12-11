@@ -82,15 +82,26 @@
             <form id="unifiedUploadForm" class="upload-form">
               <div class="upload-inputfile">
                 <label class="form-label text-input-label">UPLOAD FILES</label>
-                <div class="file-drop-zone" id="fileDropZone">
-                  <div class="drop-zone-content">
-                    <span class="material-symbols-rounded upload-icon">cloud_upload</span>
-                    <h4>Drag and drop files here</h4>
-                    <p>or click to browse files</p>
-                    <p class="file-types" id="acceptedFileTypes">Accepted file types will be shown here</p>
+                <span class="dropfile-area">
+                  <div class="file-drop-zone" id="fileDropZone">
+                    <div class="drop-zone-content">
+                      <span class="material-symbols-rounded upload-icon">cloud_upload</span>
+                      <h4>Drag and drop files here</h4>
+                      <p>or click to browse files</p>
+                      <p class="file-types" id="acceptedFileTypes">Accepted file types will be shown here</p>
+                    </div>
+                    <input class="form-control dropfile-input" type="file" name="files" id="fileInput" multiple required style="display: none;" />
                   </div>
-                  <input class="form-control dropfile-input" type="file" name="files" id="fileInput" multiple required style="display: none;" />
-                </div>
+                  <div class="file-drop-zone-2" id="file_drop_zone_2">
+                    <div class="drop-zone-content">
+                      <span class="material-symbols-rounded upload-icon">cloud_upload</span>
+                      <h4>Drag and drop files here</h4>
+                      <p>or click to browse files</p>
+                      <p class="file-types" id="acceptedFileTypes2">Accepted file types will be shown here</p>
+                    </div>
+                    <input class="form-control dropfile-input" type="file" name="files" id="fileInput2" multiple required style="display: none;" />
+                  </div>
+                </span>
                 <div class="form-text" id="uploadHelpText">Select files for analysis</div>
               </div>
               
@@ -237,9 +248,11 @@
     const uploadArea = document.getElementById("unified-upload-area");
     const fileInput = document.getElementById("fileInput");
     const fileDropZone = document.getElementById("fileDropZone");
+    const fileDropZone2 = document.getElementById("file_drop_zone_2");
     const uploadForm = document.getElementById("unifiedUploadForm");
     const uploadBtn = document.getElementById("uploadBtn");
     const acceptedFileTypes = document.getElementById("acceptedFileTypes");
+    const acceptedFileTypes2 = document.getElementById("acceptedFileTypes2");
     const uploadHelpText = document.getElementById("uploadHelpText");
 
     // Upload state management
@@ -255,18 +268,21 @@
         accept: ".fastq,.fq,.fastq.gz,.fa",
         helpText: "Select FASTQ files for Illumina sequencing analysis",
         fileTypes: "FASTQ (.fastq, .fq, .fastq.gz), FASTA (.fa)",
+        fileTypes2: "ERROR: This shouldn't be here!",
         endpoint: "/upload/illumina"
       },
       iontorrent: {
         accept: ".fastq,.fq,.fastq.gz,.fa",
         helpText: "Select FASTQ and BARCODE files for IonTorrent analysis",
-        fileTypes: "FASTQ (.fastq, .fq, .fastq.gz), FASTA (.fa)",
+        fileTypes: "FASTQ (.fastq, .fq, .fastq.gz)",
+        fileTypes2: "FASTA (.FA)",
         endpoint: "/upload/iontorrent"
       },
       its: {
         accept: ".fastq,.fq,.fastq.gz,.fa",
         helpText: "Select FASTQ files for ITS analysis",
         fileTypes: "FASTQ (.fastq, .fq, .fastq.gz), FASTA (.fa)",
+        fileTypes2: "ERROR: This shouldn't be here!",
         endpoint: "/upload/its"
       }
     };
@@ -289,11 +305,21 @@
       // Update UI elements
       fileInput.accept = config.accept;
       acceptedFileTypes.textContent = config.fileTypes;
+      if(selectedPipeline === "iontorrent"){
+        acceptedFileTypes2.textContent = config.fileTypes2;
+      }
       uploadHelpText.textContent = config.helpText;
       uploadBtn.innerHTML = `<span class="material-symbols-rounded">upload</span> Upload ${selectedPipeline.toUpperCase()}`;
       
       // Show upload area
-      uploadArea.style.display = "block";
+      uploadArea.style.display = "flex";
+      console.log(selectedPipeline);
+      if(selectedPipeline === "iontorrent"){
+        fileDropZone2.style.display = "flex";
+      }
+        else{
+          fileDropZone2.style.display = "none";
+        }
       
       // Reset form
       resetForm();
@@ -309,6 +335,7 @@
 
     // Drag and drop functionality
     function initializeDragAndDrop() {
+      const isSelectedPipeline = analysis_select.value;
       ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         fileDropZone.addEventListener(eventName, preventDefaults, false);
       });
@@ -332,6 +359,29 @@
 
       fileDropZone.addEventListener('drop', handleDrop, false);
       fileDropZone.addEventListener('click', () => fileInput.click());
+
+      if(isSelectedPipeline === "iontorrent"){
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+          fileDropZone.addEventListener(eventName, preventDefaults, false);
+          fileDropZone2.addEventListener(eventName,preventDefaults,false);
+        });
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+          fileDropZone2.addEventListener(eventName, () =>{
+            fileDropZone2.classList('drag-active');
+          }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+          fileDropZone2.addEventListener(eventName, () => {
+            fileDropZone2.classList.remove('drag-active');
+          },false);
+        });
+        
+        fileDropZone2.addEventListener('drop', handleDrop, false);
+        fileDropZone2.addEventListener('click', () => fileInput.click());
+      }
     }
 
     function handleDrop(e) {

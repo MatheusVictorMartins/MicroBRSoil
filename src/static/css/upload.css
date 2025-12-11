@@ -114,6 +114,7 @@
     align-items: center;
     color: var(--primary-color-green0);
     font-family: var(--main-font);
+    width: 20vw;
 }
 
 .upload-btn{
@@ -132,4 +133,9 @@
 
 .btn{
     font-family: var(--main-font);
+}
+
+.dropfile-area{
+    display: flex;
+    gap: 1.5vw;
 }
