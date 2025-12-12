@@ -247,6 +247,7 @@
     const analysis_select = document.getElementById("upload_select");
     const uploadArea = document.getElementById("unified-upload-area");
     const fileInput = document.getElementById("fileInput");
+    const fileInput2 = document.getElementById("fileInput2");
     const fileDropZone = document.getElementById("fileDropZone");
     const fileDropZone2 = document.getElementById("file_drop_zone_2");
     const uploadForm = document.getElementById("unifiedUploadForm");
@@ -254,6 +255,10 @@
     const acceptedFileTypes = document.getElementById("acceptedFileTypes");
     const acceptedFileTypes2 = document.getElementById("acceptedFileTypes2");
     const uploadHelpText = document.getElementById("uploadHelpText");
+
+    // Store files separately for each drop zone
+    let zone1Files = [];
+    let zone2Files = [];
 
     // Upload state management
     let currentUpload = {
@@ -265,25 +270,31 @@
     // Pipeline configurations
     const pipelineConfigs = {
       illumina: {
-        accept: ".fastq,.fq,.fastq.gz,.fa",
+        accept1: ".fastq,.fq,.fastq.gz,.fa",
+        accept2: "",
         helpText: "Select FASTQ files for Illumina sequencing analysis",
         fileTypes: "FASTQ (.fastq, .fq, .fastq.gz), FASTA (.fa)",
-        fileTypes2: "ERROR: This shouldn't be here!",
-        endpoint: "/upload/illumina"
+        fileTypes2: "",
+        endpoint: "/upload/illumina",
+        hasTwoZones: false
       },
       iontorrent: {
-        accept: ".fastq,.fq,.fastq.gz,.fa",
+        accept1: ".fastq,.fq,.fastq.gz",
+        accept2: ".fa,.fasta",
         helpText: "Select FASTQ and BARCODE files for IonTorrent analysis",
         fileTypes: "FASTQ (.fastq, .fq, .fastq.gz)",
-        fileTypes2: "FASTA (.FA)",
-        endpoint: "/upload/iontorrent"
+        fileTypes2: "BARCODES - FASTA (.fa, .fasta)",
+        endpoint: "/upload/iontorrent",
+        hasTwoZones: true
       },
       its: {
-        accept: ".fastq,.fq,.fastq.gz,.fa",
+        accept1: ".fastq,.fq,.fastq.gz,.fa",
+        accept2: "",
         helpText: "Select FASTQ files for ITS analysis",
         fileTypes: "FASTQ (.fastq, .fq, .fastq.gz), FASTA (.fa)",
-        fileTypes2: "ERROR: This shouldn't be here!",
-        endpoint: "/upload/its"
+        fileTypes2: "",
+        endpoint: "/upload/its",
+        hasTwoZones: false
       }
     };
 
@@ -303,23 +314,23 @@
       currentUpload.selectedPipeline = selectedPipeline;
       
       // Update UI elements
-      fileInput.accept = config.accept;
+      fileInput.accept = config.accept1;
+      fileInput2.accept = config.accept2;
       acceptedFileTypes.textContent = config.fileTypes;
-      if(selectedPipeline === "iontorrent"){
-        acceptedFileTypes2.textContent = config.fileTypes2;
-      }
+      acceptedFileTypes2.textContent = config.fileTypes2;
       uploadHelpText.textContent = config.helpText;
       uploadBtn.innerHTML = `<span class="material-symbols-rounded">upload</span> Upload ${selectedPipeline.toUpperCase()}`;
       
       // Show upload area
       uploadArea.style.display = "flex";
       console.log(selectedPipeline);
-      if(selectedPipeline === "iontorrent"){
+      
+      // Show/hide second drop zone based on pipeline
+      if (config.hasTwoZones) {
         fileDropZone2.style.display = "flex";
+      } else {
+        fileDropZone2.style.display = "none";
       }
-        else{
-          fileDropZone2.style.display = "none";
-        }
       
       // Reset form
       resetForm();
@@ -327,6 +338,9 @@
 
     function resetForm() {
       fileInput.value = "";
+      fileInput2.value = "";
+      zone1Files = [];
+      zone2Files = [];
       document.getElementById("selectedFiles").innerHTML = "";
       uploadBtn.disabled = true;
       showStatus("", "");
@@ -335,9 +349,10 @@
 
     // Drag and drop functionality
     function initializeDragAndDrop() {
-      const isSelectedPipeline = analysis_select.value;
+      // Prevent defaults for both zones
       ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         fileDropZone.addEventListener(eventName, preventDefaults, false);
+        fileDropZone2.addEventListener(eventName, preventDefaults, false);
       });
 
       function preventDefaults(e) {
@@ -345,6 +360,7 @@
         e.stopPropagation();
       }
 
+      // Zone 1 drag styling
       ['dragenter', 'dragover'].forEach(eventName => {
         fileDropZone.addEventListener(eventName, () => {
           fileDropZone.classList.add('drag-active');
@@ -357,81 +373,123 @@
         }, false);
       });
 
-      fileDropZone.addEventListener('drop', handleDrop, false);
+      // Zone 2 drag styling
+      ['dragenter', 'dragover'].forEach(eventName => {
+        fileDropZone2.addEventListener(eventName, () => {
+          fileDropZone2.classList.add('drag-active');
+        }, false);
+      });
+
+      ['dragleave', 'drop'].forEach(eventName => {
+        fileDropZone2.addEventListener(eventName, () => {
+          fileDropZone2.classList.remove('drag-active');
+        }, false);
+      });
+
+      // Zone 1 drop and click handlers
+      fileDropZone.addEventListener('drop', (e) => handleDrop(e, 1), false);
       fileDropZone.addEventListener('click', () => fileInput.click());
 
-      if(isSelectedPipeline === "iontorrent"){
-
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-          fileDropZone.addEventListener(eventName, preventDefaults, false);
-          fileDropZone2.addEventListener(eventName,preventDefaults,false);
-        });
-
-        ['dragenter', 'dragover'].forEach(eventName => {
-          fileDropZone2.addEventListener(eventName, () =>{
-            fileDropZone2.classList('drag-active');
-          }, false);
-        });
-
-        ['dragleave', 'drop'].forEach(eventName => {
-          fileDropZone2.addEventListener(eventName, () => {
-            fileDropZone2.classList.remove('drag-active');
-          },false);
-        });
-        
-        fileDropZone2.addEventListener('drop', handleDrop, false);
-        fileDropZone2.addEventListener('click', () => fileInput.click());
-      }
+      // Zone 2 drop and click handlers
+      fileDropZone2.addEventListener('drop', (e) => handleDrop(e, 2), false);
+      fileDropZone2.addEventListener('click', () => fileInput2.click());
     }
 
-    function handleDrop(e) {
+    function handleDrop(e, zoneNumber) {
       const dt = e.dataTransfer;
-      const files = dt.files;
+      const files = Array.from(dt.files);
       
-      // Update file input with dropped files
-      fileInput.files = files;
-      handleFileSelection();
+      if (zoneNumber === 1) {
+        zone1Files = files;
+      } else {
+        zone2Files = files;
+      }
+      
+      updateFileDisplay();
+      updateUploadButton();
     }
 
-    function handleFileSelection() {
-      const files = fileInput.files;
+    function handleFileSelection(zoneNumber) {
+      if (zoneNumber === 1) {
+        zone1Files = Array.from(fileInput.files);
+      } else {
+        zone2Files = Array.from(fileInput2.files);
+      }
       
-      if (files.length === 0) {
+      updateFileDisplay();
+      updateUploadButton();
+    }
+
+    function updateUploadButton() {
+      const config = pipelineConfigs[currentUpload.selectedPipeline];
+      if (!config) {
         uploadBtn.disabled = true;
-        document.getElementById("selectedFiles").innerHTML = "";
         return;
       }
-
-      uploadBtn.disabled = false;
-      displaySelectedFiles(files);
+      
+      if (config.hasTwoZones) {
+        // For IonTorrent, require files in both zones
+        uploadBtn.disabled = zone1Files.length === 0 || zone2Files.length === 0;
+      } else {
+        // For other pipelines, require files in zone 1
+        uploadBtn.disabled = zone1Files.length === 0;
+      }
     }
 
-    function displaySelectedFiles(files) {
+    function updateFileDisplay() {
       const selectedFilesDiv = document.getElementById('selectedFiles');
+      const config = pipelineConfigs[currentUpload.selectedPipeline];
       
-      if (files.length === 0) {
+      if (zone1Files.length === 0 && zone2Files.length === 0) {
         selectedFilesDiv.innerHTML = '';
         return;
       }
       
-      // Convert FileList to array and sort by filename
-      const sortedFiles = Array.from(files).sort((a, b) => {
-        return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
-      });
+      let html = '<div class="mt-3">';
       
-      let html = '<div class="mt-3"><strong>Selected Files:</strong><ul class="list-group mt-2">';
-      
-      for (let i = 0; i < sortedFiles.length; i++) {
-        const file = sortedFiles[i];
-        const size = formatFileSize(file.size);
-        const icon = getFileIcon(file.name);
-        html += `<li class="list-group-item d-flex justify-content-between align-items-center">
-                   <span><span class="material-symbols-rounded file-icon">${icon}</span> ${file.name}</span>
-                   <span class="badge bg-secondary">${size}</span>
-                 </li>`;
+      // Zone 1 files
+      if (zone1Files.length > 0) {
+        const sortedZone1 = zone1Files.sort((a, b) => 
+          a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
+        );
+        
+        html += `<div class="mb-3">
+          <strong><span class="material-symbols-rounded" style="vertical-align: middle;">description</span> ${config.fileTypes}:</strong>
+          <ul class="list-group mt-2">`;
+        
+        for (const file of sortedZone1) {
+          const size = formatFileSize(file.size);
+          const icon = getFileIcon(file.name);
+          html += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                     <span><span class="material-symbols-rounded file-icon">${icon}</span> ${file.name}</span>
+                     <span class="badge bg-primary">${size}</span>
+                   </li>`;
+        }
+        html += '</ul></div>';
       }
       
-      html += '</ul></div>';
+      // Zone 2 files (only for IonTorrent)
+      if (config.hasTwoZones && zone2Files.length > 0) {
+        const sortedZone2 = zone2Files.sort((a, b) => 
+          a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
+        );
+        
+        html += `<div class="mb-3">
+          <strong><span class="material-symbols-rounded" style="vertical-align: middle;">code</span> ${config.fileTypes2}:</strong>
+          <ul class="list-group mt-2">`;
+        
+        for (const file of sortedZone2) {
+          const size = formatFileSize(file.size);
+          const icon = getFileIcon(file.name);
+          html += `<li class="list-group-item d-flex justify-content-between align-items-center">
+                     <span><span class="material-symbols-rounded file-icon">${icon}</span> ${file.name}</span>
+                     <span class="badge bg-success">${size}</span>
+                   </li>`;
+        }
+        html += '</ul></div>';
+      }
+      
+      html += '</div>';
       selectedFilesDiv.innerHTML = html;
     }
 
@@ -457,29 +515,38 @@
       
       if (currentUpload.isUploading || !currentUpload.selectedPipeline) return;
 
-      const files = fileInput.files;
-
-      if (!files || files.length === 0) {
-        showStatus('Please select at least one file', 'error');
-        return;
-      }
-
-      const formData = new FormData();
-      
-      // Convert FileList to array and sort by filename
-      const sortedFiles = Array.from(files).sort((a, b) => {
-        return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
-      });
-      
-      // Add all files to FormData in sorted order
-      for (let i = 0; i < sortedFiles.length; i++) {
-        formData.append('files', sortedFiles[i]);
-      }
-
       const config = pipelineConfigs[currentUpload.selectedPipeline];
       if (!config) {
         showStatus('Invalid analysis type', 'error');
         return;
+      }
+
+      // Validate files based on pipeline type
+      if (config.hasTwoZones) {
+        if (zone1Files.length === 0 || zone2Files.length === 0) {
+          showStatus('Please select files for both FASTQ and BARCODE areas', 'error');
+          return;
+        }
+      } else {
+        if (zone1Files.length === 0) {
+          showStatus('Please select at least one file', 'error');
+          return;
+        }
+      }
+
+      const formData = new FormData();
+      
+      // Combine all files from both zones
+      const allFiles = [...zone1Files, ...zone2Files];
+      
+      // Sort all files by filename
+      const sortedFiles = allFiles.sort((a, b) => {
+        return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+      });
+      
+      // Add all files to FormData
+      for (const file of sortedFiles) {
+        formData.append('files', file);
       }
 
       try {
@@ -488,7 +555,7 @@
         uploadBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Uploading...';
 
         showProgress(true);
-        showStatus(`Starting upload of ${files.length} file(s)...`, 'info');
+        showStatus(`Starting upload of ${allFiles.length} file(s)...`, 'info');
 
         // Create XMLHttpRequest for progress tracking
         const xhr = new XMLHttpRequest();
@@ -595,7 +662,8 @@
 
     // Initialize
     analysis_select.addEventListener("change", handlePipelineSelection);
-    fileInput.addEventListener("change", handleFileSelection);
+    fileInput.addEventListener("change", () => handleFileSelection(1));
+    fileInput2.addEventListener("change", () => handleFileSelection(2));
     uploadForm.addEventListener("submit", handleUpload);
     
     // Initialize drag and drop
