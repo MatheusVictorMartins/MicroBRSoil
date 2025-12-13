@@ -90,7 +90,7 @@
                       <p>or click to browse files</p>
                       <p class="file-types" id="acceptedFileTypes">Accepted file types will be shown here</p>
                     </div>
-                    <input class="form-control dropfile-input" type="file" name="files" id="fileInput" multiple required style="display: none;" />
+                    <input class="form-control dropfile-input" type="file" name="files" id="fileInput" multiple style="display: none;" />
                   </div>
                   <div class="file-drop-zone-2" id="file_drop_zone_2">
                     <div class="drop-zone-content">
@@ -99,7 +99,7 @@
                       <p>or click to browse files</p>
                       <p class="file-types" id="acceptedFileTypes2">Accepted file types will be shown here</p>
                     </div>
-                    <input class="form-control dropfile-input" type="file" name="files" id="fileInput2" multiple required style="display: none;" />
+                    <input class="form-control dropfile-input" type="file" name="files" id="fileInput2" multiple style="display: none;" />
                   </div>
                 </span>
                 <div class="form-text" id="uploadHelpText">Select files for analysis</div>
@@ -270,28 +270,28 @@
     // Pipeline configurations
     const pipelineConfigs = {
       illumina: {
-        accept1: ".fastq,.fq,.fastq.gz,.fa",
+        accept1: ".fastq,.fq,.fastq.gz,.fa,.csv",
         accept2: "",
-        helpText: "Select FASTQ files for Illumina sequencing analysis",
-        fileTypes: "FASTQ (.fastq, .fq, .fastq.gz), FASTA (.fa)",
+        helpText: "Select FASTQ files and metadata CSV for Illumina sequencing analysis",
+        fileTypes: "FASTQ (.fastq, .fq, .fastq.gz), FASTA (.fa), CSV (.csv)",
         fileTypes2: "",
         endpoint: "/upload/illumina",
         hasTwoZones: false
       },
       iontorrent: {
-        accept1: ".fastq,.fq,.fastq.gz",
+        accept1: ".fastq,.fq,.fastq.gz,.csv",
         accept2: ".fa,.fasta",
-        helpText: "Select FASTQ and BARCODE files for IonTorrent analysis",
-        fileTypes: "FASTQ (.fastq, .fq, .fastq.gz)",
+        helpText: "Select FASTQ files, metadata CSV and BARCODE files for IonTorrent analysis",
+        fileTypes: "FASTQ (.fastq, .fq, .fastq.gz), CSV (.csv)",
         fileTypes2: "BARCODES - FASTA (.fa, .fasta)",
         endpoint: "/upload/iontorrent",
         hasTwoZones: true
       },
       its: {
-        accept1: ".fastq,.fq,.fastq.gz,.fa",
+        accept1: ".fastq,.fq,.fastq.gz,.fa,.csv",
         accept2: "",
-        helpText: "Select FASTQ files for ITS analysis",
-        fileTypes: "FASTQ (.fastq, .fq, .fastq.gz), FASTA (.fa)",
+        helpText: "Select FASTQ files and metadata CSV for ITS analysis",
+        fileTypes: "FASTQ (.fastq, .fq, .fastq.gz), FASTA (.fa), CSV (.csv)",
         fileTypes2: "",
         endpoint: "/upload/its",
         hasTwoZones: false
