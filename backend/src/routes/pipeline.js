@@ -1,41 +1,23 @@
 const express = require("express");
 const router = express.Router();
-const { v4: uuidv4 } = require('uuid');
 const { pipelines } = require('../utils/fakeDB');
-const { addPipelineJob, queue } = require('../queues');
-const { paths } = require('../utils/moduleResolver');
-const path = require('path');
-const fs = require('fs');
 
-// Use moduleResolver so the same code works locally and in Docker
-const { getPipelineRun, getPipelineRunsByUser, getPipelineResults } = require(paths.pipelineFunctions());
+// Use dynamic paths that work in both local development and Docker
+const PIPELINE_FUNCTIONS_PATH = '/app/db/db_functions/pipeline_functions';
+
+const { getPipelineRun, getPipelineRunsByUser, getPipelineResults } = require(PIPELINE_FUNCTIONS_PATH);
 
 // Get pipeline run status
 router.get('/status/:runId', async (req, res) => {
   try {
     const { runId } = req.params;
-    let queueInfo = null;
-    try {
-      const job = await queue.getJob(runId);
-      if (job) {
-        const [state, position] = await Promise.all([
-          job.getState(),
-          job.getPosition().catch(() => null)
-        ]);
-        queueInfo = { state, position };
-      }
-    } catch (e) {
-      // do not fail the endpoint if queue lookup fails
-    }
     
     // Try to get from database first
     const dbRun = await getPipelineRun(runId);
     if (dbRun) {
-      const runWithLogs = attachPipelineLogs(dbRun);
       return res.json({
         success: true,
-        run: runWithLogs,
-        queue: queueInfo
+        run: dbRun
       });
     }
     
@@ -45,8 +27,7 @@ router.get('/status/:runId', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Pipeline run not found' });
     }
     
-    const runWithLogs = attachPipelineLogs(run);
-    res.json({ success: true, run: runWithLogs, queue: queueInfo });
+    res.json({ success: true, run });
   } catch (error) {
     console.error('Error getting pipeline status:', error);
     res.status(500).json({ success: false, error: error.message });
@@ -100,14 +81,16 @@ router.get('/runs', async (req, res) => {
   }
 });
 
-// Legacy routes now enqueue jobs instead of running synchronously
+// Legacy routes (kept for compatibility)
+const runIllumina = require("../integrations/run_illumina.js");
+const runITS = require("../integrations/run_its.js");
+const runIontorrent = require("../integrations/run_iontorrent.js"); 
+
 router.post("/illumina", async (req, res) => {
   try {
-    const { fastqPath } = req.body;
-    if (!fastqPath) return res.status(400).json({ success: false, error: "fastqPath é obrigatório." });
-    const runId = uuidv4();
-    const job = await addPipelineJob({ runId, fastqPath, pipelineType: 'illumina' });
-    res.json({ success: true, runId, jobId: job.id, pipelineType: 'illumina' });
+    const { fastq1, fastq2 } = req.body;
+    const result = await runIllumina(fastq1, fastq2);
+    res.json({ success: true, result });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -115,11 +98,9 @@ router.post("/illumina", async (req, res) => {
 
 router.post("/its", async (req, res) => {
   try {
-    const { fastqPath } = req.body;
-    if (!fastqPath) return res.status(400).json({ success: false, error: "fastqPath é obrigatório." });
-    const runId = uuidv4();
-    const job = await addPipelineJob({ runId, fastqPath, pipelineType: 'its' });
-    res.json({ success: true, runId, jobId: job.id, pipelineType: 'its' });
+    const { fastq1, fastq2 } = req.body;
+    const result = await runITS(fastq1, fastq2);
+    res.json({ success: true, result });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -133,38 +114,11 @@ router.post("/barcodes", async (req, res) => {
       return res.status(400).json({ success: false, error: "fastqPath e barcodesPath são obrigatórios." });
     }
 
-    const runId = uuidv4();
-    const job = await addPipelineJob({ runId, fastqPath, pipelineType: 'barcode', meta: { barcodesPath } });
-    res.json({ success: true, runId, jobId: job.id, pipelineType: 'barcode' });
+    const result = await runIontorrent(fastqPath, barcodesPath);
+    res.json({ success: true, result });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
 module.exports = router;
-
-// Helpers
-const RESULTS_DIR = process.env.RESULTS_DIR || path.join(__dirname, '..', '..', 'results');
-function attachPipelineLogs(run) {
-  const logFile = path.join(RESULTS_DIR, run.run_id || run.id || '', 'pipeline_progress.log');
-  let fileLogs = [];
-  try {
-    if (fs.existsSync(logFile)) {
-      const content = fs.readFileSync(logFile, 'utf8');
-      fileLogs = content
-        .split(/\r?\n/)
-        .map(l => l.trim())
-        .filter(Boolean)
-        .slice(-50); // keep last 50 lines to avoid huge payloads
-    }
-  } catch (err) {
-    // ignore log read errors
-  }
-
-  const mergedLogs = Array.isArray(run.logs) ? [...run.logs] : [];
-  if (fileLogs.length) {
-    mergedLogs.push(...fileLogs);
-  }
-
-  return { ...run, logs: mergedLogs };
-}

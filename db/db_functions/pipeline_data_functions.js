@@ -9,7 +9,6 @@ const { createPipelineResult } = require('./pipeline_functions');
 const sampleFunctions = require('./sample_funtion');
 const alphaFunctions = require('./alpha_functions');
 const soilFunctions = require('./soil_funtions');
-const userFunctions = require('./user_functions');
 
 /**
  * Process and save pipeline results to database after successful completion
@@ -276,116 +275,6 @@ const parseMetadataForSoil = (metadataRow, pipelineType, runId) => {
 };
 
 /**
- * Resolve a valid owner_id to satisfy FK constraints on soil.owner_id.
- * Priority:
- * 1) userId argument (if it exists in users)
- * 2) user_id stored with the pipeline run
- * 3) First active user in the database
- * 4) Auto-create a fallback pipeline user when none exist
- */
-const resolveOwnerId = async (userId, runId) => {
-    const lookupUser = async (candidateId, source) => {
-        if (!candidateId) return null;
-
-        try {
-            const result = await pool.query(
-                'SELECT user_id FROM microbrsoil_db.users WHERE user_id = $1',
-                [candidateId]
-            );
-
-            if (result.rows.length > 0) {
-                return result.rows[0].user_id;
-            }
-
-            writeLog(`\n[WARNING] ${source} user_id ${candidateId} not found in users table`);
-        } catch (err) {
-            writeLog(`\n[WARNING] Failed to validate ${source} user_id ${candidateId}: ${err.message}`);
-        }
-
-        return null;
-    };
-
-    // 1) Provided userId
-    let ownerId = await lookupUser(userId, 'Provided');
-
-    // 2) Owner from pipeline_runs
-    if (!ownerId) {
-        try {
-            const runOwner = await pool.query(
-                'SELECT user_id FROM microbrsoil_db.pipeline_runs WHERE run_id = $1',
-                [runId]
-            );
-            const runUserId = runOwner.rows[0]?.user_id;
-            ownerId = await lookupUser(runUserId, 'Pipeline run');
-        } catch (err) {
-            writeLog(`\n[WARNING] Could not read pipeline_runs for run ${runId}: ${err.message}`);
-        }
-    }
-
-    // 3) Fallback to first active user
-    if (!ownerId) {
-        try {
-            const fallback = await pool.query(
-                'SELECT user_id FROM microbrsoil_db.users WHERE is_active = true ORDER BY user_id ASC LIMIT 1'
-            );
-            if (fallback.rows.length > 0) {
-                ownerId = fallback.rows[0].user_id;
-                writeLog(`\n[INFO] Using fallback owner_id ${ownerId} (first active user)`);
-            }
-        } catch (err) {
-            writeLog(`\n[WARNING] Failed to load fallback user: ${err.message}`);
-        }
-    }
-
-    // 4) Create a default pipeline owner when the database has no users
-    if (!ownerId) {
-        try {
-            const defaultEmail = process.env.PIPELINE_DEFAULT_OWNER_EMAIL || 'pipeline@microbrsoil.local';
-            const defaultPassword = process.env.PIPELINE_DEFAULT_OWNER_PASSWORD || `pipeline-${runId}`;
-
-            // Reuse existing pipeline user if present
-            const existing = await pool.query(
-                'SELECT user_id FROM microbrsoil_db.users WHERE user_email = $1 LIMIT 1',
-                [defaultEmail]
-            );
-
-            if (existing.rows.length > 0) {
-                ownerId = existing.rows[0].user_id;
-                writeLog(`\n[INFO] Using existing pipeline owner_id ${ownerId} (${defaultEmail})`);
-            } else {
-                // Create a lightweight system user to satisfy FK
-                const createdUser = await userFunctions.createUser({
-                    email: defaultEmail,
-                    password: defaultPassword,
-                    role: 1
-                });
-
-                ownerId = createdUser?.rows?.[0]?.user_id;
-
-                if (ownerId) {
-                    // Ensure the new user is active so future lookups find it
-                    await pool.query(
-                        'UPDATE microbrsoil_db.users SET is_active = true WHERE user_id = $1',
-                        [ownerId]
-                    );
-                    writeLog(`\n[INFO] Created default pipeline owner ${ownerId} (${defaultEmail}) for run ${runId}`);
-                } else {
-                    throw new Error('Failed to create default pipeline owner user');
-                }
-            }
-        } catch (err) {
-            writeLog(`\n[ERROR] Could not create fallback pipeline owner: ${err.message}`);
-        }
-    }
-
-    if (!ownerId) {
-        throw new Error('No valid owner_id found in users table. Create at least one user before processing results.');
-    }
-
-    return ownerId;
-};
-
-/**
  * Process CSV files and store data in database
  * @param {Object} resultFiles - Object containing file paths
  * @param {number} userId - User ID
@@ -472,9 +361,6 @@ const processAndStoreData = async (resultFiles, userId, runId, pipelineType) => 
             writeLog(`\n[INFO] Using existing soil record: ${soilId}`);
         } else {
             try {
-                const ownerId = await resolveOwnerId(userId, runId);
-                writeLog(`\n[INFO] Using owner_id ${ownerId} for soil record creation`);
-
                 // Use parsed metadata if available, otherwise use defaults
                 const soilData = parsedMetadata || {
                     sample_name: `Pipeline_${pipelineType}_${runId}`,
@@ -489,14 +375,12 @@ const processAndStoreData = async (resultFiles, userId, runId, pipelineType) => 
                     Enz_Aril: 0,
                     Enz_Beta: 0,
                     Enz_Fosf: 0,
-                    metadata_description: `Results from ${pipelineType} pipeline run ${runId}`
+                    metadata_description: `Results from ${pipelineType} pipeline run ${runId}`,
+                    owner_id: userId || 1
                 };
 
                 // Ensure owner_id is set even when using parsed metadata
-                soilData.owner_id = ownerId;
-                if (parsedMetadata) {
-                    parsedMetadata.owner_id = ownerId;
-                }
+                soilData.owner_id = userId || 1;
 
                 soilRecord = await soilFunctions.createSoil(soilData);
                 soilId = soilRecord.rows[0].soil_id;

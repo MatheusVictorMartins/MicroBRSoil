@@ -1,4 +1,4 @@
-const { Worker } = require('bullmq');
+const { Worker, UnrecoverableError } = require('bullmq');
 const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs');
@@ -14,28 +14,6 @@ const { processPipelineResults } = require(paths.resultProcessor());
 
 const RESULTS_DIR = process.env.RESULTS_DIR || path.join(__dirname, '../../results');
 if (!fs.existsSync(RESULTS_DIR)) fs.mkdirSync(RESULTS_DIR, { recursive: true });
-
-function ensureInputExists(inputPath) {
-  if (!inputPath) {
-    throw new Error('Input path not provided for pipeline job');
-  }
-
-  if (!fs.existsSync(inputPath)) {
-    throw new Error(`Input path not found: ${inputPath}`);
-  }
-
-  const stats = fs.statSync(inputPath);
-  if (stats.isDirectory()) {
-    const candidates = fs.readdirSync(inputPath).filter(f => f.match(/\.fastq(\.gz)?$/i));
-    if (candidates.length === 0) {
-      throw new Error(`No FASTQ files found in ${inputPath}`);
-    }
-  } else if (stats.isFile()) {
-    if (stats.size === 0) {
-      throw new Error(`Input file is empty: ${inputPath}`);
-    }
-  }
-}
 
 const worker = new Worker(QUEUE_NAME, async job => {
   const { runId, fastqPath, pipelineType, meta } = job.data;
@@ -83,18 +61,6 @@ const worker = new Worker(QUEUE_NAME, async job => {
     // Create run-specific output directory
     const runOutputDir = path.join(RESULTS_DIR, runId);
     if (!fs.existsSync(runOutputDir)) fs.mkdirSync(runOutputDir, { recursive: true });
-
-    // Fail fast if input no longer exists (e.g., deleted uploads)
-    try {
-      ensureInputExists(fastqPath);
-    } catch (inputErr) {
-      pipelines[runId].status = 'failed';
-      pipelines[runId].logs.push(`Input validation failed: ${inputErr.message}`);
-      await updatePipelineRunStatus(runId, 'failed', inputErr.message, pipelines[runId].logs);
-      workerLogger.warn('Skipping job due to missing/invalid input', { runId, fastqPath, error: inputErr.message });
-      // Do not throw: complete the job to avoid endless retries on missing inputs
-      return { success: false, runId, skipped: true, reason: 'missing_input', error: inputErr.message };
-    }
 
     // Execute the appropriate pipeline based on type using R integration
     let result;
@@ -162,6 +128,25 @@ const worker = new Worker(QUEUE_NAME, async job => {
       console.error('Database update error:', dbError);
     }
     
+    // Check if error is non-recoverable (should not retry)
+    const errorMsg = error.message || '';
+    const isNonRecoverable = 
+      errorMsg.includes('no package called') ||           // Missing R package
+      errorMsg.includes('there is no package called') ||  // Missing R package (alternate)
+      errorMsg.includes('could not find function') ||     // Missing R function
+      errorMsg.includes('Unknown pipeline type') ||       // Invalid pipeline type
+      errorMsg.includes('FASTQ files not found') ||       // Missing input files
+      errorMsg.includes('Metadata file not found') ||     // Missing metadata
+      errorMsg.includes('permission denied');             // Permission error
+    
+    if (isNonRecoverable) {
+      workerLogger.error('Non-recoverable error detected, will not retry', {
+        runId,
+        error: errorMsg
+      });
+      throw new UnrecoverableError(`Non-recoverable: ${errorMsg}`);
+    }
+    
     throw error;
   } finally {
     // Always clear the lock renewal interval, regardless of success or failure
@@ -183,10 +168,10 @@ const worker = new Worker(QUEUE_NAME, async job => {
 }, { 
   connection,
   concurrency: 1, // Process one job at a time to avoid resource conflicts
-  stalledInterval: 300 * 1000, // 5 minutes before checking for stalled jobs
-  maxStalledCount: 1, // Consider stalled once; avoid endless retries
-  lockDuration: 1800 * 1000, // 30 minutes lock duration for long R runs
-  lockRenewTime: 600 * 1000, // Renew lock every 10 minutes
+  stalledInterval: 120 * 1000, // 120 seconds (2 minutes)
+  maxStalledCount: 2, // Allow up to 2 stalls before considering failed (reduced to prevent duplicates)
+  lockDuration: 600 * 1000, // 10 minutes lock duration (matches manual renewal interval)
+  lockRenewTime: 300 * 1000, // Renew lock when half the duration has elapsed (5 minutes)
 });
 
 worker.on('completed', async (job) => {

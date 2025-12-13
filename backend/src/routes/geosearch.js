@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { paths } = require('../utils/moduleResolver');
-const { getSoil } = require(paths.soilFunctions());
+const { getSoil } = require('/app/db/db_functions/soil_funtions');
 const { apiLogger } = require('../utils/logger');
 
 // Endpoint to get all soil samples for geosearch map

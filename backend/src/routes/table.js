@@ -1,15 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { paths } = require('../utils/moduleResolver');
-const pool = require(paths.db());
+const pool = require('/app/db/db');
 
 // Get soil data for index.html and upload.html
 router.get('/soil', async (req, res) => {
   try {
     const { page = 1, limit = 20, search = '', material = '', location = '' } = req.query;
-    const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
-    const limitNumber = Math.max(1, Math.min(parseInt(limit, 10) || 20, 100));
-    const offset = (pageNumber - 1) * limitNumber;
+    const offset = (page - 1) * limit;
 
     let whereConditions = [];
     let queryParams = [];
@@ -50,11 +47,11 @@ router.get('/soil', async (req, res) => {
     `;
 
     const countResult = await pool.query(countQuery, queryParams);
-    const totalRecords = parseInt(countResult.rows[0].total, 10) || 0;
+    const totalRecords = parseInt(countResult.rows[0].total);
 
     // Get paginated data
     paramCount++;
-    queryParams.push(limitNumber);
+    queryParams.push(limit);
     paramCount++;
     queryParams.push(offset);
 
@@ -89,10 +86,10 @@ router.get('/soil', async (req, res) => {
       success: true,
       data: dataResult.rows,
       pagination: {
-        currentPage: pageNumber,
-        totalPages: Math.ceil(totalRecords / limitNumber),
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(totalRecords / limit),
         totalRecords,
-        limit: limitNumber
+        limit: parseInt(limit)
       }
     });
 
@@ -232,9 +229,7 @@ router.get('/soil/:id', async (req, res) => {
 router.get('/users', async (req, res) => {
   try {
     const { page = 1, limit = 20, search = '' } = req.query;
-    const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
-    const limitNumber = Math.max(1, Math.min(parseInt(limit, 10) || 20, 100));
-    const offset = (pageNumber - 1) * limitNumber;
+    const offset = (page - 1) * limit;
 
     let whereConditions = [];
     let queryParams = [];
@@ -257,11 +252,11 @@ router.get('/users', async (req, res) => {
     `;
 
     const countResult = await pool.query(countQuery, queryParams);
-    const totalRecords = parseInt(countResult.rows[0].total, 10) || 0;
+    const totalRecords = parseInt(countResult.rows[0].total);
 
     // Get paginated data (excluding password hash for security)
     paramCount++;
-    queryParams.push(limitNumber);
+    queryParams.push(limit);
     paramCount++;
     queryParams.push(offset);
 
@@ -287,10 +282,10 @@ router.get('/users', async (req, res) => {
       success: true,
       data: dataResult.rows,
       pagination: {
-        currentPage: pageNumber,
-        totalPages: Math.ceil(totalRecords / limitNumber),
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(totalRecords / limit),
         totalRecords,
-        limit: limitNumber
+        limit: parseInt(limit)
       }
     });
 
@@ -311,9 +306,7 @@ router.get('/users', async (req, res) => {
 router.get('/pipeline-results', async (req, res) => {
   try {
     const { page = 1, limit = 20, status = '', user_id = '' } = req.query;
-    const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
-    const limitNumber = Math.max(1, Math.min(parseInt(limit, 10) || 20, 100));
-    const offset = (pageNumber - 1) * limitNumber;
+    const offset = (page - 1) * limit;
 
     let whereConditions = [];
     let queryParams = [];
@@ -343,11 +336,11 @@ router.get('/pipeline-results', async (req, res) => {
     `;
 
     const countResult = await pool.query(countQuery, queryParams);
-    const totalRecords = parseInt(countResult.rows[0].total, 10) || 0;
+    const totalRecords = parseInt(countResult.rows[0].total);
 
     // Get paginated data
     paramCount++;
-    queryParams.push(limitNumber);
+    queryParams.push(limit);
     paramCount++;
     queryParams.push(offset);
 
@@ -378,10 +371,10 @@ router.get('/pipeline-results', async (req, res) => {
       success: true,
       data: dataResult.rows,
       pagination: {
-        currentPage: pageNumber,
-        totalPages: Math.ceil(totalRecords / limitNumber),
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(totalRecords / limit),
         totalRecords,
-        limit: limitNumber
+        limit: parseInt(limit)
       }
     });
 
@@ -484,9 +477,7 @@ router.get('/alpha/soil/:soilId', async (req, res) => {
 router.get('/alpha', async (req, res) => {
   try {
     const { page = 1, limit = 100 } = req.query;
-    const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
-    const limitNumber = Math.max(1, Math.min(parseInt(limit, 10) || 100, 500));
-    const offset = (pageNumber - 1) * limitNumber;
+    const offset = (page - 1) * limit;
 
     const query = `
       SELECT 
@@ -502,7 +493,7 @@ router.get('/alpha', async (req, res) => {
       LIMIT $1 OFFSET $2
     `;
 
-    const result = await pool.query(query, [limitNumber, offset]);
+    const result = await pool.query(query, [limit, offset]);
 
     res.json({
       success: true,

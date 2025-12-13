@@ -1,28 +1,48 @@
 #!/usr/bin/env node
 /**
  * Manual Database Insert Script
- *
- * This script lets you manually insert successful pipeline results
- * that were not recorded due to unexpected errors.
- *
- * Usage:
+ * 
+ * Este script permite inserir manualmente no banco de dados os resultados
+ * de pipelines que foram bem-sucedidos, mas que não foram registrados
+ * por erros inesperados.
+ * 
+ * Uso:
  *   node manual-db-insert.js <runId> [pipelineType] [userId]
- *
- * Examples:
+ * 
+ * Exemplos:
  *   node manual-db-insert.js 25a64ee5-edc3-412c-a43e-8b163f2a413c
  *   node manual-db-insert.js 25a64ee5-edc3-412c-a43e-8b163f2a413c illumina
  *   node manual-db-insert.js 25a64ee5-edc3-412c-a43e-8b163f2a413c illumina 1
- *
- * Parameters:
- *   runId        - Upload/pipeline ID (UUID, required)
- *   pipelineType - Pipeline type: illumina, iontorrent, its (default: illumina)
- *   userId       - Owner user ID (optional; auto-detected when omitted)
+ * 
+ * Parâmetros:
+ *   runId        - ID do upload/pipeline (UUID, obrigatório)
+ *   pipelineType - Tipo do pipeline: illumina, iontorrent, its (padrão: illumina)
+ *   userId       - ID do usuário owner (padrão: 1)
  */
-
 
 const path = require('path');
 const fs = require('fs');
-require('dotenv').config();
+
+// Try to load dotenv if available
+try {
+    require('dotenv').config();
+} catch (e) {
+    // dotenv not installed - try to load .env manually
+    const envPath = path.join(__dirname, '.env');
+    if (fs.existsSync(envPath)) {
+        const envContent = fs.readFileSync(envPath, 'utf8');
+        envContent.split('\n').forEach(line => {
+            const trimmed = line.trim();
+            if (trimmed && !trimmed.startsWith('#')) {
+                const [key, ...valueParts] = trimmed.split('=');
+                if (key && valueParts.length > 0) {
+                    const value = valueParts.join('=').replace(/^["']|["']$/g, '');
+                    process.env[key.trim()] = value;
+                }
+            }
+        });
+    }
+}
 
 // Colors for console output
 const colors = {
@@ -60,7 +80,7 @@ ${colors.yellow}Uso:${colors.reset}
 ${colors.yellow}Parâmetros:${colors.reset}
   runId         ID do upload/pipeline (UUID, obrigatório)
   pipelineType  Tipo do pipeline: illumina, iontorrent, its (padrão: illumina)
-  userId        ID do usuario owner (opcional; detectado automaticamente se omitido)
+  userId        ID do usuário owner (padrão: 1)
 
 ${colors.yellow}Exemplos:${colors.reset}
   node manual-db-insert.js 25a64ee5-edc3-412c-a43e-8b163f2a413c
@@ -206,6 +226,8 @@ async function checkRunStatus(runId) {
             console.log(`  ${colors.yellow}✗ Nenhum registro encontrado no banco${colors.reset}`);
             console.log(`  ${colors.cyan}→ Use este script para inserir os resultados${colors.reset}`);
         }
+
+        await pool.end();
     } catch (e) {
         console.log(`\n${colors.red}Erro ao verificar banco de dados: ${e.message}${colors.reset}`);
     }
@@ -219,7 +241,7 @@ async function insertPipelineResults(runId, pipelineType, userId) {
     
     log(`Iniciando inserção manual para runId: ${runId}`, 'header');
     log(`Pipeline Type: ${pipelineType}`, 'info');
-    log(`User ID: ${userId ?? 'auto'}`, 'info');
+    log(`User ID: ${userId}`, 'info');
     log(`Diretório: ${resultsDir}`, 'info');
 
     // Verify directory exists
@@ -294,9 +316,11 @@ async function insertPipelineResults(runId, pipelineType, userId) {
                 log('Registro deletado com sucesso', 'success');
             } else {
                 log('Operação cancelada pelo usuário', 'info');
+                await pool.end();
                 process.exit(0);
             }
         }
+        await pool.end();
     } catch (e) {
         log(`Erro ao verificar registro existente: ${e.message}`, 'error');
     }
@@ -331,13 +355,22 @@ async function insertPipelineResults(runId, pipelineType, userId) {
             log(`Arquivos não encontrados: ${result.missingFiles.join(', ')}`, 'warning');
         }
 
-        // Finaliza script
-        log('Processamento concluido', 'info');
+        // Close database connection
+        const pool = require('./db/db');
+        await pool.end();
+
+        log('Conexão com banco de dados encerrada', 'info');
         process.exit(0);
 
     } catch (error) {
         log(`Erro ao processar resultados: ${error.message}`, 'error');
         console.error(error.stack);
+        
+        try {
+            const pool = require('./db/db');
+            await pool.end();
+        } catch (e) { /* ignore */ }
+        
         process.exit(1);
     }
 }
@@ -365,6 +398,7 @@ async function main() {
         await checkRunStatus(args[1]);
         try {
             const pool = require('./db/db');
+            await pool.end();
         } catch (e) { /* ignore */ }
         process.exit(0);
     }
@@ -383,8 +417,7 @@ async function main() {
     }
 
     const pipelineType = args[1] || 'illumina';
-    const parsedUserId = args[2] ? Number.parseInt(args[2], 10) : null;
-    const userId = Number.isNaN(parsedUserId) ? null : parsedUserId;
+    const userId = parseInt(args[2]) || 1;
 
     // Validate pipeline type
     const validTypes = ['illumina', 'iontorrent', 'its'];

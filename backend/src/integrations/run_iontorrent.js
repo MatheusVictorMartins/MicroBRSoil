@@ -36,11 +36,6 @@ async function runIonTorrentPipeline(fastqPath, outputDir = null) {
     console.log(`Input: ${fastqPath}`);
     console.log(`Output: ${outputDir || 'default'}`);
 
-    // Guard: ensure we are not passing a barcode fasta as the main input
-    if (!/\.fastq(\.gz)?$/i.test(fastqPath)) {
-      throw new Error(`IonTorrent expects a multiplexed FASTQ (.fastq/.fastq.gz). Received: ${fastqPath}`);
-    }
-
     // Check R packages before running pipeline
     await checkRPackages();
 

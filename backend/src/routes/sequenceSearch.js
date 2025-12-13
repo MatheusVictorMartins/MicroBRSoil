@@ -2,9 +2,8 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 
-const { paths } = require('../utils/moduleResolver');
-const sampleFunctions = require(paths.sampleFunctions());
-const writeLog = require(paths.logHandler());
+const sampleFunctions = require("/app/db/db_functions/sample_funtion");
+const writeLog = require('/app/db/log_files/log_handler');
 
 const htmlPath = path.join(path.dirname(__dirname), 'src', 'html');
 

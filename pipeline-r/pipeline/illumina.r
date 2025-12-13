@@ -22,16 +22,6 @@ run_dada2_pipeline <- function(path1, path2 = default_silva_path, outdir = NULL,
   cat("========================================\n")
   cat("Timestamp:", as.character(Sys.time()), "\n\n")
   
-  # Configure log sink to capture progress (cat/print) into file for tracking
-  if (!is.null(outdir)) {
-    log_file <- file.path(outdir, "pipeline_progress.log")
-    sink(log_file, append = TRUE, split = TRUE)
-    on.exit({
-      try(sink(NULL), silent = TRUE)
-      try(sink(NULL), silent = TRUE)
-    }, add = TRUE)
-  }
-  
   # Resolve input path (directory or file)
   if (dir.exists(path1)) {
     path <- path1
