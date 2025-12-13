@@ -62,23 +62,12 @@ async function addPipelineJob({ runId, fastqPath, pipelineType, meta = {} }) {
   }
   
   const job = await queue.add('run', { runId, fastqPath, pipelineType, meta }, {
-    attempts: 3,
-    backoff: { type: 'exponential', delay: 5000 },
+    attempts: 1,  // No retries - fail immediately on error
     removeOnComplete: 1000,
     removeOnFail: 1000,
-    // Extended timeout for long-running pipeline jobs (2 hours)
-    jobOptions: {
-      delay: 0,
-      priority: 1,
-      jobId: runId,
-      removeOnComplete: true,
-      removeOnFail: false
-    },
-    // Job timeout: 2 hours (7200000 ms)
     delay: 0,
     priority: 1,
     jobId: runId,
-    // Prevent job stalling by setting higher timeout
     removeOnComplete: 10,
     removeOnFail: 50
   });
