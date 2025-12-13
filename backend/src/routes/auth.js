@@ -2,7 +2,8 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
-const userFunctions = require('/app/db/db_functions/user_functions');
+const { paths } = require('../utils/moduleResolver');
+const userFunctions = require(paths.userFunctions());
 const authenticate = require('../middleware/authenticate');
 
 // Import logging system

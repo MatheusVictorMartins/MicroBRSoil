@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
+const { paths } = require('./utils/moduleResolver');
 
 // Import logging system
 const { apiLogger } = require('./utils/logger');
@@ -57,7 +58,7 @@ app.use('/api/table', tableRoutes);
 app.get('/health', async (req, res) => {
   try {
     // Test database connection
-    const pool = require('/app/db/db');
+    const pool = require(paths.db());
     await pool.query('SELECT 1');
     
     // Test Redis connection
@@ -102,6 +103,7 @@ app.get('/register', (req, res) => res.sendFile(path.join(htmlPath, 'register.ht
 app.get('/taxon', (req, res) => res.sendFile(path.join(htmlPath, 'taxon_search.html')));
 app.get('/sequence', (req, res) => res.sendFile(path.join(htmlPath, 'sequence_search.html')));
 app.get('/geosearch', (req, res) => res.sendFile(path.join(htmlPath, 'geosearch.html')));
+app.get('/pipeline-status', (req, res) => res.sendFile(path.join(htmlPath, 'pipeline_status.html')));
 
 app.get('/upload', (req, res) => res.sendFile(path.join(htmlPath, 'upload.html')));
 

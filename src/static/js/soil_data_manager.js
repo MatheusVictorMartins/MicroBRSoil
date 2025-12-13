@@ -316,13 +316,15 @@ class SoilDataManager {
 }
 
 // Initialize when DOM is loaded
-let soilManager;
-document.addEventListener('DOMContentLoaded', function() {
-    // Check if we're on the index page
-    if (document.querySelector('.dashboard-table')) {
-        soilManager = new SoilDataManager();
-    }
-});
-
-// Export for global access
+let soilManager = null;
 window.soilManager = soilManager;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if we're on the index page and avoid double instantiation
+    if (soilManager || !document.querySelector('.dashboard-table')) {
+        return;
+    }
+
+    soilManager = new SoilDataManager();
+    window.soilManager = soilManager;
+});

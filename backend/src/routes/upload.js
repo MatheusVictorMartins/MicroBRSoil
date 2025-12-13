@@ -5,12 +5,11 @@ const fs = require('fs');
 const { addPipelineJob } = require('../queues');
 const { pipelines } = require('../utils/fakeDB');
 const { v4: uuidv4 } = require('uuid');
+const { paths } = require('../utils/moduleResolver');
 
 // Use dynamic paths that work in both local development and Docker
-const PIPELINE_FUNCTIONS_PATH = '/app/db/db_functions/pipeline_functions';
-const DB_PATH = '/app/db/db';
-
-const { createPipelineRun, updatePipelineRunStatus } = require(PIPELINE_FUNCTIONS_PATH);
+const { createPipelineRun, updatePipelineRunStatus } = require(paths.pipelineFunctions());
+const DB_PATH = paths.db();
 
 const router = express.Router();
 
@@ -72,19 +71,52 @@ async function handleUpload(req, res, pipelineType) {
       const fastqFiles = uploadedFiles.filter(f => 
         f.name.match(/_(L\d{3}_)?R[12]_001\.fastq(\.gz)?$/i)
       );
+      // Also accept alternate naming (R1/R2 or _1/_2) and zip
+      const altFastqFiles = fastqFiles.length > 0 ? fastqFiles : uploadedFiles.filter(f =>
+        f.name.match(/R[12].*\.fastq(\.gz)?$|_[12]\.fastq(\.gz)?$/i)
+      );
+      const zipFiles = uploadedFiles.filter(f => f.name.toLowerCase().endsWith('.zip'));
       
-      if (fastqFiles.length === 0) {
+      if (altFastqFiles.length === 0 && zipFiles.length === 0) {
         // Clean up uploaded files
         const uploadDir = path.dirname(files[0].path);
         fs.rmSync(uploadDir, { recursive: true, force: true });
         return res.status(400).json({ 
-          error: 'No valid FASTQ files found. Illumina pipeline requires files matching pattern: *_R1_001.fastq.gz or *_L001_R1_001.fastq.gz',
+          error: 'No valid FASTQ or ZIP found. Illumina pipeline requires *_R1_001.fastq.gz/_L001_R1_001.fastq.gz, R1/R2 fastqs, or a ZIP containing them.',
           filesReceived: uploadedFiles.map(f => f.name)
         });
       }
       
-      // Use the directory path containing FASTQ files
-      mainFilePath = path.dirname(files[0].path);
+      // Use the directory path containing FASTQ files, or the ZIP path (handled later)
+      mainFilePath = altFastqFiles.length > 0 
+        ? path.dirname(altFastqFiles[0].path)
+        : zipFiles[0].path;
+    } else if (pipelineType === 'iontorrent') {
+      // IonTorrent expects a multiplexed FASTQ; ignore barcode fasta when choosing the main file
+      const fastqFiles = uploadedFiles
+        .filter(f => f.name.match(/[.]fastq(\.gz)?$/i))
+        .sort((a, b) => b.size - a.size); // pick the largest FASTQ
+
+      if (fastqFiles.length === 0) {
+        const uploadDir = path.dirname(files[0].path);
+        fs.rmSync(uploadDir, { recursive: true, force: true });
+        return res.status(400).json({
+          error: 'No FASTQ found for IonTorrent. Please upload the multiplexed FASTQ (.fastq or .fastq.gz).',
+          filesReceived: uploadedFiles.map(f => f.name)
+        });
+      }
+
+      // Basic sanity: reject extremely small files that are likely not real reads
+      if (fastqFiles[0].size < 1024) {
+        const uploadDir = path.dirname(files[0].path);
+        fs.rmSync(uploadDir, { recursive: true, force: true });
+        return res.status(400).json({
+          error: 'FASTQ is too small (<1KB). Please upload the real multiplexed FASTQ.',
+          filesReceived: uploadedFiles.map(f => `${f.name} (${f.size} bytes)`)
+        });
+      }
+
+      mainFilePath = fastqFiles[0].path;
     } else {
       // For other pipelines: use the first file path (legacy behavior)
       mainFilePath = files[0].path;
@@ -153,11 +185,10 @@ async function handleUpload(req, res, pipelineType) {
 const illuminaUpload = multer({ 
   storage: createStorage('illumina'),
   limits: {
-    fileSize: 2 * 1024 * 1024 * 1024, // 2GB per file
-    files: 50, // Maximum 50 files (increased from 20)
-    fieldSize: 100 * 1024 * 1024, // 100MB for field data
+    fileSize: 5 * 1024 * 1024 * 1024, // 5GB per file
+    files: 50, // Maximum 50 files
+    fieldSize: 200 * 1024 * 1024, // 200MB for field data
     fieldNameSize: 100, // Max field name size
-    fieldSize: 100 * 1024 * 1024, // Max field value size
     fields: 1000 // Max number of non-file fields
   }
 });
@@ -186,11 +217,10 @@ router.post('/illumina', illuminaUpload.array('files'), (error, req, res, next) 
 const iontorrentUpload = multer({ 
   storage: createStorage('iontorrent'),
   limits: {
-    fileSize: 2 * 1024 * 1024 * 1024, // 2GB per file
-    files: 50, // Maximum 50 files (increased from 20)
-    fieldSize: 100 * 1024 * 1024, // 100MB for field data
+    fileSize: 5 * 1024 * 1024 * 1024, // 5GB per file
+    files: 50, // Maximum 50 files
+    fieldSize: 200 * 1024 * 1024, // 200MB for field data
     fieldNameSize: 100, // Max field name size
-    fieldSize: 100 * 1024 * 1024, // Max field value size
     fields: 1000 // Max number of non-file fields
   }
 });
@@ -219,11 +249,10 @@ router.post('/iontorrent', iontorrentUpload.array('files'), (error, req, res, ne
 const itsUpload = multer({ 
   storage: createStorage('its'),
   limits: {
-    fileSize: 2 * 1024 * 1024 * 1024, // 2GB per file
-    files: 50, // Maximum 50 files (increased from 20)
-    fieldSize: 100 * 1024 * 1024, // 100MB for field data
+    fileSize: 5 * 1024 * 1024 * 1024, // 5GB per file
+    files: 50, // Maximum 50 files
+    fieldSize: 200 * 1024 * 1024, // 200MB for field data
     fieldNameSize: 100, // Max field name size
-    fieldSize: 100 * 1024 * 1024, // Max field value size
     fields: 1000 // Max number of non-file fields
   }
 });
@@ -252,11 +281,10 @@ router.post('/its', itsUpload.array('files'), (error, req, res, next) => {
 const legacyUpload = multer({ 
   storage: createStorage('default'),
   limits: {
-    fileSize: 2 * 1024 * 1024 * 1024, // 2GB per file
-    files: 50, // Maximum 50 files (increased from 20)
-    fieldSize: 100 * 1024 * 1024, // 100MB for field data
+    fileSize: 5 * 1024 * 1024 * 1024, // 5GB per file
+    files: 50, // Maximum 50 files
+    fieldSize: 200 * 1024 * 1024, // 200MB for field data
     fieldNameSize: 100, // Max field name size
-    fieldSize: 100 * 1024 * 1024, // Max field value size
     fields: 1000 // Max number of non-file fields
   }
 });

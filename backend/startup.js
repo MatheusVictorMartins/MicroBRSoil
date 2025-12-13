@@ -5,9 +5,10 @@ const path = require('path');
 //console.log(process.env);
 
 const { connection, queue } = require('./src/queues');
+const { paths } = require('./src/utils/moduleResolver');
 
 // Database module path - works for both Docker and local development
-const DB_PATH = '/app/db/db.js';
+const DB_PATH = paths.db();
 
 console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('__dirname:', __dirname);
@@ -28,6 +29,23 @@ async function checkDependencies() {
     console.log('Testing Redis connection...');
     await connection.ping();
     console.log('Redis connected');
+
+    // Reset pipeline queue on startup to avoid stale jobs
+    console.log('Resetting pipeline queue (drain/clean/obliterate)...');
+    try {
+      await queue.pause();
+      await queue.drain();
+      await queue.clean(0, 'active');
+      await queue.clean(0, 'completed');
+      await queue.clean(0, 'failed');
+      await queue.clean(0, 'wait');
+      await queue.clean(0, 'paused');
+      await queue.obliterate({ force: true });
+      await queue.resume();
+      console.log('Queue reset done.');
+    } catch (queueErr) {
+      console.warn('Queue reset warning:', queueErr.message);
+    }
     
     // Test queue functionality
     console.log('Testing queue functionality...');

@@ -1,23 +1,33 @@
-const { dbLogger } = require('/app/src/utils/logger');
+const path = require('path');
+
+// Try multiple logger locations: Docker path first, then local backend path, then console fallback
+const tryRequire = (p) => {
+    try { return require(p); } catch (err) { return null; }
+};
+
+const loggerModule =
+    tryRequire('/app/src/utils/logger') ||
+    tryRequire(path.join(__dirname, '../../backend/src/utils/logger'));
+
+const dbLogger = loggerModule?.dbLogger || {
+    info: console.log,
+    warn: console.warn,
+    error: console.error
+};
 
 // Legacy compatibility wrapper for existing database logging
-// This maintains backward compatibility while using the new logging system
 const writeLog = (message) => {
     if (!message || typeof message !== "string") {
-        dbLogger.warn('Invalid log message format', { 
+        dbLogger.warn('Invalid log message format', {
             messageType: typeof message,
-            messageValue: message 
+            messageValue: message
         });
         return;
     }
 
-    // Remove the old format requirement and log directly
     const cleanMessage = message.startsWith('\n') ? message.substring(1) : message;
-    
-    // Use the new logging system with database logger
     dbLogger.info(cleanMessage);
-}
+};
 
-// Export both the legacy function and new logger for gradual migration
 module.exports = writeLog;
 module.exports.dbLogger = dbLogger;

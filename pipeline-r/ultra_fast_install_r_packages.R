@@ -152,20 +152,33 @@ install_with_fallback <- function(packages, use_bioc = FALSE, category = "packag
 }
 
 # Install in optimized order with comprehensive error handling
-cat("📦 Installing system dependency packages...\n")
+cat("Installing system dependency packages...\n")
 install_with_fallback(required_packages$system_deps, use_bioc = FALSE, category = "system dependencies")
 
-cat("📦 Installing basic R packages...\n")
+cat("Installing basic R packages...\n")
 install_with_fallback(required_packages$basic, use_bioc = FALSE, category = "basic packages")
 
-cat("📦 Installing CRAN analysis packages...\n") 
+cat("Installing CRAN analysis packages...\n")
 install_with_fallback(required_packages$cran_analysis, use_bioc = FALSE, category = "CRAN analysis packages")
 
-cat("📦 Installing advanced packages...\n")
+cat("Installing advanced packages...\n")
 install_with_fallback(required_packages$advanced, use_bioc = FALSE, category = "advanced packages")
 
-cat("📦 Installing Bioconductor packages (including microbiome)...\n")
+cat("Installing Bioconductor packages (including microbiome)...\n")
 install_with_fallback(required_packages$bioconductor, use_bioc = TRUE, category = "Bioconductor packages")
+
+# Targeted retry for breakaway if it is still not loadable
+if (!is_package_ready("breakaway")) {
+  cat("breakaway not functional after standard install, trying remotes::install_github...\n")
+  if (!requireNamespace("remotes", quietly = TRUE)) {
+    install.packages("remotes", dependencies = TRUE)
+  }
+  tryCatch({
+    remotes::install_github("adw96/breakaway", upgrade = "never", dependencies = TRUE)
+  }, error = function(e) {
+    cat(paste("GitHub install for breakaway failed:", e$message, "\n"))
+  })
+}
 
 # Final verification
 cat("\n🔍 Final verification of all packages...\n")

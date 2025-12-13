@@ -1,260 +1,484 @@
-run_dada2_pipeline <- function(path1, barcodes_path = "/app/pipeline-r/barcodes/barcodes_16S.fa", outdir = NULL, type = "iontorrent") {
-  path <- dirname(path1)
-  
-  # Set working directory to outdir if provided
-  if (!is.null(outdir)) {
-    setwd(outdir)
-  }
-  
-  log_file <- file.path(getwd(), "log.txt")
+default_silva_path <- Sys.getenv(
+  "SILVA_REFERENCE_PATH",
+  "/app/pipeline-r/references/silva_nr99_v138.1_train_set.fa"
+)
 
-  tryCatch({
-    #  Carregando pacotes
+run_dada2_pipeline <- function(path1,
+                               barcodes_path = "/app/pipeline-r/barcodes/barcodes_16S.fa",
+                               path2 = default_silva_path,
+                               outdir = NULL,
+                               type = "iontorrent") {
+
+  suppressPackageStartupMessages({
     library(dada2)
     library(phyloseq)
     library(ggplot2)
     library(vegan)
     library(dplyr)
     library(ShortRead)
-    library(breakaway)
-    # install.packages("breakaway")
+  })
 
-    write(paste(Sys.time(), "- Pacotes carregados com sucesso"), 
-          file = log_file, append = TRUE)
+  # Force single-core to avoid mclapply/fork issues on some hosts
+  options(mc.cores = 1)
+  Sys.setenv("MC_CORES" = 1, "OMP_NUM_THREADS" = 1)
+  if (requireNamespace("BiocParallel", quietly = TRUE)) {
+    BiocParallel::register(BiocParallel::SerialParam())
+  }
 
-    #  Diretórios
-    path <- dirname(path1)
-    demux_path <- "demultiplexed"
-    filt_path <- "filtered"
-    dir.create(demux_path, showWarnings = FALSE)
-    dir.create(filt_path, showWarnings = FALSE)
+  if (!requireNamespace("jsonlite", quietly = TRUE)) {
+    install.packages("jsonlite", repos = "https://cloud.r-project.org")
+  }
+  library(jsonlite)
 
-    #  Barcodes
-    write(paste(Sys.time(), "- Iniciando demultiplexing"), 
-          file = log_file, append = TRUE)
-    barcodes <- readFasta(barcodes_path)
-    barcode_ids <- as.character(id(barcodes))
-    barcode_seqs <- as.character(sread(barcodes))
+  cat("\n========================================\n")
+  cat("IonTorrent DADA2 pipeline\n")
+  cat("========================================\n")
+  cat("Timestamp:", as.character(Sys.time()), "\n\n")
 
-    #  FASTQ multiplexado
-    fq <- readFastq(path1)
+  # Configure log sink to capture progress into file for tracking
+  if (!is.null(outdir)) {
+    log_file <- file.path(outdir, "pipeline_progress.log")
+    sink(log_file, append = TRUE, split = TRUE)
+    on.exit({
+      while (sink.number() > 0) sink(NULL)
+    }, add = TRUE)
+  }
+
+  if (!file.exists(path1)) {
+    stop("Input FASTQ file not found: ", path1)
+  }
+  if (!file.exists(barcodes_path)) {
+    stop("Barcode reference not found: ", barcodes_path)
+  }
+
+  result_path <- if (!is.null(outdir)) outdir else file.path(getwd(), "resultados_iontorrent")
+  dir.create(result_path, recursive = TRUE, showWarnings = FALSE)
+
+  demux_path <- file.path(result_path, "demultiplexed")
+  filt_path  <- file.path(result_path, "filtered")
+
+  # Safer single-thread mode
+  use_multithread <- FALSE
+
+  # Clean previous runs
+  if (dir.exists(demux_path)) unlink(demux_path, recursive = TRUE, force = TRUE)
+  if (dir.exists(filt_path))  unlink(filt_path,  recursive = TRUE, force = TRUE)
+  dir.create(demux_path, showWarnings = FALSE, recursive = TRUE)
+  dir.create(filt_path,  showWarnings = FALSE, recursive = TRUE)
+
+  # ---------------------------
+  # Helpers (streaming-safe)
+  # ---------------------------
+  count_reads_stream <- function(f, chunk = 200000L) {
+    st <- ShortRead::FastqStreamer(f, n = chunk)
+    on.exit(try(close(st), silent = TRUE), add = TRUE)
+    total <- 0L
+    repeat {
+      x <- yield(st)
+      if (length(x) == 0) break
+      total <- total + length(x)
+    }
+    total
+  }
+
+  estimate_read_lengths <- function(files, max_reads = 2000L, chunk = 5000L) {
+    lens <- integer()
+    for (f in files) {
+      try({
+        st <- ShortRead::FastqStreamer(f, n = chunk)
+        on.exit(try(close(st), silent = TRUE), add = TRUE)
+        repeat {
+          r <- yield(st)
+          if (length(r) == 0) break
+          lens <- c(lens, width(sread(r)))
+          if (length(lens) >= max_reads) break
+        }
+        close(st)
+        on.exit(NULL, add = FALSE)
+      }, silent = TRUE)
+      if (length(lens) >= max_reads) break
+    }
+    lens
+  }
+
+  safe_filter_and_trim <- function(fwd, filt, args) {
+    tryCatch({
+      do.call(
+        filterAndTrim,
+        c(list(fwd, filt), args, list(multithread = use_multithread))
+      )
+    }, error = function(e) {
+      message("filterAndTrim failed with multithread mode (", use_multithread,
+              "), retrying sequentially per-sample: ", e$message)
+      res <- lapply(seq_along(fwd), function(i) {
+        tryCatch(
+          do.call(
+            filterAndTrim,
+            c(list(fwd[i], filt[i]), args, list(multithread = FALSE))
+          ),
+          error = function(inner) {
+            stop(sprintf("Filtering failed for sample %s: %s", basename(fwd[i]), inner$message))
+          }
+        )
+      })
+      do.call(rbind, res)
+    })
+  }
+
+  # --------------------------------------------------
+  # Step 0: Demultiplexing by barcode (STREAMING)
+  # --------------------------------------------------
+  cat("Step 0: Demultiplexing by barcode (streaming)\n")
+
+  barcodes <- readFasta(barcodes_path)
+  barcode_ids  <- as.character(id(barcodes))
+  barcode_seqs <- as.character(sread(barcodes))
+
+  # limpa saídas
+  for (sid in barcode_ids) {
+    out_fastq <- file.path(demux_path, paste0(sid, ".fastq.gz"))
+    if (file.exists(out_fastq)) file.remove(out_fastq)
+  }
+
+  chunk_n <- as.integer(Sys.getenv("IONT_STREAM_CHUNK", "50000"))
+  st_in <- ShortRead::FastqStreamer(path1, n = chunk_n)
+  on.exit(try(close(st_in), silent = TRUE), add = TRUE)
+
+  repeat {
+    fq_chunk <- yield(st_in)
+    if (length(fq_chunk) == 0) break
+
+    seqs <- as.character(sread(fq_chunk))
 
     for (i in seq_along(barcode_seqs)) {
-      bc <- barcode_seqs[i]
+      bc  <- barcode_seqs[i]
       sid <- barcode_ids[i]
-      filt <- fq[substr(as.character(sread(fq)), 1, nchar(bc)) == bc]
-      if (length(filt) > 0) {
-        trimmed <- narrow(sread(filt), start = nchar(bc) + 1,
-                          end = width(sread(filt)))
-        ids <- id(filt)
-        qual <- narrow(quality(quality(filt)), start = nchar(bc) + 1,
-                       end = width(sread(filt)))
-        newfq <- ShortReadQ(sread = trimmed, quality = qual, id = ids)
-        writeFastq(newfq,
-                   file.path(demux_path, paste0(sid, ".fastq.gz")),
-                   compress = TRUE)
-      }
+      k   <- nchar(bc)
+
+      hit <- substr(seqs, 1, k) == bc
+      if (!any(hit)) next
+
+      sub <- fq_chunk[hit]
+      trimmed <- narrow(sread(sub), start = k + 1, end = width(sread(sub)))
+      qual <- narrow(quality(quality(sub)), start = k + 1, end = width(sread(sub)))
+      newfq <- ShortReadQ(sread = trimmed, quality = qual, id = id(sub))
+
+      out_fastq <- file.path(demux_path, paste0(sid, ".fastq.gz"))
+      writeFastq(newfq, out_fastq, compress = TRUE, mode = "a")
     }
 
-    write(paste(Sys.time(), "- Demultiplexing concluído"),
-          file = log_file, append = TRUE)
+    rm(fq_chunk)
+    gc()
+  }
 
-    #  Filtro por média
-    fnFs <- list.files(demux_path, pattern = "fastq.gz", 
-                       full.names = TRUE)
+  # --------------------------------------------------
+  # Step 0.1: List demultiplexed outputs (IMPORTANT)
+  # --------------------------------------------------
+  fnFs <- list.files(demux_path, pattern = "\\.fastq(\\.gz)?$", full.names = TRUE)
+  if (length(fnFs) == 0) stop("No demultiplexed FASTQ files were generated in: ", demux_path)
+  sample.names <- tools::file_path_sans_ext(basename(fnFs))
 
-    read_counts <- sapply(fnFs, function(f) length(readFastq(f)))
-    mean_reads <- mean(read_counts)
-    cutoff <- 0.10 * mean_reads
-    keep_idx <- which(read_counts >= cutoff)
-    fnFs <- fnFs[keep_idx]
-    read_counts <- read_counts[keep_idx]
+  # --------------------------------------------------
+  # Step 0.5: Depth screening (STREAMING COUNT)
+  # --------------------------------------------------
+  cat("Step 0.5: Depth screening (remove low-depth barcodes)\n")
 
-    write(paste(Sys.time(), "- Média de reads:", round(mean_reads)),
-          file = log_file, append = TRUE)
-    write(paste(Sys.time(), "- Cutoff (10%):", round(cutoff)),
-          file = log_file, append = TRUE)
-    write(paste(Sys.time(), "- Amostras mantidas:", length(fnFs)),
-          file = log_file, append = TRUE)
+  read_counts <- sapply(fnFs, count_reads_stream)
+  mean_reads <- mean(read_counts)
+  cutoff_reads <- 0.10 * mean_reads
+  keep_idx <- which(read_counts >= cutoff_reads)
 
-    # Filtragem
-    sample.names <- tools::file_path_sans_ext(basename(fnFs))
-    filtFs <- file.path(filt_path, 
-                        paste0(sample.names, "_filt.fastq.gz"))
+  if (length(keep_idx) == 0) {
+    stop("All demultiplexed samples are below the 10% depth cutoff (mean reads = ", round(mean_reads), ").")
+  }
 
-    write(paste(Sys.time(), "- Iniciando filtragem"),
-          file = log_file, append = TRUE)
-    out <- filterAndTrim(fnFs, filtFs,
-                         truncLen = 270, maxN = 0, maxEE = 2, truncQ = 2,
-                         rm.phix = TRUE, compress = TRUE,
-                         multithread = TRUE)
+  dropped <- length(read_counts) - length(keep_idx)
+  if (dropped > 0) {
+    cat("Dropping", dropped, "samples below depth cutoff of", round(cutoff_reads), "reads\n")
+  }
 
-    #  DADA2
-    write(paste(Sys.time(), "- Aprendizado de erro"),
-          file = log_file, append = TRUE)
-    errF <- learnErrors(filtFs, multithread = TRUE)
+  fnFs <- fnFs[keep_idx]
+  sample.names <- sample.names[keep_idx]
+  cat("Samples retained after cutoff:", paste(sample.names, collapse = ", "), "\n")
 
-    write(paste(Sys.time(), "- Inferência DADA"),
-          file = log_file, append = TRUE)
-    dds <- dada(filtFs, err = errF, multithread = TRUE)
+  # --------------------------------------------------
+  # Estimate truncLen, etc.
+  # --------------------------------------------------
+  lens <- estimate_read_lengths(fnFs)
+  trunc_len_est <- NA_integer_
+  if (length(lens)) {
+    trunc_len_est <- min(270L, max(80L, floor(stats::quantile(lens, 0.85))))
+  }
+  if (is.na(trunc_len_est) || trunc_len_est <= 0) trunc_len_est <- 220L
+  max_ee_est <- if (trunc_len_est >= 220) 3 else 4
 
-    write(paste(Sys.time(), "- Criando tabela de sequência"),
-          file = log_file, append = TRUE)
-    seqtab <- makeSequenceTable(dds)
+  cat("Estimated read length (85th pct):", trunc_len_est, " maxEE:", max_ee_est, "\n")
 
-    write(paste(Sys.time(), "- Remoção de quimeras"),
-          file = log_file, append = TRUE)
-    seqtab.nochim <- removeBimeraDenovo(seqtab,
-                                        method = "consensus",
-                                        multithread = TRUE)
+  # --------------------------------------------------
+  # Step 1: Filter and trim (single-end)
+  # --------------------------------------------------
+  cat("Step 1: Filter and trim (single-end)\n")
 
-    #  Taxonomia
-    write(paste(Sys.time(), "- Atribuição de taxonomia"),
-          file = log_file, append = TRUE)
- taxa <- assignTaxonomy(seqtab.nochim,
-              "referencia/silva_nr99_v138.1_train_set.fa",
-              multithread = TRUE)
+  filtFs <- file.path(filt_path, paste0(sample.names, "_filt.fastq.gz"))
 
-    saveRDS(seqtab.nochim, file.path(path, "seqtab_nochim.rds"))
-    saveRDS(taxa, file.path(path, "taxa.rds"))
-    
-    numer_of_taxa_assigned_by_rank <- sapply(as_tibble(taxa), function(col) (!is.na(col))) %>%  colSums()
-    #algoritmo para kingdom = ...;
-    for (i in seq_along(numer_of_taxa_assigned_by_rank)) {
-  write(paste(names(numer_of_taxa_assigned_by_rank)[i], ":",
-              numer_of_taxa_assigned_by_rank[i]),
-        file = log_file, append = TRUE)
-}
-                                                            #add >=
-    rank_chosen_to_plot <- which(numer_of_taxa_assigned_by_rank >= 2) %>% max()
-    rank_name <- names(numer_of_taxa_assigned_by_rank)[rank_chosen_to_plot]
-    
-    write(paste("Rank chosen to plot: ", rank_name),
-          file = log_file, append = TRUE)
-    
-    write(paste(Sys.time(), "- Number of ASVs with a taxa assigned per rank"),
-          file = log_file, append = TRUE)
-    #  Alpha/Beta
-    write(paste(Sys.time(), "- Criando objeto phyloseq"),
-          file = log_file, append = TRUE)
-    ps <- phyloseq(otu_table(seqtab.nochim, taxa_are_rows = FALSE),
-                   tax_table(taxa))
+  filter_attempts <- list(
+    list(
+      name = "default",
+      args = list(
+        truncLen = trunc_len_est,
+        maxN = 0,
+        maxEE = max_ee_est,
+        truncQ = 2,
+        rm.phix = TRUE,
+        compress = TRUE
+      )
+    ),
+    list(
+      name = "relaxed_no_trunc",
+      args = list(
+        truncLen = 0,
+        maxN = 0,
+        maxEE = 5,
+        truncQ = 2,
+        rm.phix = TRUE,
+        compress = TRUE
+      )
+    ),
+    list(
+      name = "pass_through",
+      args = NULL
+    )
+  )
 
-    write(paste(Sys.time(), "- Diversidade alfa"),
-          file = log_file, append = TRUE)
-    alpha <- estimate_richness(ps,
-               measures = c("Observed", "Shannon", "Simpson"))
-    # alpha$Goods <- 1 - (rowSums(otu_table(ps) == 1) /
-    #                     rowSums(otu_table(ps))) # Goods coverage tem o mesmo problema que o Chao1
-    # Para dados de DADA2, não tem singletons e tanto Chao1 quanto Goods fica o mesmo valor de 
-    # Observed
-    # Aqui uma alterativa:
-    # install.packages("breakaway")
-    # O breakaway usa um modelo para estimar o número de espécies na amostra
-    
-    # Apply per sample
-    
+  filter_success <- FALSE
+  out <- NULL
+
+  for (attempt in filter_attempts) {
+    cat("Filter attempt:", attempt$name, "\n")
+    if (attempt$name == "pass_through") break
+
+    out <- safe_filter_and_trim(fnFs, filtFs, attempt$args)
+    print(out)
+    cat("reads.in reads.out\n")
+    cat(capture.output(out), sep = "\n")
+
+    keep <- out[, "reads.out"] > 0
+    if (sum(keep) > 0) {
+      filter_success <- TRUE
+      if (!all(keep)) {
+        cat("Removing", sum(!keep), "samples with zero reads after filtering (attempt:", attempt$name, ")\n")
+        filtFs <- filtFs[keep]
+        sample.names <- sample.names[keep]
+      }
+      break
+    } else {
+      cat("All reads removed in attempt", attempt$name, "- trying next strategy if available.\n")
+      unlink(filtFs, recursive = FALSE, force = TRUE)
+    }
+  }
+
+  if (!filter_success) {
+    cat("Filter attempts failed; copying demultiplexed FASTQs as filtered outputs (pass-through)\n")
+    file.copy(fnFs, filtFs, overwrite = TRUE)
+    counts <- sapply(fnFs, function(f) {
+      tryCatch(count_reads_stream(f), error = function(e) NA_integer_)
+    })
+    out <- cbind(reads.in = counts, reads.out = counts)
+    rownames(out) <- basename(fnFs)
+    filter_success <- TRUE
+    sample.names <- tools::file_path_sans_ext(basename(filtFs))
+    print(out)
+    cat("reads.in reads.out\n")
+    cat(capture.output(out), sep = "\n")
+  }
+
+  if (!filter_success) {
+    stop("Filtering failed: all samples removed even after relaxed parameters.")
+  }
+
+  # --------------------------------------------------
+  # Step 2: Learn errors
+  # --------------------------------------------------
+  cat("Step 2: Learn errors\n")
+  errF <- learnErrors(filtFs, multithread = use_multithread)
+
+  # --------------------------------------------------
+  # Step 3: Denoise (PER SAMPLE)
+  # --------------------------------------------------
+  cat("Step 3: Denoise (per-sample)\n")
+
+  dadaFs <- vector("list", length(filtFs))
+  names(dadaFs) <- sample.names
+
+  for (i in seq_along(filtFs)) {
+    cat("  -", i, "/", length(filtFs), ":", basename(filtFs[i]), "\n")
+    derep <- derepFastq(filtFs[i], verbose = TRUE)
+    dadaFs[[i]] <- dada(derep, err = errF, multithread = FALSE)
+    rm(derep)
+    gc()
+  }
+
+  # --------------------------------------------------
+  # Step 4: Sequence table and chimera removal
+  # --------------------------------------------------
+  cat("Step 4: Sequence table and chimera removal\n")
+  seqtab <- makeSequenceTable(dadaFs)
+  seqtab.nochim <- removeBimeraDenovo(seqtab, method = "consensus", multithread = use_multithread)
+  rownames(seqtab.nochim) <- sample.names
+
+  # --------------------------------------------------
+  # Step 5: Taxonomy assignment
+  # --------------------------------------------------
+  cat("Step 5: Taxonomy assignment\n")
+  valid_ref <- !is.null(path2) && file.exists(path2)
+  taxa <- tryCatch({
+    if (valid_ref) {
+      assignTaxonomy(seqtab.nochim, path2, multithread = use_multithread)
+    } else {
+      stop("Reference missing")
+    }
+  }, error = function(e) {
+    warning("assignTaxonomy failed: ", e$message)
+    matrix(
+      NA_character_,
+      nrow = ncol(seqtab.nochim),
+      ncol = 7,
+      dimnames = list(colnames(seqtab.nochim),
+                      c("kingdom", "phylum", "class", "order", "family", "genus", "species"))
+    )
+  })
+
+  # --------------------------------------------------
+  # Step 6: Create phyloseq object
+  # --------------------------------------------------
+  cat("Step 6: Create phyloseq object\n")
+  samples <- data.frame(sample = sample.names, sampleid = sample.names, row.names = sample.names)
+  ps <- phyloseq(
+    otu_table(seqtab.nochim, taxa_are_rows = FALSE),
+    tax_table(as.matrix(taxa)),
+    sample_data(samples)
+  )
+  saveRDS(ps, file = file.path(result_path, "phyloseq_object.rds"))
+
+  # --------------------------------------------------
+  # Step 7: Alpha diversity
+  # --------------------------------------------------
+  cat("Step 7: Alpha diversity\n")
+  alpha_div <- estimate_richness(ps, measures = c("Observed", "Shannon", "Simpson"))
+  alpha_div$Chao1 <- estimate_richness(ps, measures = "Chao1")[, 1]
+  alpha_div$Goods <- 1 - (rowSums(otu_table(ps) == 1) / pmax(rowSums(otu_table(ps)), 1))
+
+  if (requireNamespace("breakaway", quietly = TRUE)) {
+    cat("Computing breakaway richness estimates\n")
     otu_mat <- as(otu_table(ps), "matrix")
     if (taxa_are_rows(ps)) otu_mat <- t(otu_mat)
-    
-    breakaway_list <- apply(otu_mat, 1, function(x) breakaway(as.integer(x)))
-    
-    # Build a data frame from the list
-    breakaway_df <- data.frame(
-      SampleID = names(breakaway_list),
-      Breakaway = sapply(breakaway_list, function(x) x$estimate),
-      Breakaway_se = sapply(breakaway_list, function(x) x$error),
-      row.names = NULL
+    ba_list <- tryCatch(
+      apply(otu_mat, 1, function(x) breakaway::breakaway(as.integer(x))),
+      error = function(e) {
+        warning("breakaway failed: ", e$message)
+        NULL
+      }
     )
-    
-    alpha$SampleID <- rownames(alpha) %>% gsub(pattern = "^X", replacement = "")
-    
-    alpha <- left_join(alpha, breakaway_df, by = "SampleID")
-    alpha <- alpha %>% select(SampleID, everything())
-    
-    alpha <- alpha %>%
-      mutate(across(c(Breakaway, Breakaway_se), ~ round(.x, 4)))
-    
-    
-    write.csv(alpha, file.path(getwd(), "alpha_diversity_metrics.csv"))
-
-    write(paste(Sys.time(), "- Diversidade beta"),
-          file = log_file, append = TRUE)
-    ordu <- ordinate(ps, method = "PCoA", distance = "bray")
-
-    #  Gráficos
-    write(paste(Sys.time(), "- Gerando gráficos"),
-          file = log_file, append = TRUE)
-    p1 <- plot_richness(ps,
-            measures = c("Observed", "Shannon", "Simpson"))
-    ggsave("alpha_diversity.png", p1)
-
-    p2 <- plot_ordination(ps, ordu, color = "Sample") +
-          geom_point(size = 4)
-    ggsave("beta_diversity.png", p2)
-
-    
-    tax_glomed <- tax_glom(ps, taxrank = rank_name)
-    top20 <- names(sort(taxa_sums(tax_glomed),
-                        decreasing = TRUE))[1:20]
-    ps_top20 <- prune_taxa(top20, tax_glomed)
-    p3 <- plot_bar(ps_top20, fill = rank_name) +
-          theme(axis.text.x = element_text(angle = 90, hjust = 1))
-    ggsave("taxa_barplot.png", p3)
-
-    # === Exportações adicionais ===
-    write(paste(Sys.time(), "- Exportando tabelas CSV"),
-          file = log_file, append = TRUE)
-    output_dir <- getwd()  # Use current working directory (outdir)
-    write.csv(as.data.frame(otu_table(ps)), file.path(output_dir, "otu_table.csv"))
-    write.csv(as.data.frame(tax_table(ps)), file.path(output_dir, "tax_table.csv"))
-    
-    # Create sample metadata (minimal since IonTorrent doesn't have built-in sample data)
-    sample_names <- sample_names(ps)
-    sample_metadata <- data.frame(
-      sample = sample_names,
-      row.names = sample_names
-    )
-    write.csv(sample_metadata, file.path(output_dir, "sample_metadata.csv"))
-
-    # Create success status file to indicate pipeline completed without errors
-    success_status <- list(
-      status = "success",
-      message = "Pipeline concluído com sucesso",
-      timestamp = Sys.time(),
-      pipeline_type = "iontorrent",
-      files_created = c(
-        "alpha_diversity_metrics.csv",
-        "otu_table.csv", 
-        "tax_table.csv",
-        "sample_metadata.csv"
+    if (!is.null(ba_list)) {
+      ba_df <- data.frame(
+        sample = names(ba_list),
+        breakaway = sapply(ba_list, function(x) x$estimate),
+        breakaway_se = sapply(ba_list, function(x) x$error),
+        row.names = NULL
       )
-    )
-    
-    # Write status file as JSON-like format
-    writeLines(
-      c(
-        "{",
-        paste0('  "status": "', success_status$status, '",'),
-        paste0('  "message": "', success_status$message, '",'),
-        paste0('  "timestamp": "', success_status$timestamp, '",'),
-        paste0('  "pipeline_type": "', success_status$pipeline_type, '",'),
-        '  "files_created": [',
-        paste0('    "', success_status$files_created, '"', collapse = ",\n"),
-        '  ]',
-        "}"
-      ),
-      file.path(output_dir, "pipeline_status.json")
-    )
+      alpha_div$sample <- rownames(alpha_div)
+      alpha_div <- merge(alpha_div, ba_df, by.x = "sample", by.y = "sample", all.x = TRUE, sort = FALSE)
+      alpha_div$sample <- NULL
+    }
+  } else {
+    cat("breakaway not installed; skipping breakaway richness\n")
+  }
 
-    write(paste(Sys.time(), "- PIPELINE CONCLUÍDO COM SUCESSO"),
-          file = log_file, append = TRUE)
-    cat("Pipeline completed successfully - no errors detected\n")
-    return("Pipeline concluído com sucesso.")
+  alpha_export <- data.frame(
+    sample = rownames(alpha_div),
+    observed = alpha_div$Observed,
+    shannon = alpha_div$Shannon,
+    simpson = alpha_div$Simpson,
+    chao1 = alpha_div$Chao1,
+    goods = alpha_div$Goods
+  )
+  if ("breakaway" %in% colnames(alpha_div)) {
+    alpha_export$breakaway <- alpha_div$breakaway
+    alpha_export$breakaway_se <- alpha_div$breakaway_se
+  }
+  write.csv(alpha_export, file.path(result_path, "alpha_diversity_metrics.csv"), row.names = FALSE)
 
-  }, error = function(e) {
-    write(paste(Sys.time(), "- ERRO DETECTADO:", e$message),
-          file = log_file, append = TRUE)
-    stop("Erro na execução. Verifique log.")
-  })
+  # --------------------------------------------------
+  # Step 8: Taxonomic barplot
+  # --------------------------------------------------
+  cat("Step 8: Taxonomic barplot\n")
+  try({
+    ps_genus <- tax_glom(ps, taxrank = "Genus")
+    ps_genus_rel <- transform_sample_counts(ps_genus, function(x) x / sum(x))
+    g1 <- plot_bar(ps_genus_rel, fill = "Genus") +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1))
+    ggsave(file.path(result_path, "taxa_barplot_genus.png"), g1, width = 10, height = 6)
+  }, silent = TRUE)
+
+  # --------------------------------------------------
+  # Step 9: Beta diversity (PCoA Bray-Curtis)
+  # --------------------------------------------------
+  cat("Step 9: Beta diversity (PCoA Bray-Curtis)\n")
+  try({
+    ord_bc <- ordinate(ps, method = "PCoA", distance = "bray")
+    g2 <- plot_ordination(ps, ord_bc, color = "sample") +
+      geom_point(size = 3) +
+      theme_minimal()
+    ggsave(file.path(result_path, "beta_diversity_pcoa.png"), g2, width = 8, height = 6)
+  }, silent = TRUE)
+
+  # --------------------------------------------------
+  # Step 10: Export tables
+  # --------------------------------------------------
+  cat("Step 10: Export tables\n")
+  otu_export <- data.frame(
+    sequence = colnames(seqtab.nochim),
+    t(seqtab.nochim),
+    check.names = FALSE
+  )
+  write.csv(otu_export, file.path(result_path, "otu_table.csv"), row.names = FALSE)
+
+  tax_export <- data.frame(
+    sequence = rownames(taxa),
+    taxa,
+    check.names = FALSE
+  )
+  write.csv(tax_export, file.path(result_path, "tax_table.csv"), row.names = FALSE)
+
+  metadata_export <- data.frame(sample = sample.names, sampleid = sample.names, row.names = NULL)
+  write.csv(metadata_export, file.path(result_path, "sample_metadata.csv"), row.names = FALSE)
+
+  summary_stats <- data.frame(
+    metric = c("total_samples", "total_taxa", "total_reads"),
+    value = c(nsamples(ps), ntaxa(ps), sum(otu_table(ps)))
+  )
+  write.csv(summary_stats, file.path(result_path, "pipeline_summary_stats.csv"), row.names = FALSE)
+
+  status <- list(
+    status = "success",
+    message = "Pipeline concluido com sucesso",
+    pipeline_type = type,
+    timestamp = Sys.time(),
+    files_created = c(
+      "alpha_diversity_metrics.csv",
+      "otu_table.csv",
+      "tax_table.csv",
+      "sample_metadata.csv",
+      "phyloseq_object.rds",
+      "taxa_barplot_genus.png",
+      "beta_diversity_pcoa.png",
+      "pipeline_summary_stats.csv"
+    )
+  )
+  jsonlite::write_json(status, file.path(result_path, "pipeline_status.json"), auto_unbox = TRUE, pretty = TRUE)
+
+  cat("Output directory:", result_path, "\n")
+  cat("========================================\n\n")
+  return("Pipeline concluido com sucesso.")
 }

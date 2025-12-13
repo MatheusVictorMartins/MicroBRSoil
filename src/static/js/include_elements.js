@@ -1,15 +1,23 @@
-document.addEventListener("DOMContentLoaded",() => {
-    fetch("header.html")
-    .then(response => response.text())
-    .then(data => {
-        document.getElementById("header-placeholder").innerHTML = data;
-    });
-});
+async function loadFragment(path, targetId) {
+    const target = document.getElementById(targetId);
+    if (!target) {
+        return;
+    }
 
-document.addEventListener("DOMContentLoaded",() => {
-    fetch("left_menu.html")
-    .then(response => response.text())
-    .then(data => {
-        document.getElementById("leftmenu-placeholder").innerHTML = data;
-    });
+    try {
+        const response = await fetch(path);
+        if (!response.ok) {
+            throw new Error(`Request failed with status ${response.status}`);
+        }
+
+        const content = await response.text();
+        target.innerHTML = content;
+    } catch (error) {
+        console.error(`Failed to load fragment "${path}":`, error);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadFragment('/header', 'header-placeholder');
+    loadFragment('/left_menu', 'leftmenu-placeholder');
 });

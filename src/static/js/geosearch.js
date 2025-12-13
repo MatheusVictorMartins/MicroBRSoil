@@ -20,6 +20,12 @@ async function loadSoilSamples() {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      const text = await response.text();
+      throw new Error(`Expected JSON, received '${contentType || 'unknown'}' - first bytes: ${text.slice(0, 180)}`);
+    }
+
     const result = await response.json();
     console.log('Parsed JSON result:', result);
 
@@ -93,6 +99,12 @@ function updateSampleCount(count) {
 window.verDetalhes = async function(id) {
   try {
     const response = await fetch(`/api/geosearch/${id}`);
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      const text = await response.text();
+      throw new Error(`Expected JSON, received '${contentType || 'unknown'}' - first bytes: ${text.slice(0, 180)}`);
+    }
+
     const result = await response.json();
     
     if (!result.success) {

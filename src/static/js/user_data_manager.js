@@ -209,7 +209,14 @@ class UserDataManager {
 
     togglePasswordVisibility(userId) {
         const passwordSpan = document.querySelector(`[data-user-id="${userId}"]`);
+        if (!passwordSpan) {
+            return;
+        }
+
         const visibilityIcon = passwordSpan.nextElementSibling;
+        if (!visibilityIcon) {
+            return;
+        }
         
         if (passwordSpan.textContent === '*********') {
             passwordSpan.textContent = '[Hidden for security]';
@@ -240,9 +247,13 @@ class UserDataManager {
     }
 
     clearForm() {
-        document.getElementById('tname').value = '';
-        document.getElementById('tpassword').value = '';
-        document.getElementById('tconfpassword').value = '';
+        const emailInput = document.getElementById('temail');
+        const passwordInput = document.getElementById('tpassword');
+        const confirmInput = document.getElementById('tconfpassword');
+
+        if (emailInput) emailInput.value = '';
+        if (passwordInput) passwordInput.value = '';
+        if (confirmInput) confirmInput.value = '';
     }
 
     goToPage(page) {
@@ -281,7 +292,9 @@ class UserDataManager {
 
         // Insert message before the register form
         const registerFrame = document.querySelector('.register-frame');
-        registerFrame.parentNode.insertBefore(messageDiv, registerFrame);
+        if (registerFrame && registerFrame.parentNode) {
+            registerFrame.parentNode.insertBefore(messageDiv, registerFrame);
+        }
 
         // Auto-hide after 5 seconds
         setTimeout(() => {
@@ -293,13 +306,15 @@ class UserDataManager {
 }
 
 // Initialize when DOM is loaded
-let userManager;
-document.addEventListener('DOMContentLoaded', function() {
-    // Check if we're on the register page
-    if (document.querySelector('.register-users-table')) {
-        userManager = new UserDataManager();
-    }
-});
-
-// Export for global access
+let userManager = null;
 window.userManager = userManager;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if we're on the register page and avoid double instantiation
+    if (userManager || !document.querySelector('.register-users-table')) {
+        return;
+    }
+
+    userManager = new UserDataManager();
+    window.userManager = userManager;
+});

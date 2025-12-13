@@ -2,11 +2,10 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const router = express.Router();
+const { paths } = require('../utils/moduleResolver');
 
 // Use dynamic paths that work in both local development and Docker
-const PIPELINE_FUNCTIONS_PATH = '/app/db/db_functions/pipeline_functions';
-
-const { getPipelineRun, getPipelineResults } = require(PIPELINE_FUNCTIONS_PATH);
+const { getPipelineRun, getPipelineResults } = require(paths.pipelineFunctions());
 
 const RESULTS_DIR = process.env.RESULTS_DIR || path.join(__dirname, '../../results');
 

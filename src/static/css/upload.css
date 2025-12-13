@@ -139,32 +139,3 @@
     display: flex;
     gap: 1.5vw;
 }
-
-.file-drop-zone,
-.file-drop-zone-2 {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    transition: all 0.3s ease;
-}
-
-.file-drop-zone.drag-active .drop-zone-content,
-.file-drop-zone-2.drag-active .drop-zone-content {
-    border-color: var(--primary-color-green1);
-    background-color: rgba(60, 105, 96, 0.1);
-    transform: scale(1.02);
-}
-
-.file-drop-zone-2 {
-    display: none;
-}
-
-.file-drop-zone-2 .drop-zone-content {
-    border-color: #28a745;
-    color: #28a745;
-}
-
-.file-drop-zone-2.drag-active .drop-zone-content {
-    border-color: #1e7e34;
-    background-color: rgba(40, 167, 69, 0.1);
-}

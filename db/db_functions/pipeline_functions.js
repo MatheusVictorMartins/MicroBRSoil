@@ -84,28 +84,39 @@ const getPipelineRunsByUser = async (userId) => {
 
 // Create or update pipeline result record (idempotent)
 const createPipelineResult = async ({ runId, soilId = null, alphaDiversityFile, otuTableFile, taxonomyFile, metadataFile }) => {
-    const values = [runId, soilId, alphaDiversityFile, otuTableFile, taxonomyFile, metadataFile];
     try {
-        // Use UPSERT to make this operation idempotent
-        // If a result for this run_id already exists, update it instead of failing
-        const query = `
-            INSERT INTO microbrsoil_db.pipeline_results 
-            (run_id, soil_id, alpha_diversity_file, otu_table_file, taxonomy_file, metadata_file, processed_at)
-            VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
-            ON CONFLICT (run_id) 
-            DO UPDATE SET
-                soil_id = EXCLUDED.soil_id,
-                alpha_diversity_file = EXCLUDED.alpha_diversity_file,
-                otu_table_file = EXCLUDED.otu_table_file,
-                taxonomy_file = EXCLUDED.taxonomy_file,
-                metadata_file = EXCLUDED.metadata_file,
-                processed_at = CURRENT_TIMESTAMP
-            RETURNING *`;
-        const response = await pool.query(query, values);
-        writeLog("\n[SUCESSO] Pipeline result upserted: " + JSON.stringify(response.rows[0]));
-        return response.rows[0];
+        // Manual upsert to avoid reliance on DB unique constraints
+        const selectQuery = `SELECT result_id FROM microbrsoil_db.pipeline_results WHERE run_id = $1`;
+        const existing = await pool.query(selectQuery, [runId]);
+
+        if (existing.rows.length > 0) {
+            const updateQuery = `
+                UPDATE microbrsoil_db.pipeline_results
+                SET soil_id = $2,
+                    alpha_diversity_file = $3,
+                    otu_table_file = $4,
+                    taxonomy_file = $5,
+                    metadata_file = $6,
+                    processed_at = CURRENT_TIMESTAMP
+                WHERE run_id = $1
+                RETURNING *`;
+            const updateValues = [runId, soilId, alphaDiversityFile, otuTableFile, taxonomyFile, metadataFile];
+            const response = await pool.query(updateQuery, updateValues);
+            writeLog("\n[SUCESSO] Pipeline result atualizado: " + JSON.stringify(response.rows[0]));
+            return response.rows[0];
+        } else {
+            const insertQuery = `
+                INSERT INTO microbrsoil_db.pipeline_results 
+                (run_id, soil_id, alpha_diversity_file, otu_table_file, taxonomy_file, metadata_file, processed_at)
+                VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
+                RETURNING *`;
+            const insertValues = [runId, soilId, alphaDiversityFile, otuTableFile, taxonomyFile, metadataFile];
+            const response = await pool.query(insertQuery, insertValues);
+            writeLog("\n[SUCESSO] Pipeline result criado: " + JSON.stringify(response.rows[0]));
+            return response.rows[0];
+        }
     } catch (err) {
-        writeLog("\n[ERRO] Upsert pipeline result: " + err + "\nvalues: " + values);
+        writeLog("\n[ERRO] Criar/atualizar pipeline result: " + err + "\nrunId: " + runId);
         throw err;
     }
 };
