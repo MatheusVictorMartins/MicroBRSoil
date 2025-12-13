@@ -138,7 +138,7 @@ CREATE TABLE IF NOT EXISTS pipeline_runs (
 -- Tabela de resultados de pipeline
 CREATE TABLE IF NOT EXISTS pipeline_results (
     result_id SERIAL PRIMARY KEY,
-    run_id UUID NOT NULL,
+    run_id UUID NOT NULL UNIQUE,
     soil_id INTEGER,
     alpha_diversity_file TEXT,
     otu_table_file TEXT,
