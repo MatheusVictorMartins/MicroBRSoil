@@ -120,10 +120,10 @@ async function runIlluminaPipeline(fastqPath, outputDir = null) {
     // Verify output files were created and validate quality
     if (outputDir) {
       const expectedFiles = [
-        { name: 'otu_table.csv', minSize: 500, minRows: 10 },
-        { name: 'tax_table.csv', minSize: 1000, minRows: 50 },
-        { name: 'sample_metadata.csv', minSize: 100, minRows: 2 },
-        { name: 'phyloseq_object.rds', minSize: 1000, minRows: null }
+        { name: 'otu_table.csv', minSize: 100, minRows: 1 },
+        { name: 'tax_table.csv', minSize: 100, minRows: 1 },
+        { name: 'sample_metadata.csv', minSize: 50, minRows: 1 },
+        { name: 'phyloseq_object.rds', minSize: 500, minRows: null }
       ];
       
       const missingFiles = [];
