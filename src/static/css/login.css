@@ -1,0 +1,249 @@
+.login-layout{
+    display: flex;
+}
+.left-side{
+    position: relative;
+    top: 0;
+    left: 0;
+}
+.login-decoration{
+    position: relative;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: auto;
+    max-height: 100vh;
+
+
+}
+.btn-go-back{
+    position: absolute;
+
+    bottom: 1rem;
+    left: 1rem;
+    cursor: pointer;
+
+    color: var(--background-color0);
+}
+
+.btn-back-icon{
+    font-size: 4rem !important;
+}
+
+.btn-go-back:hover{
+    background-color: var(--decoration-colorRGBA3);
+    border-radius: 5rem;
+}
+.white-reduced-logo{
+    position: absolute;
+    top: 4.375rem;
+    left: 3.125rem;
+
+    width: 12%;
+    height: auto;
+}
+
+
+
+.right-side{
+    position: relative;
+    margin-left: 13vw;
+    margin-top: 10vh;
+    justify-content: center;
+
+    z-index: 1;
+}
+
+.right-side-decoration{
+    position: absolute;
+    top: 1rem;
+    left: 35vw;
+    top: 75vh;
+    width: 71.094vw;
+
+    background: url("../assets/figures/login_decoration2.svg") no-repeat left bottom;
+    background-size: cover;
+
+    clip-path: inset(0 0 0 0);
+
+    z-index: -1;
+}
+
+.login-decoration2{
+    z-index: -1;
+    position: absolute;
+    width: 25%;
+
+    bottom: 1rem;
+}
+
+.normal-logo{
+    width: 20vw;
+    height: auto;
+
+    justify-self: center;
+
+}
+.login-welcome-message{
+    margin-top: 3.125rem;
+    margin-bottom: 1.5625rem;
+
+    text-align: center;
+    font-size: 2.375rem;
+}
+.login-form{
+    display: flex;
+    flex-direction: column;
+}
+
+#tpassword{
+    margin-bottom: 0.5rem;
+}
+
+.text-input::placeholder{
+    font-family: "Inter", sans-serif;
+    font-weight: 500;
+    font-size: 1.25rem;
+    color: rgba(43,55,61, 0.6);
+}
+
+.text-input:focus{
+    border: none;
+    outline-offset: 0px;
+}
+
+
+
+.btn-dont-know-pass{
+    display: flex;
+    background-color: transparent;
+    justify-self: flex-end;
+    text-decoration: underline;
+
+    width: fit-content;
+
+    padding: .3125rem .625rem;
+
+    font-family: "Inter", sans-serif;
+    font-weight: 500;
+    color: var(--complementary-color);
+}
+
+.btn-dont-know-pass:hover{
+    color: var(--complementary-color0);
+    background-color: var(--decoration-complementary-colorRGBA1);
+    border-radius: 1.25rem;
+    padding: .3125rem .625rem;
+}
+
+.btn-dont-know-pass:active{
+     background-color: var(--decoration-complementary-colorRGBA0);
+     border-radius: 1.25rem;
+}
+
+.btn-lg{
+
+    display: flex;
+    align-items: center;
+    text-align: center;
+    justify-content: center;
+    background-color: #2A8A4C;
+    border: none;
+    border-radius: 1.25rem;
+
+    color: #E8FFF0;
+
+    width: 100%;
+    height: 3.75rem;
+
+    font-family: "Inter", sans-serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+
+    margin-top: 2.5rem;
+
+    box-shadow: 0 1rem 1.5rem var(--decoration-light-color1);
+
+}
+
+.btn-login-icon{
+    font-size: 2rem !important;
+    margin-right: .3125rem;
+}
+
+.btn-lg:hover{
+    background-color: var(--primary-color-green1);
+    border: none;
+    color: #fff;
+    box-shadow: 0 1rem 1.5rem var(--decoration-shadow-color0);
+}
+.btn-lg:not(:disabled):active{
+    background-color: #2A8A4C;
+    box-shadow: 0 1rem 1.5rem rgba(100,205,68,0.6);
+}
+
+.login-input-label{
+    font-family: "Inter", sans-serif;
+    font-weight: 600;
+    font-size: 1.5rem;
+    cursor: text;
+    color: #2B373D;
+}
+
+.login-text-input{
+    border: .0625rem solid;
+    border-radius: 1.25rem;
+    border-color: #2B373D;
+    width: 28.125rem;
+    height: 3.75rem;
+
+    cursor:text;
+    margin-top: 1.5625rem;
+    margin-bottom: 0.5rem;
+
+    padding-left: 1.5625rem;
+
+    background-color: #F8FFFA;
+
+    font-family: "Inter",sans-serif;
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: #2B373D;
+}
+
+.login-text-input::placeholder{
+    font-family: "Inter", sans-serif;
+    font-weight: 500;
+    font-size: 1.25rem;
+    color: rgba(43,55,61, 0.6);
+}
+
+.login-text-input:focus{
+    border: none;
+    outline-offset: 0px;
+}
+
+.popover{
+    border-radius: var(--basic-frame-def-radius);
+    background-color: var(--background-color0);
+}
+
+.popover-header{
+    border-radius: var(--basic-frame-def-radius) var(--basic-frame-def-radius) 0 0;
+
+    background-color: var(--primary-color-green);
+    color: var(--background-color0);
+}
+
+
+.form-input-area{
+    margin-bottom: 2rem;
+}
+
+.dont-know-pass-area{
+    display: flex;
+
+    margin-bottom: auto;
+    margin-left: auto;
+    width: fit-content;
+}

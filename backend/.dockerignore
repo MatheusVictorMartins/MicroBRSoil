@@ -1,0 +1,8 @@
+node_modules
+.env
+uploads
+mock_results_csv
+pipeline-r
+npm-debug.log
+Dockerfile
+Dockerfile.worker
