@@ -16,6 +16,19 @@ cat("⚡ Ultra-Fast R Package Installer for MicroBRSoil\n")
 cat(paste("R version:", R.version.string, "\n"))
 cat("📦 Using optimized package installation strategy\n")
 
+# Clean stale lock directories to avoid install failures
+cleanup_lock_dirs <- function() {
+  lib_paths <- .libPaths()
+  for (lib in lib_paths) {
+    locks <- list.files(lib, pattern = "^00LOCK", full.names = TRUE)
+    for (lock in locks) {
+      try(unlink(lock, recursive = TRUE, force = TRUE), silent = TRUE)
+    }
+  }
+}
+cleanup_lock_dirs()
+
+
 # Check system dependencies
 cat("🔍 Checking system dependencies...\n")
 system("pkg-config --version", ignore.stderr = TRUE)
@@ -27,6 +40,8 @@ required_packages <- list(
   system_deps = c("curl", "openssl", "sys", "rappdirs"),
   # Basic R packages
   basic = c("ggplot2", "dplyr"),
+  # Support packages needed by Bioconductor deps (ShortRead -> latticeExtra -> interp)
+  cran_support = c("interp", "latticeExtra"),
   # CRAN analysis packages  
   cran_analysis = c("vegan"),
   # More complex CRAN packages
@@ -85,6 +100,8 @@ install_with_fallback <- function(packages, use_bioc = FALSE, category = "packag
     
     # Try multiple installation strategies
     success <- FALSE
+    cleanup_lock_dirs()
+
     
     # Strategy 1: Try binary first
     if (!success) {
@@ -157,6 +174,9 @@ install_with_fallback(required_packages$system_deps, use_bioc = FALSE, category 
 
 cat("Installing basic R packages...\n")
 install_with_fallback(required_packages$basic, use_bioc = FALSE, category = "basic packages")
+
+cat("Installing support CRAN packages for Bioconductor dependencies...\n")
+install_with_fallback(required_packages$cran_support, use_bioc = FALSE, category = "support packages")
 
 cat("Installing CRAN analysis packages...\n")
 install_with_fallback(required_packages$cran_analysis, use_bioc = FALSE, category = "CRAN analysis packages")

@@ -19,22 +19,61 @@ fluxo das functions:
  */
 
 //cria user e retorna a linha criada
-const createUser = async ({ email, password, role = 1 }) => {
-    const values = [email, password, role];
+const createUser = async ({ email, password, role = null }) => {
+    const values = [email, password];
     try {
-        if (email == null || email === "" || typeof (email) != "string" || password == null || password === "" || typeof (password) != "string" || role == null || typeof (role) != "number" || role === "") {//validador de entrada, devem respeitar o tipo e não pode ser undefined
-            throw `Entrada incorreta\n:email:${email} typeof: ${typeof (email)}\nnpassword:${password} typeof: ${typeof (password)}\nrole: ${role} typeof: ${typeof (role)}`;
-        } else {
-            const query = `insert into microbrsoil_db.users (user_email, password_hash, role_id) values ($1,$2,$3) returning *`;
-            const response = await pool.query(query, values);
-            if (response.rowCount === 0) {
-                throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
-            }
-            writeLog("\n[SUCESSO]"+ "\nEntrada: "+ values+ "\nLinhas: " + JSON.stringify(response.rows[0]));
-            return response;
+        if (email == null || email === "" || typeof (email) != "string" || password == null || password === "" || typeof (password) != "string") {//validador de entrada, devem respeitar o tipo e não pode ser undefined
+            throw `Entrada incorreta\n:email:${email} typeof: ${typeof (email)}\npassword:${password} typeof: ${typeof (password)}\nrole: ${role} typeof: ${typeof (role)}`;
         }
+
+        // Resolve role_id dinamicamente para evitar FK quebrada
+        let roleIdToUse = role;
+        if (roleIdToUse == null) {
+            // padrão = role "user"
+            let roleLookup = await pool.query(
+                `select role_id from microbrsoil_db.roles where role_name = $1 limit 1`,
+                ['user']
+            );
+            if (roleLookup.rowCount === 0) {
+                // tenta recriar roles padrão caso a seed não tenha rodado
+                await pool.query(`
+                    insert into microbrsoil_db.roles (role_name, description) values
+                    ('admin', 'Administrador do sistema com acesso total'),
+                    ('user', 'Usuário padrão com acesso limitado'),
+                    ('researcher', 'Pesquisador com acesso a análises e resultados')
+                    on conflict (role_name) do nothing
+                `);
+                roleLookup = await pool.query(
+                    `select role_id from microbrsoil_db.roles where role_name = $1 limit 1`,
+                    ['user']
+                );
+                if (roleLookup.rowCount === 0) {
+                    throw `Role padrão 'user' não encontrada na tabela roles (mesmo após tentar recriar)`;
+                }
+            }
+            roleIdToUse = roleLookup.rows[0].role_id;
+        } else if (typeof roleIdToUse === "string") {
+            const roleLookup = await pool.query(
+                `select role_id from microbrsoil_db.roles where role_name = $1 limit 1`,
+                [roleIdToUse]
+            );
+            if (roleLookup.rowCount === 0) {
+                throw `Role '${roleIdToUse}' não encontrada na tabela roles`;
+            }
+            roleIdToUse = roleLookup.rows[0].role_id;
+        } else if (typeof roleIdToUse !== "number") {
+            throw `Role inválida: ${roleIdToUse} typeof: ${typeof roleIdToUse}`;
+        }
+
+        const query = `insert into microbrsoil_db.users (user_email, password_hash, role_id) values ($1,$2,$3) returning *`;
+        const response = await pool.query(query, [...values, roleIdToUse]);
+        if (response.rowCount === 0) {
+            throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
+        }
+        writeLog("\n[SUCESSO]"+ "\nEntrada: "+ [email, "***", roleIdToUse]+ "\nLinhas: " + JSON.stringify(response.rows[0]));
+        return response;
     } catch (err) {
-        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas: " + values);
+        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas: " + [email, "***", role]);
         return false;
     }
 }
@@ -101,7 +140,8 @@ const logUser = async (email) => {
             const query = `select * from microbrsoil_db.users where user_email = $1`;
             const response = await pool.query(query, values);
             if (response.rowCount == 0) {
-                throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
+                writeLog("\n[INFO]logUser: nenhum usuario encontrado para " + values);
+                return null;
             }
             writeLog("\n[SUCESSO]"+ "\nEntrada: "+ values+ "\nLinhas: " + JSON.stringify(response.rows[0]));
             return response;

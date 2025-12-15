@@ -48,11 +48,11 @@
                 <div class="basic-frame register-frame">
                     <form action="/auth/register" method="POST" class="login-form was-validated" novalidate>
                         <label for="temail" class="text-input-label">EMAIL</label>
-                        <input type="text" name="temail" id="temail" class="text-input register-text-input" placeholder="EMAIL">
+                        <input type="email" name="temail" id="temail" class="text-input register-text-input" placeholder="EMAIL" autocomplete="email">
                         <label for="tpassword" class="text-input-label">SENHA</label>
-                        <input type="password" name="tpassword" id="tpassword" class="text-input register-text-input" placeholder="PASSWORD">
+                        <input type="password" name="tpassword" id="tpassword" class="text-input register-text-input" placeholder="PASSWORD" autocomplete="new-password">
                         <label for="tconfpassword" class="text-input-label">CONFIRMAR SENHA</label>
-                        <input type="password" name="tconfpassword" id="tconfpassword" class="text-input register-text-input" placeholder="CONFIRM PASSWORD">
+                        <input type="password" name="tconfpassword" id="tconfpassword" class="text-input register-text-input" placeholder="CONFIRM PASSWORD" autocomplete="new-password">
                         <button type="submit" class="btn btn-primary btn-register">
 	                        <span class="material-symbols-rounded btn-icon">person_add</span>REGISTER
                         </button>

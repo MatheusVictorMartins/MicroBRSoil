@@ -184,6 +184,7 @@ class UserDataManager {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json'
                 },
                 body: JSON.stringify({
                     temail: name,
@@ -192,7 +193,14 @@ class UserDataManager {
                 })
             });
 
-            const data = await response.json();
+            let data;
+            const contentType = response.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+                data = await response.json();
+            } else {
+                const text = await response.text();
+                data = { success: response.ok, message: text };
+            }
 
             if (response.ok && data.success) {
                 this.showMessage('User registered successfully!', 'success');

@@ -11,6 +11,13 @@ const { apiLogger } = require('../utils/logger');
 
 const router = express.Router();
 
+// Helper to detect JSON-oriented calls (fetch/AJAX)
+const wantsJson = (req) => {
+  const acceptHeader = req.headers.accept || '';
+  const contentType = req.headers['content-type'] || '';
+  return acceptHeader.includes('application/json') || contentType.includes('application/json');
+};
+
 // LOGIN
 router.post('/login', async (req, res) => {
   const { temail, tpassword } = req.body;
@@ -27,7 +34,15 @@ router.post('/login', async (req, res) => {
   try {
     const checkUser = await userFunctions.logUser(temail);
 
-    if (checkUser == false) {
+    if (checkUser === false) {
+      apiLogger.error('Login lookup failed', { 
+        email: temail,
+        ip: req.ip 
+      });
+      return res.status(500).send('Erro interno do servidor');
+    }
+
+    if (!checkUser || checkUser.rowCount === 0) {
       apiLogger.warn('Login attempt with non-existent user', { 
         email: temail,
         ip: req.ip 
@@ -35,33 +50,44 @@ router.post('/login', async (req, res) => {
       return res.status(400).send('Nome de usuário não existe.');
     }
 
-    const senhaCorreta = await bcrypt.compare(tpassword, checkUser.rows[0].password_hash);
+    const userRow = checkUser.rows[0];
+    const userRole = userRow.role_id ?? userRow.user_role;
+    const senhaCorreta = await bcrypt.compare(tpassword, userRow.password_hash);
     if (!senhaCorreta) {
       apiLogger.warn('Login attempt with incorrect password', { 
         email: temail,
-        userId: checkUser.rows[0].user_id,
+        userId: userRow.user_id,
         ip: req.ip 
       });
       return res.status(401).send('Senha incorreta');
     }
 
     const token = jwt.sign(
-      { id: checkUser.rows[0].user_id, username: checkUser.rows[0].user_email, role: checkUser.rows[0].user_role },
+      { id: userRow.user_id, username: userRow.user_email, role: userRole },
       process.env.JWT_SECRET || "segredo_super_secreto",
       { expiresIn: "1h" }
     );
 
     res.cookie("token", token, {
       httpOnly: true,
-      sameSite: "Strict",
+      sameSite: "Lax",
       secure: false, // true se estiver com HTTPS
-      maxAge: 3600000
+      maxAge: 3600000,
+      path: "/"
+    });
+    // Cookie auxiliar (não sensível) para o front detectar status mesmo se o fetch falhar
+    res.cookie("auth_status", "1", {
+      httpOnly: false,
+      sameSite: "Lax",
+      secure: false,
+      maxAge: 3600000,
+      path: "/"
     });
 
     apiLogger.info('Successful login', {
       email: temail,
-      userId: checkUser.rows[0].user_id,
-      role: checkUser.rows[0].user_role,
+      userId: userRow.user_id,
+      role: userRole,
       ip: req.ip
     });
 
@@ -80,37 +106,118 @@ router.post('/login', async (req, res) => {
 // REGISTER (somente simulação, sem autenticação de admin ainda)
 router.post('/register', async (req, res) => {
   const { temail, tpassword, tconfpassword } = req.body;
-  console.log(temail, tpassword, tconfpassword);
-  if (!temail || !tpassword || !tconfpassword) {
-    return res.status(400).send('Todos os campos são obrigatórios.');
+
+  const reply = (status, payload) => {
+    if (wantsJson(req)) {
+      return res.status(status).json(payload);
+    }
+    return res.status(status).send(payload.message || payload);
+  };
+
+  try {
+    if (!temail || !tpassword || !tconfpassword) {
+      const message = 'Todos os campos são obrigatórios.';
+      return reply(400, { success: false, message });
+    }
+  
+    if (tpassword !== tconfpassword) {
+      const message = 'As senhas não coincidem.';
+      return reply(400, { success: false, message });
+    }
+  
+    const checkUser = await userFunctions.logUser(temail);
+  
+    // Handle DB lookup failure separately
+    if (checkUser === false) {
+      apiLogger.error('Register lookup failed', {
+        email: temail,
+        ip: req.ip
+      });
+      const message = 'Erro ao consultar usuário no BD.';
+      return reply(500, { success: false, message });
+    }
+  
+    if (checkUser && checkUser.rowCount > 0) {
+      apiLogger.warn('Register attempt with existing user', {
+        email: temail,
+        ip: req.ip
+      });
+      const message = 'Nome de usuário já existe.';
+      return reply(400, { success: false, message });
+    }
+  
+    const passwordHash = await bcrypt.hash(tpassword, 10);
+    const userResp = await userFunctions.createUser({email: temail, password: passwordHash});
+  
+    if(userResp == false){
+      throw new Error('Erro no BD ao criar usuário.');
+    }
+  
+    if (wantsJson(req)) {
+      return res.status(201).json({ success: true, message: 'Usuário registrado com sucesso.' });
+    }
+  
+    return res.redirect('/login');
+  } catch (error) {
+    apiLogger.error('Register error', {
+      email: temail,
+      error: error.message,
+      stack: error.stack,
+      ip: req.ip
+    });
+    const message = error.message || 'Erro no BD.';
+    return reply(500, { success: false, message });
   }
-
-  console.log(tpassword, tconfpassword);
-  if (tpassword !== tconfpassword) {
-    return res.status(400).send('As senhas não coincidem.');
-  }
-
-  const checkUser = await userFunctions.logUser(temail);
-
-  if (checkUser) {
-    return res.status(400).send('Nome de usuário já existe.');
-  }
-
-  const passwordHash = await bcrypt.hash(tpassword, 10);
-
-  const userResp = await userFunctions.createUser({email: temail, password: passwordHash});
-
-  if(userResp == false){
-    return res.status(500).send('Erro no BD.');
-  }
-
-  // res.send(`Usuário ${temail} registrado com sucesso.`);
-  res.redirect('/login');
 });
 
 router.post('/logout', (req, res) => {
-  res.clearCookie('token');
-  res.redirect('/');
+  apiLogger.info('Logout requested', {
+    ip: req.ip
+  });
+
+  res.clearCookie('token', {
+    httpOnly: true,
+    sameSite: "Lax",
+    secure: false,
+    path: "/"
+  });
+  res.clearCookie('auth_status', {
+    httpOnly: false,
+    sameSite: "Lax",
+    secure: false,
+    path: "/"
+  });
+
+  // Always return JSON; client/UI decides the redirect
+  return res.json({ success: true });
+});
+
+// Check authentication status for client-side UI updates
+router.get('/status', (req, res) => {
+  const token = req.cookies.token;
+
+  if (!token) {
+    return res.json({ authenticated: false });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || "segredo_super_secreto");
+    return res.json({
+      authenticated: true,
+      user: {
+        id: decoded.id,
+        email: decoded.username,
+        role: decoded.role
+      }
+    });
+  } catch (error) {
+    apiLogger.warn('Invalid auth status check', {
+      error: error.message,
+      ip: req.ip
+    });
+    res.clearCookie('token');
+    return res.json({ authenticated: false });
+  }
 });
 
 

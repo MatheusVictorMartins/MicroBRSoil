@@ -6,6 +6,7 @@
         alt="Logo branca da MicroBRSoil"
         id="header-logo">
       </a>
-        <button onclick="ButtonGoTo('../html/login.html')" type="button" class="btn btn-warning btn-login"><span class="material-symbols-rounded btn-login-icon btn-icon">login</span>LOG IN</button>
+        <button id="auth-button" onclick="ButtonGoTo('/login')" type="button" class="btn btn-warning btn-login"><span class="material-symbols-rounded btn-login-icon btn-icon">login</span><span class="btn-login-label">LOG IN</span></button>
+        <button type="button" class="btn btn-outline-light btn-logout d-none" onclick="logoutUser()"><span class="material-symbols-rounded btn-login-icon btn-icon">logout</span><span class="btn-login-label">LOG OUT</span></button>
       </span>
 </header>

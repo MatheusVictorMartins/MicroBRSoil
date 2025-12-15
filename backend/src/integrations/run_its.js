@@ -1,9 +1,49 @@
 const path = require("path");
+const fs = require("fs");
+const os = require("os");
 const R = require("r-integration");
 const { exec } = require("child_process");
 const { promisify } = require("util");
 
 const execAsync = promisify(exec);
+
+function detectMemoryLimitBytes() {
+  const candidates = [
+    "/sys/fs/cgroup/memory.max",
+    "/sys/fs/cgroup/memory/memory.limit_in_bytes"
+  ];
+
+  for (const file of candidates) {
+    try {
+      if (!fs.existsSync(file)) continue;
+      const raw = fs.readFileSync(file, "utf8").trim();
+      if (!raw || raw === "max") continue;
+      const val = parseInt(raw, 10);
+      if (Number.isFinite(val) && val > 0 && val < Number.MAX_SAFE_INTEGER) {
+        return val;
+      }
+    } catch (err) {
+      // Ignore and try next candidate
+    }
+  }
+  return null;
+}
+
+function configureRMemoryEnv() {
+  const hostTotal = os.totalmem();
+  const cgroupLimit = detectMemoryLimitBytes();
+  const limitBytes = cgroupLimit ? Math.min(hostTotal, cgroupLimit) : hostTotal;
+  const targetBytes = Math.max(Math.floor(limitBytes * 0.9), 2 * 1024 ** 3);
+  const targetGB = Math.max(2, Math.floor(targetBytes / (1024 ** 3)));
+
+  process.env.R_MAX_VSIZE = `${targetGB}G`;
+  process.env.R_MAX_MEM_SIZE = `${targetGB}G`;
+  process.env.MALLOC_ARENA_MAX = process.env.MALLOC_ARENA_MAX || "2";
+
+  console.log(
+    `?? R memory ceiling set to ~${targetGB}G (source=${cgroupLimit ? "cgroup" : "host"})`
+  );
+}
 
 async function checkRPackages() {
   try {
@@ -35,6 +75,9 @@ async function runITSPipeline(fastqPath, outputDir = null) {
     console.log('Starting ITS pipeline...');
     console.log(`Input: ${fastqPath}`);
     console.log(`Output: ${outputDir || 'default'}`);
+
+    // Allow R to see the full memory available to the container/host
+    configureRMemoryEnv();
 
     // Check R packages before running pipeline
     await checkRPackages();

@@ -53,3 +53,35 @@ header{
 .btn-login:not(:disabled):active{
     background-color: #2a8a4c;
 }
+
+.btn-logout{
+    display: flex;
+    gap: .3125rem;
+    margin-left: auto;
+    margin-right: 3vw;
+
+    align-items: center;
+
+    background-color: transparent;
+    border: 2px solid #F8FFFA;
+
+    font-family: "Inter", sans-serif;
+    font-weight: 600;
+    font-size: 1.25rem;
+
+    padding: 0.5rem 1.25rem;
+
+    color: #F8FFFA;
+}
+
+.btn-logout:hover{
+    background-color: #64CD44;
+    border-color: #64CD44;
+    color: #FFFFFF;
+}
+
+.btn-logout:not(:disabled):active{
+    background-color: #2a8a4c;
+    border-color: #2a8a4c;
+    color: #FFFFFF;
+}
