@@ -6,6 +6,7 @@ const { addPipelineJob, queue } = require('../queues');
 const { paths } = require('../utils/moduleResolver');
 const path = require('path');
 const fs = require('fs');
+const { requireAuth } = require('../middleware/authenticate');
 
 // Use moduleResolver so the same code works locally and in Docker
 const { getPipelineRun, getPipelineRunsByUser, getPipelineResults } = require(paths.pipelineFunctions());
@@ -85,7 +86,7 @@ router.get('/results/:runId', async (req, res) => {
 });
 
 // Get user's pipeline runs
-router.get('/runs', async (req, res) => {
+router.get('/runs', requireAuth, async (req, res) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -101,7 +102,7 @@ router.get('/runs', async (req, res) => {
 });
 
 // Legacy routes now enqueue jobs instead of running synchronously
-router.post("/illumina", async (req, res) => {
+router.post("/illumina", requireAuth, async (req, res) => {
   try {
     const { fastqPath } = req.body;
     if (!fastqPath) return res.status(400).json({ success: false, error: "fastqPath é obrigatório." });
@@ -113,7 +114,7 @@ router.post("/illumina", async (req, res) => {
   }
 });
 
-router.post("/its", async (req, res) => {
+router.post("/its", requireAuth, async (req, res) => {
   try {
     const { fastqPath } = req.body;
     if (!fastqPath) return res.status(400).json({ success: false, error: "fastqPath é obrigatório." });
@@ -125,7 +126,7 @@ router.post("/its", async (req, res) => {
   }
 });
 
-router.post("/barcodes", async (req, res) => {
+router.post("/barcodes", requireAuth, async (req, res) => {
   try {
     const { fastqPath, barcodesPath } = req.body;
 

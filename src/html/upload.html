@@ -255,6 +255,7 @@
     const acceptedFileTypes = document.getElementById("acceptedFileTypes");
     const acceptedFileTypes2 = document.getElementById("acceptedFileTypes2");
     const uploadHelpText = document.getElementById("uploadHelpText");
+    let authState = { authenticated: false, isAdmin: false, user: null };
 
     // Store files separately for each drop zone
     let zone1Files = [];
@@ -297,6 +298,33 @@
         hasTwoZones: false
       }
     };
+
+    async function refreshAuthState(forceRefresh = false) {
+      try {
+        const status = await getAuthStatus(forceRefresh);
+        status.isAdmin = status.isAdmin ?? isAdminRole(status.user?.role);
+        authState = status;
+        return status;
+      } catch (error) {
+        authState = { authenticated: false, isAdmin: false, user: null };
+        return authState;
+      }
+    }
+
+    function redirectToLoginWithReturn() {
+      const nextParam = encodeURIComponent(window.location.pathname + window.location.search);
+      window.location.href = `/login?next=${nextParam}`;
+    }
+
+    async function ensureAuthenticatedForUpload(event) {
+      const status = await refreshAuthState(true);
+      if (status.authenticated) return true;
+
+      if (event) event.preventDefault();
+      showStatus("Faça login ou crie uma conta para enviar arquivos e executar pipelines.", "error");
+      setTimeout(() => redirectToLoginWithReturn(), 800);
+      return false;
+    }
 
     function handlePipelineSelection() {
       const selectedPipeline = analysis_select.value;
@@ -513,6 +541,9 @@
     async function handleUpload(event) {
       event.preventDefault();
       
+      const allowed = await ensureAuthenticatedForUpload(event);
+      if (!allowed) return;
+
       if (currentUpload.isUploading || !currentUpload.selectedPipeline) return;
 
       const config = pipelineConfigs[currentUpload.selectedPipeline];

@@ -1,10 +1,9 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const cookieParser = require('cookie-parser');
 const { paths } = require('../utils/moduleResolver');
 const userFunctions = require(paths.userFunctions());
-const authenticate = require('../middleware/authenticate');
+const { requireAdmin, getTokenFromRequest, decodeToken, isAdminRole } = require('../middleware/authenticate');
 
 // Import logging system
 const { apiLogger } = require('../utils/logger');
@@ -18,9 +17,16 @@ const wantsJson = (req) => {
   return acceptHeader.includes('application/json') || contentType.includes('application/json');
 };
 
+const sanitizeNext = (value = '/') => {
+  if (typeof value !== 'string') return '/';
+  if (!value.startsWith('/')) return '/';
+  return value;
+};
+
 // LOGIN
 router.post('/login', async (req, res) => {
   const { temail, tpassword } = req.body;
+  const nextPath = sanitizeNext(req.body.next || req.query.next || '/');
 
   if (!temail || !tpassword) {
     apiLogger.warn('Login attempt with missing credentials', { 
@@ -88,10 +94,15 @@ router.post('/login', async (req, res) => {
       email: temail,
       userId: userRow.user_id,
       role: userRole,
-      ip: req.ip
+      ip: req.ip,
+      nextPath
     });
 
-    res.redirect('/');
+    if (wantsJson(req)) {
+      return res.json({ success: true, redirect: nextPath });
+    }
+
+    res.redirect(nextPath);
   } catch (error) {
     apiLogger.error('Login error', {
       email: temail,
@@ -103,8 +114,8 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// REGISTER (somente simulação, sem autenticação de admin ainda)
-router.post('/register', async (req, res) => {
+// REGISTER (somente admins)
+router.post('/register', requireAdmin, async (req, res) => {
   const { temail, tpassword, tconfpassword } = req.body;
 
   const reply = (status, payload) => {
@@ -194,16 +205,18 @@ router.post('/logout', (req, res) => {
 
 // Check authentication status for client-side UI updates
 router.get('/status', (req, res) => {
-  const token = req.cookies.token;
+  const token = getTokenFromRequest(req);
 
   if (!token) {
     return res.json({ authenticated: false });
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "segredo_super_secreto");
+    const decoded = decodeToken(token);
+    const adminFlag = isAdminRole(decoded.role);
     return res.json({
       authenticated: true,
+      isAdmin: adminFlag,
       user: {
         id: decoded.id,
         email: decoded.username,
@@ -216,12 +229,13 @@ router.get('/status', (req, res) => {
       ip: req.ip
     });
     res.clearCookie('token');
+    res.clearCookie('auth_status');
     return res.json({ authenticated: false });
   }
 });
 
 
-router.get('/api/userList', authenticate, async (req, res)=>{ 
+router.get('/api/userList', requireAdmin, async (req, res)=>{ 
   const userList = await userFunctions.listUsers();
   if(userList == false){
     return res.status(500).send('Erro no BD.');

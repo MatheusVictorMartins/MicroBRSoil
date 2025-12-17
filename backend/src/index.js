@@ -3,6 +3,7 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
 const { paths } = require('./utils/moduleResolver');
+const { requireAdmin } = require('./middleware/authenticate');
 
 // Import logging system
 const { apiLogger } = require('./utils/logger');
@@ -99,7 +100,7 @@ app.get('/left_menu', (req, res) => res.sendFile(path.join(htmlPath, 'left_menu.
 
 app.get('/', (req, res) => res.sendFile(path.join(htmlPath, 'index.html')));
 app.get('/login', (req, res) => res.sendFile(path.join(htmlPath, 'login.html')));
-app.get('/register', (req, res) => res.sendFile(path.join(htmlPath, 'register.html')));
+app.get('/register', requireAdmin, (req, res) => res.sendFile(path.join(htmlPath, 'register.html')));
 app.get('/taxon', (req, res) => res.sendFile(path.join(htmlPath, 'taxon_search.html')));
 app.get('/sequence', (req, res) => res.sendFile(path.join(htmlPath, 'sequence_search.html')));
 app.get('/geosearch', (req, res) => res.sendFile(path.join(htmlPath, 'geosearch.html')));

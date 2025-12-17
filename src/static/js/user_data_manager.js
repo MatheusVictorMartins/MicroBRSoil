@@ -207,7 +207,7 @@ class UserDataManager {
                 this.clearForm();
                 this.loadUserData(); // Refresh the user list
             } else {
-                this.showMessage(data.message || 'Registration failed', 'error');
+                this.showMessage(data.message || data.error || 'Registration failed', 'error');
             }
         } catch (error) {
             console.error('Registration error:', error);

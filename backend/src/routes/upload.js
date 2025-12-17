@@ -6,12 +6,14 @@ const { addPipelineJob } = require('../queues');
 const { pipelines } = require('../utils/fakeDB');
 const { v4: uuidv4 } = require('uuid');
 const { paths } = require('../utils/moduleResolver');
+const { requireAuth } = require('../middleware/authenticate');
 
 // Use dynamic paths that work in both local development and Docker
 const { createPipelineRun, updatePipelineRunStatus } = require(paths.pipelineFunctions());
 const DB_PATH = paths.db();
 
 const router = express.Router();
+router.use(requireAuth);
 
 const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(__dirname, '../../uploads');
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
