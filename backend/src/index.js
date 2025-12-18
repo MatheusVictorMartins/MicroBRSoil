@@ -18,22 +18,70 @@ const geosearchRoutes = require('./routes/geosearch');
 const tableRoutes = require('./routes/table');
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(express.urlencoded({ extended: true, limit: '2gb' }));
 app.use(express.json({ limit: '2gb' }));
 app.use(cookieParser());
 
-// Add CORS headers to allow cross-origin requests
+const isProduction = process.env.NODE_ENV === 'production';
+const defaultAllowedOrigin = process.env.FRONTEND_URL || `http://localhost:${process.env.FRONTEND_PORT || 8080}`;
+const allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+if (!allowedOrigins.length && defaultAllowedOrigin) {
+  allowedOrigins.push(defaultAllowedOrigin);
+}
+
+// CORS with allowlist and credential support
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*'); // Allow all origins
+  const origin = req.headers.origin;
+  const isAllowed = !origin || allowedOrigins.includes(origin);
+
+  res.header('Vary', 'Origin');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-  } else {
-    next();
+  res.header('Access-Control-Allow-Credentials', 'true');
+
+  if (isAllowed && origin) {
+    res.header('Access-Control-Allow-Origin', origin);
   }
+
+  if (!isAllowed) {
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(403);
+    }
+    return res.status(403).json({ error: 'Origin not allowed' });
+  }
+
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+
+  return next();
+});
+
+const contentSecurityPolicy = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://fonts.googleapis.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://cdn.jsdelivr.net",
+  "font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com",
+  "img-src 'self' data: https://*.tile.openstreetmap.org",
+  "connect-src 'self'",
+  "frame-ancestors 'self'"
+].join('; ');
+
+// Security headers
+app.use((req, res, next) => {
+  res.setHeader('Content-Security-Policy', contentSecurityPolicy);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  if (isProduction) {
+    res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+  }
+  next();
 });
 
 // Add logging middleware
@@ -87,7 +135,7 @@ app.get('/health', async (req, res) => {
     res.status(500).json({ 
       status: 'error', 
       timestamp: new Date().toISOString(),
-      error: error.message 
+      error: isProduction ? 'Service unavailable' : error.message 
     });
   }
 });
@@ -129,9 +177,12 @@ app.use((err, req, res, next) => {
     method: req.method
   });
   
-  res.status(err.status || 500).json({ 
-    error: err.message || 'Internal server error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  const status = err.status || 500;
+  const safeMessage = isProduction ? 'Internal server error' : (err.message || 'Internal server error');
+
+  res.status(status).json({ 
+    error: safeMessage,
+    ...(!isProduction && { stack: err.stack })
   });
 });
 

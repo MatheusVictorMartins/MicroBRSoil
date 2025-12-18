@@ -1,16 +1,33 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { paths } = require('../utils/moduleResolver');
 const userFunctions = require(paths.userFunctions());
 const { requireAdmin, getTokenFromRequest, decodeToken, isAdminRole } = require('../middleware/authenticate');
-
-// Import logging system
 const { apiLogger } = require('../utils/logger');
 
 const router = express.Router();
 
-// Helper to detect JSON-oriented calls (fetch/AJAX)
+const isProduction = process.env.NODE_ENV === 'production';
+const jwtSecret = process.env.JWT_SECRET;
+
+const cookieOptions = {
+  httpOnly: true,
+  sameSite: 'Lax',
+  secure: isProduction,
+  maxAge: 3600000,
+  path: '/'
+};
+
+const publicCookieOptions = {
+  httpOnly: false,
+  sameSite: 'Lax',
+  secure: isProduction,
+  maxAge: 3600000,
+  path: '/'
+};
+
 const wantsJson = (req) => {
   const acceptHeader = req.headers.accept || '';
   const contentType = req.headers['content-type'] || '';
@@ -23,18 +40,30 @@ const sanitizeNext = (value = '/') => {
   return value;
 };
 
+const hashIdentifier = (value) => {
+  if (!value) return undefined;
+  return crypto.createHash('sha256').update(value).digest('hex').slice(0, 12);
+};
+
+const serverErrorMessage = 'Erro interno do servidor';
+
 // LOGIN
 router.post('/login', async (req, res) => {
   const { temail, tpassword } = req.body;
   const nextPath = sanitizeNext(req.body.next || req.query.next || '/');
 
+  if (!jwtSecret) {
+    apiLogger.error('Login blocked: missing JWT secret', { requestId: req.id || 'login' });
+    return res.status(500).send('Configuração ausente. Contate o administrador.');
+  }
+
   if (!temail || !tpassword) {
     apiLogger.warn('Login attempt with missing credentials', { 
-      email: temail ? 'provided' : 'missing',
-      password: tpassword ? 'provided' : 'missing',
+      emailProvided: Boolean(temail),
+      passwordProvided: Boolean(tpassword),
       ip: req.ip 
     });
-    return res.status(400).send("Usuário e senha são obrigatórios.");
+    return res.status(400).send('Usuário e senha são obrigatórios.');
   }
 
   try {
@@ -42,15 +71,15 @@ router.post('/login', async (req, res) => {
 
     if (checkUser === false) {
       apiLogger.error('Login lookup failed', { 
-        email: temail,
+        emailHash: hashIdentifier(temail),
         ip: req.ip 
       });
-      return res.status(500).send('Erro interno do servidor');
+      return res.status(500).send(serverErrorMessage);
     }
 
     if (!checkUser || checkUser.rowCount === 0) {
       apiLogger.warn('Login attempt with non-existent user', { 
-        email: temail,
+        emailHash: hashIdentifier(temail),
         ip: req.ip 
       });
       return res.status(400).send('Nome de usuário não existe.');
@@ -61,7 +90,6 @@ router.post('/login', async (req, res) => {
     const senhaCorreta = await bcrypt.compare(tpassword, userRow.password_hash);
     if (!senhaCorreta) {
       apiLogger.warn('Login attempt with incorrect password', { 
-        email: temail,
         userId: userRow.user_id,
         ip: req.ip 
       });
@@ -70,28 +98,14 @@ router.post('/login', async (req, res) => {
 
     const token = jwt.sign(
       { id: userRow.user_id, username: userRow.user_email, role: userRole },
-      process.env.JWT_SECRET || "segredo_super_secreto",
-      { expiresIn: "1h" }
+      jwtSecret,
+      { expiresIn: '1h' }
     );
 
-    res.cookie("token", token, {
-      httpOnly: true,
-      sameSite: "Lax",
-      secure: false, // true se estiver com HTTPS
-      maxAge: 3600000,
-      path: "/"
-    });
-    // Cookie auxiliar (não sensível) para o front detectar status mesmo se o fetch falhar
-    res.cookie("auth_status", "1", {
-      httpOnly: false,
-      sameSite: "Lax",
-      secure: false,
-      maxAge: 3600000,
-      path: "/"
-    });
+    res.cookie('token', token, cookieOptions);
+    res.cookie('auth_status', '1', publicCookieOptions);
 
     apiLogger.info('Successful login', {
-      email: temail,
       userId: userRow.user_id,
       role: userRole,
       ip: req.ip,
@@ -102,15 +116,14 @@ router.post('/login', async (req, res) => {
       return res.json({ success: true, redirect: nextPath });
     }
 
-    res.redirect(nextPath);
+    return res.redirect(nextPath);
   } catch (error) {
     apiLogger.error('Login error', {
-      email: temail,
+      emailHash: hashIdentifier(temail),
       error: error.message,
-      stack: error.stack,
       ip: req.ip
     });
-    res.status(500).send('Erro interno do servidor');
+    return res.status(500).send(serverErrorMessage);
   }
 });
 
@@ -138,10 +151,9 @@ router.post('/register', requireAdmin, async (req, res) => {
   
     const checkUser = await userFunctions.logUser(temail);
   
-    // Handle DB lookup failure separately
     if (checkUser === false) {
       apiLogger.error('Register lookup failed', {
-        email: temail,
+        emailHash: hashIdentifier(temail),
         ip: req.ip
       });
       const message = 'Erro ao consultar usuário no BD.';
@@ -150,7 +162,7 @@ router.post('/register', requireAdmin, async (req, res) => {
   
     if (checkUser && checkUser.rowCount > 0) {
       apiLogger.warn('Register attempt with existing user', {
-        email: temail,
+        emailHash: hashIdentifier(temail),
         ip: req.ip
       });
       const message = 'Nome de usuário já existe.';
@@ -160,7 +172,7 @@ router.post('/register', requireAdmin, async (req, res) => {
     const passwordHash = await bcrypt.hash(tpassword, 10);
     const userResp = await userFunctions.createUser({email: temail, password: passwordHash});
   
-    if(userResp == false){
+    if (userResp === false){
       throw new Error('Erro no BD ao criar usuário.');
     }
   
@@ -171,9 +183,8 @@ router.post('/register', requireAdmin, async (req, res) => {
     return res.redirect('/login');
   } catch (error) {
     apiLogger.error('Register error', {
-      email: temail,
+      emailHash: hashIdentifier(temail),
       error: error.message,
-      stack: error.stack,
       ip: req.ip
     });
     const message = error.message || 'Erro no BD.';
@@ -186,20 +197,9 @@ router.post('/logout', (req, res) => {
     ip: req.ip
   });
 
-  res.clearCookie('token', {
-    httpOnly: true,
-    sameSite: "Lax",
-    secure: false,
-    path: "/"
-  });
-  res.clearCookie('auth_status', {
-    httpOnly: false,
-    sameSite: "Lax",
-    secure: false,
-    path: "/"
-  });
+  res.clearCookie('token', cookieOptions);
+  res.clearCookie('auth_status', publicCookieOptions);
 
-  // Always return JSON; client/UI decides the redirect
   return res.json({ success: true });
 });
 
@@ -228,8 +228,8 @@ router.get('/status', (req, res) => {
       error: error.message,
       ip: req.ip
     });
-    res.clearCookie('token');
-    res.clearCookie('auth_status');
+    res.clearCookie('token', cookieOptions);
+    res.clearCookie('auth_status', publicCookieOptions);
     return res.json({ authenticated: false });
   }
 });

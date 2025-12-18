@@ -1,6 +1,11 @@
 const fs = require('fs');
 const path = require('path');
 
+const sanitizeUrl = (url = '') => {
+  const clean = url.split('?')[0] || '';
+  return clean;
+};
+
 /**
  * Comprehensive logging utility for MicroBRSoil
  * Supports multiple log levels and automatic log rotation
@@ -222,11 +227,12 @@ class Logger {
   httpMiddleware() {
     return (req, res, next) => {
       const start = Date.now();
+      const requestPath = sanitizeUrl(req.originalUrl || req.url);
       
       // Log request
       this.info('HTTP Request', {
         method: req.method,
-        url: req.url,
+        url: requestPath,
         userAgent: req.get('User-Agent'),
         ip: req.ip || req.connection.remoteAddress,
         requestId: req.id || Math.random().toString(36).substr(2, 9)
@@ -241,7 +247,7 @@ class Logger {
         if (logger) {
           logger.info('HTTP Response', {
             method: req.method,
-            url: req.url,
+            url: requestPath,
             statusCode: res.statusCode,
             duration: `${duration}ms`,
             requestId: req.id || 'unknown'

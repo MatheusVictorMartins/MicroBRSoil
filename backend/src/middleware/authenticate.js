@@ -1,6 +1,14 @@
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'segredo_super_secreto';
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET env var must be set to verify authentication tokens');
+}
+
+if (JWT_SECRET.length < 16) {
+  throw new Error('JWT_SECRET must be at least 16 characters long');
+}
 const ADMIN_ROLE_VALUES = ['admin', 'ADMIN', 1, '1'];
 
 function wantsJson(req) {

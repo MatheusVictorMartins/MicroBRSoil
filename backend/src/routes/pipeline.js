@@ -6,13 +6,14 @@ const { addPipelineJob, queue } = require('../queues');
 const { paths } = require('../utils/moduleResolver');
 const path = require('path');
 const fs = require('fs');
-const { requireAuth } = require('../middleware/authenticate');
+const { requireAuth, isAdminRole } = require('../middleware/authenticate');
 
 // Use moduleResolver so the same code works locally and in Docker
 const { getPipelineRun, getPipelineRunsByUser, getPipelineResults } = require(paths.pipelineFunctions());
+const isProduction = process.env.NODE_ENV === 'production';
 
 // Get pipeline run status
-router.get('/status/:runId', async (req, res) => {
+router.get('/status/:runId', requireAuth, async (req, res) => {
   try {
     const { runId } = req.params;
     let queueInfo = null;
@@ -32,6 +33,9 @@ router.get('/status/:runId', async (req, res) => {
     // Try to get from database first
     const dbRun = await getPipelineRun(runId);
     if (dbRun) {
+      if (!canAccessRun(req.user, dbRun)) {
+        return res.status(403).json({ success: false, error: 'Access denied' });
+      }
       const runWithLogs = attachPipelineLogs(dbRun);
       return res.json({
         success: true,
@@ -45,23 +49,31 @@ router.get('/status/:runId', async (req, res) => {
     if (!run) {
       return res.status(404).json({ success: false, error: 'Pipeline run not found' });
     }
+
+    if (!canAccessRun(req.user, run)) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
     
     const runWithLogs = attachPipelineLogs(run);
     res.json({ success: true, run: runWithLogs, queue: queueInfo });
   } catch (error) {
     console.error('Error getting pipeline status:', error);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: safeErrorMessage(error) });
   }
 });
 
 // Get pipeline results
-router.get('/results/:runId', async (req, res) => {
+router.get('/results/:runId', requireAuth, async (req, res) => {
   try {
     const { runId } = req.params;
     
     const pipelineRun = await getPipelineRun(runId);
     if (!pipelineRun) {
       return res.status(404).json({ success: false, error: 'Pipeline run not found' });
+    }
+
+    if (!canAccessRun(req.user, pipelineRun)) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
     }
     
     if (pipelineRun.status !== 'completed') {
@@ -81,7 +93,7 @@ router.get('/results/:runId', async (req, res) => {
     });
   } catch (error) {
     console.error('Error getting pipeline results:', error);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: safeErrorMessage(error) });
   }
 });
 
@@ -97,7 +109,7 @@ router.get('/runs', requireAuth, async (req, res) => {
     res.json({ success: true, runs });
   } catch (error) {
     console.error('Error getting user pipeline runs:', error);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: safeErrorMessage(error) });
   }
 });
 
@@ -110,7 +122,7 @@ router.post("/illumina", requireAuth, async (req, res) => {
     const job = await addPipelineJob({ runId, fastqPath, pipelineType: 'illumina' });
     res.json({ success: true, runId, jobId: job.id, pipelineType: 'illumina' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: safeErrorMessage(error) });
   }
 });
 
@@ -122,7 +134,7 @@ router.post("/its", requireAuth, async (req, res) => {
     const job = await addPipelineJob({ runId, fastqPath, pipelineType: 'its' });
     res.json({ success: true, runId, jobId: job.id, pipelineType: 'its' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: safeErrorMessage(error) });
   }
 });
 
@@ -138,7 +150,7 @@ router.post("/barcodes", requireAuth, async (req, res) => {
     const job = await addPipelineJob({ runId, fastqPath, pipelineType: 'barcode', meta: { barcodesPath } });
     res.json({ success: true, runId, jobId: job.id, pipelineType: 'barcode' });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: safeErrorMessage(error) });
   }
 });
 
@@ -168,4 +180,15 @@ function attachPipelineLogs(run) {
   }
 
   return { ...run, logs: mergedLogs };
+}
+
+function canAccessRun(user, run) {
+  if (!user || !run) return false;
+  if (isAdminRole(user.role)) return true;
+  const ownerId = run.user_id ?? run.userId;
+  return ownerId !== undefined && String(ownerId) === String(user.id);
+}
+
+function safeErrorMessage(err) {
+  return isProduction ? 'Internal server error' : err.message;
 }

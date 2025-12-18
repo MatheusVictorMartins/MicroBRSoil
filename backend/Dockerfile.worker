@@ -95,9 +95,9 @@ RUN echo "⚡ Installing BiocManager only (ultra-fast build)..." && \
     cat('✅ BiocManager installed - other packages deferred to runtime\\n');" && \
     echo "✅ Build-time R setup completed (ultra-fast mode)"
 
-# Copy and set up entrypoint script
+# Copy and set up entrypoint script (strip any Windows newlines to avoid exec issues)
 COPY backend/entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["bash", "/app/entrypoint.sh"]
 CMD ["npm", "run", "worker"]

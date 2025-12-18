@@ -3,6 +3,8 @@ const path = require('path');
 const fs = require('fs');
 const router = express.Router();
 const { paths } = require('../utils/moduleResolver');
+const { requireAuth, isAdminRole } = require('../middleware/authenticate');
+const isProduction = process.env.NODE_ENV === 'production';
 
 // Use dynamic paths that work in both local development and Docker
 const { getPipelineRun, getPipelineResults } = require(paths.pipelineFunctions());
@@ -10,24 +12,18 @@ const { getPipelineRun, getPipelineResults } = require(paths.pipelineFunctions()
 const RESULTS_DIR = process.env.RESULTS_DIR || path.join(__dirname, '../../results');
 
 // Serve result files
-router.get('/download/:runId/:filename', async (req, res) => {
+router.get('/download/:runId/:filename', requireAuth, async (req, res) => {
   try {
     const { runId, filename } = req.params;
     
-    // Optional: Verify the pipeline run exists (but don't require specific status)
-    // This allows downloading result files even from failed/incomplete pipelines
-    // Uncomment the following block if you want to require the run to exist in the database:
-    /*
     const pipelineRun = await getPipelineRun(runId);
     if (!pipelineRun) {
       return res.status(404).json({ error: 'Pipeline run not found' });
     }
-    */
     
-    // Check if user has access (if authentication is implemented)
-    // if (req.user && pipelineRun.user_id !== req.user.id) {
-    //   return res.status(403).json({ error: 'Access denied' });
-    // }
+    if (!canAccessRun(req.user, pipelineRun)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
     
     const filePath = path.join(RESULTS_DIR, runId, filename);
     
@@ -68,12 +64,12 @@ router.get('/download/:runId/:filename', async (req, res) => {
     
   } catch (error) {
     console.error('Error serving result file:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: safeErrorMessage(error) });
   }
 });
 
 // List result files for a run
-router.get('/files/:runId', async (req, res) => {
+router.get('/files/:runId', requireAuth, async (req, res) => {
   try {
     const { runId } = req.params;
     
@@ -83,10 +79,9 @@ router.get('/files/:runId', async (req, res) => {
       return res.status(404).json({ error: 'Pipeline run not found' });
     }
     
-    // Check if user has access (if authentication is implemented)
-    // if (req.user && pipelineRun.user_id !== req.user.id) {
-    //   return res.status(403).json({ error: 'Access denied' });
-    // }
+    if (!canAccessRun(req.user, pipelineRun)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
     
     const runResultsDir = path.join(RESULTS_DIR, runId);
     
@@ -111,8 +106,19 @@ router.get('/files/:runId', async (req, res) => {
     
   } catch (error) {
     console.error('Error listing result files:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: safeErrorMessage(error) });
   }
 });
 
 module.exports = router;
+
+function canAccessRun(user, run) {
+  if (!user || !run) return false;
+  if (isAdminRole(user.role)) return true;
+  const ownerId = run.user_id ?? run.userId;
+  return ownerId !== undefined && String(ownerId) === String(user.id);
+}
+
+function safeErrorMessage(err) {
+  return isProduction ? 'Internal server error' : err.message;
+}

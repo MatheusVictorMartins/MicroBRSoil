@@ -1,5 +1,6 @@
 const pool = require('../db');
 const writeLog = require('../log_files/log_handler');
+const crypto = require('crypto');
 
 //!passe multiplos parâmetros como obejtos
 //!parametros unicos podem ser passados como variavel
@@ -17,6 +18,11 @@ fluxo das functions:
     em caso de erro
         escreve mensagem de erro no log e encerra a funtion
  */
+
+const hashIdentifier = (value) => {
+    if (!value) return '';
+    return crypto.createHash('sha256').update(String(value)).digest('hex').slice(0, 12);
+};
 
 //cria user e retorna a linha criada
 const createUser = async ({ email, password, role = null }) => {
@@ -70,10 +76,10 @@ const createUser = async ({ email, password, role = null }) => {
         if (response.rowCount === 0) {
             throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
         }
-        writeLog("\n[SUCESSO]"+ "\nEntrada: "+ [email, "***", roleIdToUse]+ "\nLinhas: " + JSON.stringify(response.rows[0]));
+        writeLog("\n[SUCESSO] createUser email_hash:" + hashIdentifier(email) + " role:" + roleIdToUse);
         return response;
     } catch (err) {
-        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas: " + [email, "***", role]);
+        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas mascaradas: " + [hashIdentifier(email), "***", role]);
         return false;
     }
 }
@@ -90,11 +96,17 @@ const deleteUser = async (id) => {
             if (response.rowCount == 0) {
                 throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
             }
-            writeLog("\n[SUCESSO]"+ "\nEntrada: "+ values+ "\nLinhas: " + JSON.stringify(response.rows[0]));
+            writeLog("\n[SUCESSO] deleteUser id: " + id);
             return response;
         }
     } catch (err) {
-        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas: " + values);
+        const redactedValues = values.map((val, idx) => {
+            const col = columns[idx];
+            if (col && col.includes('password')) return '***';
+            if (col && col.includes('user_email')) return hashIdentifier(val);
+            return val;
+        });
+        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas mascaradas: " + redactedValues);
         return false;
     }
 }
@@ -112,19 +124,25 @@ const getUser = async (id = 0) => {
             if (response.rowCount == 0) {
                 throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
             }
-            writeLog("\n[SUCESSO]"+ "\nEntrada: "+ values+ "\nLinhas: " + JSON.stringify(response.rows).replace(regex, "\n"));
+            writeLog("\n[SUCESSO] getUser all users count: " + response.rowCount);
             return response;
         } else {
             const query = `select * from microbrsoil_db.users where user_id = $1`;
             const response = await pool.query(query, values);
-            writeLog("\n[SUCESSO]"+ "\nEntrada: "+ values+ "\nLinhas: " + JSON.stringify(response.rows[0]));
+            writeLog("\n[SUCESSO] getUser id: " + id);
             if (response.rowCount == 0) {
                 throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
             }
             return response;
         }
     } catch (err) {
-        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas: " + values);
+        const redactedValues = values.map((val, idx) => {
+            const col = columns[idx];
+            if (col && col.includes('password')) return '***';
+            if (col && col.includes('user_email')) return hashIdentifier(val);
+            return val;
+        });
+        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas mascaradas: " + redactedValues);
         return false;
     }
 }
@@ -140,14 +158,14 @@ const logUser = async (email) => {
             const query = `select * from microbrsoil_db.users where user_email = $1`;
             const response = await pool.query(query, values);
             if (response.rowCount == 0) {
-                writeLog("\n[INFO]logUser: nenhum usuario encontrado para " + values);
+                writeLog("\n[INFO] logUser: nenhum usuario encontrado para hash:" + hashIdentifier(email));
                 return null;
             }
-            writeLog("\n[SUCESSO]"+ "\nEntrada: "+ values+ "\nLinhas: " + JSON.stringify(response.rows[0]));
+            writeLog("\n[SUCESSO] logUser lookup para hash:" + hashIdentifier(email));
             return response;
         }
     } catch (err) {
-        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas: " + values);
+        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas mascaradas: " + hashIdentifier(email));
         return false;
     }
 }
@@ -189,10 +207,16 @@ const updateUser = async ({ email, password, name, id }) => {
         if (response.rowCount == 0) {
             throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
         }
-        writeLog("\n[SUCESSO]"+ "\nEntrada: "+ values+ "\nLinhas: " + JSON.stringify(response.rows[0]));
+        writeLog("\n[SUCESSO] updateUser id: " + id + " campos: " + columns.join(', '));
         return response;
     } catch (err) {
-        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas: " + values);
+        const redactedValues = values.map((val, idx) => {
+            const col = columns[idx];
+            if (col && col.includes('password')) return '***';
+            if (col && col.includes('user_email')) return hashIdentifier(val);
+            return val;
+        });
+        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas mascaradas: " + redactedValues);
         return false;
     }
 }

@@ -6,10 +6,11 @@ const { addPipelineJob } = require('../queues');
 const { pipelines } = require('../utils/fakeDB');
 const { v4: uuidv4 } = require('uuid');
 const { paths } = require('../utils/moduleResolver');
-const { requireAuth } = require('../middleware/authenticate');
+const { requireAuth, isAdminRole } = require('../middleware/authenticate');
+const isProduction = process.env.NODE_ENV === 'production';
 
 // Use dynamic paths that work in both local development and Docker
-const { createPipelineRun, updatePipelineRunStatus } = require(paths.pipelineFunctions());
+const { createPipelineRun, updatePipelineRunStatus, getPipelineRun } = require(paths.pipelineFunctions());
 const DB_PATH = paths.db();
 
 const router = express.Router();
@@ -17,6 +18,76 @@ router.use(requireAuth);
 
 const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(__dirname, '../../uploads');
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+const allowedExtensions = [
+  '.fastq',
+  '.fastq.gz',
+  '.fq',
+  '.fq.gz',
+  '.zip',
+  '.csv'
+];
+
+const multerLimits = {
+  fileSize: 5 * 1024 * 1024 * 1024, // 5GB per file
+  files: 50,
+  fieldSize: 200 * 1024 * 1024,
+  fieldNameSize: 100,
+  fields: 1000
+};
+
+const sanitizeFilename = (name) => {
+  const base = path.basename(name || '');
+  const cleaned = base.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/^\.+/, '');
+  return cleaned || `upload_${Date.now()}`;
+};
+
+const isAllowedExtension = (filename) => {
+  const lower = filename.toLowerCase();
+  return allowedExtensions.some((ext) => lower.endsWith(ext));
+};
+
+const fileFilter = (req, file, cb) => {
+  const safeName = sanitizeFilename(file.originalname);
+  file.originalname = safeName;
+
+  if (!isAllowedExtension(safeName)) {
+    const err = new Error('Invalid file type');
+    err.code = 'INVALID_FILE_TYPE';
+    return cb(err);
+  }
+
+  cb(null, true);
+};
+
+const handleUploadError = (error, res) => {
+  if (!error) return false;
+
+  if (error instanceof multer.MulterError) {
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      res.status(413).json({ error: 'File too large. Maximum file size is 5GB.' });
+      return true;
+    }
+    if (error.code === 'LIMIT_FILE_COUNT') {
+      res.status(413).json({ error: 'Too many files. Maximum is 50 files.' });
+      return true;
+    }
+    if (error.code === 'LIMIT_FIELD_VALUE') {
+      res.status(413).json({ error: 'Field value too large.' });
+      return true;
+    }
+    res.status(400).json({ error: 'Upload error: ' + error.message });
+    return true;
+  }
+
+  if (error.code === 'INVALID_FILE_TYPE') {
+    res.status(400).json({ error: 'Invalid file type. Allowed extensions: ' + allowedExtensions.join(', ') });
+    return true;
+  }
+
+  res.status(500).json({ error: isProduction ? 'Upload failed' : 'Upload failed: ' + error.message });
+  return true;
+};
 
 // Helper function to create upload-specific directory
 const createUploadDirectory = (uploadId) => {
@@ -38,7 +109,8 @@ const createStorage = (pipelineType) => {
     },
     filename: (req, file, cb) => {
       // Keep original filename for easier identification
-      cb(null, file.originalname);
+      const safeName = sanitizeFilename(file.originalname);
+      cb(null, safeName);
     },
   });
 };
@@ -197,7 +269,7 @@ async function handleUpload(req, res, pipelineType) {
     console.error(`${pipelineType} upload error`, err);
     res.status(500).json({ 
       error: `${pipelineType} upload failed`, 
-      details: err.message 
+      ...(isProduction ? {} : { details: err.message })
     });
   }
 }
@@ -205,30 +277,11 @@ async function handleUpload(req, res, pipelineType) {
 // Illumina endpoint
 const illuminaUpload = multer({ 
   storage: createStorage('illumina'),
-  limits: {
-    fileSize: 5 * 1024 * 1024 * 1024, // 5GB per file
-    files: 50, // Maximum 50 files
-    fieldSize: 200 * 1024 * 1024, // 200MB for field data
-    fieldNameSize: 100, // Max field name size
-    fields: 1000 // Max number of non-file fields
-  }
+  limits: multerLimits,
+  fileFilter
 });
 router.post('/illumina', illuminaUpload.array('files'), (error, req, res, next) => {
-  if (error instanceof multer.MulterError) {
-    console.error('Multer error:', error);
-    if (error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(413).json({ error: 'File too large. Maximum file size is 2GB.' });
-    } else if (error.code === 'LIMIT_FILE_COUNT') {
-      return res.status(413).json({ error: 'Too many files. Maximum is 50 files.' });
-    } else if (error.code === 'LIMIT_FIELD_VALUE') {
-      return res.status(413).json({ error: 'Field value too large.' });
-    } else {
-      return res.status(400).json({ error: 'Upload error: ' + error.message });
-    }
-  } else if (error) {
-    console.error('Upload error:', error);
-    return res.status(500).json({ error: 'Upload failed: ' + error.message });
-  }
+  if (handleUploadError(error, res)) return;
   next();
 }, async (req, res) => {
   await handleUpload(req, res, 'illumina');
@@ -237,30 +290,11 @@ router.post('/illumina', illuminaUpload.array('files'), (error, req, res, next) 
 // IonTorrent endpoint  
 const iontorrentUpload = multer({ 
   storage: createStorage('iontorrent'),
-  limits: {
-    fileSize: 5 * 1024 * 1024 * 1024, // 5GB per file
-    files: 50, // Maximum 50 files
-    fieldSize: 200 * 1024 * 1024, // 200MB for field data
-    fieldNameSize: 100, // Max field name size
-    fields: 1000 // Max number of non-file fields
-  }
+  limits: multerLimits,
+  fileFilter
 });
 router.post('/iontorrent', iontorrentUpload.array('files'), (error, req, res, next) => {
-  if (error instanceof multer.MulterError) {
-    console.error('Multer error:', error);
-    if (error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(413).json({ error: 'File too large. Maximum file size is 2GB.' });
-    } else if (error.code === 'LIMIT_FILE_COUNT') {
-      return res.status(413).json({ error: 'Too many files. Maximum is 50 files.' });
-    } else if (error.code === 'LIMIT_FIELD_VALUE') {
-      return res.status(413).json({ error: 'Field value too large.' });
-    } else {
-      return res.status(400).json({ error: 'Upload error: ' + error.message });
-    }
-  } else if (error) {
-    console.error('Upload error:', error);
-    return res.status(500).json({ error: 'Upload failed: ' + error.message });
-  }
+  if (handleUploadError(error, res)) return;
   next();
 }, async (req, res) => {
   await handleUpload(req, res, 'iontorrent');
@@ -269,30 +303,11 @@ router.post('/iontorrent', iontorrentUpload.array('files'), (error, req, res, ne
 // ITS endpoint
 const itsUpload = multer({ 
   storage: createStorage('its'),
-  limits: {
-    fileSize: 5 * 1024 * 1024 * 1024, // 5GB per file
-    files: 50, // Maximum 50 files
-    fieldSize: 200 * 1024 * 1024, // 200MB for field data
-    fieldNameSize: 100, // Max field name size
-    fields: 1000 // Max number of non-file fields
-  }
+  limits: multerLimits,
+  fileFilter
 });
 router.post('/its', itsUpload.array('files'), (error, req, res, next) => {
-  if (error instanceof multer.MulterError) {
-    console.error('Multer error:', error);
-    if (error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(413).json({ error: 'File too large. Maximum file size is 2GB.' });
-    } else if (error.code === 'LIMIT_FILE_COUNT') {
-      return res.status(413).json({ error: 'Too many files. Maximum is 50 files.' });
-    } else if (error.code === 'LIMIT_FIELD_VALUE') {
-      return res.status(413).json({ error: 'Field value too large.' });
-    } else {
-      return res.status(400).json({ error: 'Upload error: ' + error.message });
-    }
-  } else if (error) {
-    console.error('Upload error:', error);
-    return res.status(500).json({ error: 'Upload failed: ' + error.message });
-  }
+  if (handleUploadError(error, res)) return;
   next();
 }, async (req, res) => {
   await handleUpload(req, res, 'its');
@@ -301,15 +316,13 @@ router.post('/its', itsUpload.array('files'), (error, req, res, next) => {
 // Legacy endpoint for backward compatibility
 const legacyUpload = multer({ 
   storage: createStorage('default'),
-  limits: {
-    fileSize: 5 * 1024 * 1024 * 1024, // 5GB per file
-    files: 50, // Maximum 50 files
-    fieldSize: 200 * 1024 * 1024, // 200MB for field data
-    fieldNameSize: 100, // Max field name size
-    fields: 1000 // Max number of non-file fields
-  }
+  limits: multerLimits,
+  fileFilter
 });
-router.post('/file', legacyUpload.single('file'), async (req, res) => {
+router.post('/file', legacyUpload.single('file'), (error, req, res, next) => {
+  if (handleUploadError(error, res)) return;
+  next();
+}, async (req, res) => {
   const pipelineType = req.body.pipelineType || 'illumina';
   await handleUpload(req, res, pipelineType);
 });
@@ -318,7 +331,8 @@ router.post('/file', legacyUpload.single('file'), async (req, res) => {
 router.get('/files/:runId', async (req, res) => {
   try {
     const { runId } = req.params;
-    
+
+    await ensureRunAccess(runId, req.user);
     const runUploadDir = path.join(UPLOADS_DIR, runId);
     
     if (!fs.existsSync(runUploadDir)) {
@@ -342,7 +356,13 @@ router.get('/files/:runId', async (req, res) => {
     
   } catch (error) {
     console.error('Error listing uploaded files:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    if (error.statusCode === 404) {
+      return res.status(404).json({ error: 'Pipeline run not found' });
+    }
+    if (error.statusCode === 403) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    res.status(500).json({ error: safeErrorMessage(error) });
   }
 });
 
@@ -350,7 +370,8 @@ router.get('/files/:runId', async (req, res) => {
 router.get('/download/:runId/:filename', async (req, res) => {
   try {
     const { runId, filename } = req.params;
-    
+
+    await ensureRunAccess(runId, req.user);
     const filePath = path.join(UPLOADS_DIR, runId, filename);
     
     // Security check: ensure file is within the uploads directory
@@ -390,8 +411,52 @@ router.get('/download/:runId/:filename', async (req, res) => {
     
   } catch (error) {
     console.error('Error serving uploaded file:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    if (error.statusCode === 404) {
+      return res.status(404).json({ error: 'Pipeline run not found' });
+    }
+    if (error.statusCode === 403) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    res.status(500).json({ error: safeErrorMessage(error) });
   }
 });
 
 module.exports = router;
+
+function canAccessRun(user, run) {
+  if (!user || !run) return false;
+  if (isAdminRole(user.role)) return true;
+  const ownerId = run.user_id ?? run.userId;
+  return ownerId !== undefined && String(ownerId) === String(user.id);
+}
+
+async function ensureRunAccess(runId, user) {
+  const pipelineRun = await getPipelineRun(runId);
+  if (pipelineRun) {
+    if (!canAccessRun(user, pipelineRun)) {
+      const err = new Error('Access denied');
+      err.statusCode = 403;
+      throw err;
+    }
+    return pipelineRun;
+  }
+
+  const fallbackRun = pipelines[runId];
+  if (!fallbackRun) {
+    const err = new Error('Pipeline run not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  if (!canAccessRun(user, fallbackRun)) {
+    const err = new Error('Access denied');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  return fallbackRun;
+}
+
+function safeErrorMessage(err) {
+  return isProduction ? 'Internal server error' : err.message;
+}

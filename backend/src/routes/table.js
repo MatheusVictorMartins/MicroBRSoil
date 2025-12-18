@@ -2,6 +2,13 @@ const express = require('express');
 const router = express.Router();
 const { paths } = require('../utils/moduleResolver');
 const pool = require(paths.db());
+const isProduction = process.env.NODE_ENV === 'production';
+
+const safeErrorBody = (error, fallbackMessage) => ({
+  success: false,
+  error: fallbackMessage,
+  ...(isProduction ? {} : { message: error.message })
+});
 
 // Get soil data for index.html and upload.html
 router.get('/soil', async (req, res) => {
@@ -101,11 +108,7 @@ router.get('/soil', async (req, res) => {
       error: error.message, 
       stack: error.stack 
     });
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch soil data',
-      message: error.message
-    });
+    res.status(500).json(safeErrorBody(error, 'Failed to fetch soil data'));
   }
 });
 
@@ -136,11 +139,7 @@ router.get('/soil/filters', async (req, res) => {
       error: error.message, 
       stack: error.stack 
     });
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch filter options',
-      message: error.message
-    });
+    res.status(500).json(safeErrorBody(error, 'Failed to fetch filter options'));
   }
 });
 
@@ -220,11 +219,7 @@ router.get('/soil/:id', async (req, res) => {
       soilId: req.params.id
     });
     console.error('Soil detail error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch soil detail',
-      message: error.message
-    });
+    res.status(500).json(safeErrorBody(error, 'Failed to fetch soil detail'));
   }
 });
 
@@ -299,11 +294,7 @@ router.get('/users', async (req, res) => {
       error: error.message, 
       stack: error.stack 
     });
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch users data',
-      message: error.message
-    });
+    res.status(500).json(safeErrorBody(error, 'Failed to fetch users data'));
   }
 });
 
@@ -390,11 +381,7 @@ router.get('/pipeline-results', async (req, res) => {
       error: error.message, 
       stack: error.stack 
     });
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch pipeline results',
-      message: error.message
-    });
+    res.status(500).json(safeErrorBody(error, 'Failed to fetch pipeline results'));
   }
 });
 
@@ -422,11 +409,7 @@ router.get('/stats', async (req, res) => {
       error: error.message, 
       stack: error.stack 
     });
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch statistics',
-      message: error.message
-    });
+    res.status(500).json(safeErrorBody(error, 'Failed to fetch statistics'));
   }
 });
 
@@ -472,11 +455,7 @@ router.get('/alpha/soil/:soilId', async (req, res) => {
       soilId: req.params.soilId
     });
     console.error('Alpha tests fetch error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch alpha tests',
-      message: error.message
-    });
+    res.status(500).json(safeErrorBody(error, 'Failed to fetch alpha tests'));
   }
 });
 
@@ -515,11 +494,7 @@ router.get('/alpha', async (req, res) => {
       stack: error.stack 
     });
     console.error('Alpha tests fetch error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch alpha tests',
-      message: error.message
-    });
+    res.status(500).json(safeErrorBody(error, 'Failed to fetch alpha tests'));
   }
 });
 
@@ -571,11 +546,7 @@ router.get('/samples/soil/:soilId', async (req, res) => {
       soilId: req.params.soilId
     });
     console.error('Samples fetch error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch samples',
-      message: error.message
-    });
+    res.status(500).json(safeErrorBody(error, 'Failed to fetch samples'));
   }
 });
 
@@ -630,11 +601,7 @@ router.get('/pipeline-runs/soil/:soilId', async (req, res) => {
       soilId: req.params.soilId
     });
     console.error('Pipeline runs fetch error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch pipeline runs',
-      message: error.message
-    });
+    res.status(500).json(safeErrorBody(error, 'Failed to fetch pipeline runs'));
   }
 });
 
