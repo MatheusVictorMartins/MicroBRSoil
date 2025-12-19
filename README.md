@@ -64,26 +64,21 @@ docker compose up -d
 ## Create or promote admin (Linux)
 Goal: generate a password hash and store it in the DB.
 
-1) Generate a bcrypt hash (example password: `Admin123!`):
+1) Generate a bcrypt hash (example password: `MinhaSenha123!`):
 ```bash
-docker exec microbrsoil-backend node -e "const bcrypt=require('bcrypt'); const pwd='Admin123!'; console.log(bcrypt.hashSync(pwd,10));"
+docker exec microbrsoil-backend node -e "const bcrypt=require('bcrypt'); const pwd='MinhaSenha123!'; console.log(bcrypt.hashSync(pwd,10));"
 ```
 Copy the hash (60 chars, starts with `$2b$10$`).
 
 2) Save the hash for the admin user (default: `admin@microbrsoil.local`):
 ```bash
-docker exec microbrsoil-postgres psql -U micro -d microbrsoil -c "update microbrsoil_db.users set password_hash='$2b$10$YOUR_HASH_HERE', role_id=1 where user_email='admin@microbrsoil.local';"
-```
-To create a new admin in one line:
-```bash
-docker exec microbrsoil-postgres psql -U micro -d microbrsoil -c "insert into microbrsoil_db.users (user_email, password_hash, role_id) values ('admin@microbrsoil.local','$2b$10$YOUR_HASH_HERE',1) on conflict (user_email) do nothing;"
+docker exec -it microbrsoil-postgres psql -U micro -d microbrsoil -c "update microbrsoil_db.users set password_hash=\$\$COLE_SEU_HASH_AQUI\$\$, role_id=1 where user_email=\$\$admin@microbrsoil.local\$\$;"
 ```
 
-3) Confirm role:
+3) Confirm the hash length is 60:
 ```bash
-docker exec microbrsoil-postgres psql -U micro -d microbrsoil -c "select user_email, role_id from microbrsoil_db.users where user_email='admin@microbrsoil.local';"
+docker exec -it microbrsoil-postgres psql -U micro -d microbrsoil -c "select user_email, length(password_hash), password_hash from microbrsoil_db.users where user_email='admin@microbrsoil.local';"
 ```
-`role_id` must be `1`.
 
 4) Login in the browser:
 - Email: `admin@microbrsoil.local`
