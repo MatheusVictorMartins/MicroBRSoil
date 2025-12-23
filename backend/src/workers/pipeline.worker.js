@@ -39,7 +39,6 @@ function ensureInputExists(inputPath) {
 
 const worker = new Worker(QUEUE_NAME, async job => {
   const { runId, fastqPath, pipelineType, meta } = job.data;
-  let lockRenewalInterval; // Declare the interval variable in the job scope
   
   workerLogger.info('Processing pipeline job', {
     jobId: job.id,
@@ -55,18 +54,6 @@ const worker = new Worker(QUEUE_NAME, async job => {
       workerLogger.warn(`Job ${job.id} already completed, skipping execution`, { runId, state });
       return { success: true, runId, skipped: true, reason: 'already_completed' };
     }
-    
-    // Renew job lock periodically for long-running processes (e.g., R pipelines)
-    // Increased lock duration to 10 minutes and renewal interval to 30 seconds
-    lockRenewalInterval = setInterval(async () => {
-      try {
-        await job.updateProgress(50); // Keep job alive
-        await job.extendLock(job.token, 600000); // Extend lock by 10 minutes (was 5)
-        workerLogger.debug(`Renewed lock for job ${job.id}`, { runId });
-      } catch (error) {
-        workerLogger.warn(`Failed to renew lock for job ${job.id}`, { error: error.message, runId });
-      }
-    }, 30000); // Renew every 30 seconds (more stable than 15s)
 
     // Update status in both fakeDB and database
     if (!pipelines[runId]) {
@@ -136,7 +123,7 @@ const worker = new Worker(QUEUE_NAME, async job => {
     console.log('✅ Pipeline execution completed');
     pipelines[runId].logs.push('Pipeline execution completed successfully');
 
-    // Process results and store in database (keep lock alive during this)
+    // Process results and store in database
     const userId = meta?.uploadedBy && meta.uploadedBy !== 'anonymous' ? meta.uploadedBy : null;
     await processPipelineResults(runId, runOutputDir, userId, pipelineType);
     
@@ -163,22 +150,6 @@ const worker = new Worker(QUEUE_NAME, async job => {
     }
     
     throw error;
-  } finally {
-    // Always clear the lock renewal interval, regardless of success or failure
-    if (lockRenewalInterval) {
-      clearInterval(lockRenewalInterval);
-      workerLogger.debug(`Lock renewal interval cleared for job ${runId}`);
-    }
-    
-    // Extend lock one final time to allow BullMQ to finalize the job
-    // This prevents "Missing lock" errors during completion/failure handling
-    try {
-      await job.extendLock(job.token, 60000); // 1 minute for finalization
-      workerLogger.debug(`Final lock extension for job ${runId}`);
-    } catch (lockError) {
-      // Not critical - job may already be finalized
-      workerLogger.debug(`Could not extend lock during finalization: ${lockError.message}`);
-    }
   }
 }, { 
   connection,
