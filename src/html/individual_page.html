@@ -771,7 +771,8 @@
       const plotConfigs = [
         { name: 'taxa_barplot_genus.png', label: 'Taxa barplot (genus)' },
         { name: 'taxa_barplot.png', label: 'Taxa barplot' },
-        { name: 'beta_diversity_pcoa.png', label: 'Beta diversity PCoA' }
+        { name: 'beta_diversity_pcoa.png', label: 'Beta diversity PCoA' },
+        { name: 'beta_diversity.png', label: 'Beta diversity' }
       ];
       const available = plotConfigs.filter(plot => fileMap.has(plot.name));
       if (available.length === 0) {
@@ -1073,9 +1074,6 @@
     }
   </script>
 
-  <!--#region HEADER INCLUDE-->
-    <script src="../static/js/include_elements.js"></script>
-    <!--#endregion-->
     <!--#region BOOTSTRAP JS LINK-->
     <script src="../static/js/button.js"></script>
     <!--===================================================================================================================================-->

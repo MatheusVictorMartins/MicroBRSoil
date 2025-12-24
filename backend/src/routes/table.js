@@ -3,7 +3,8 @@ const router = express.Router();
 const { paths } = require('../utils/moduleResolver');
 const pool = require(paths.db());
 const { requireAuth, requireAdmin, isAdminRole } = require('../middleware/authenticate');
-const { decryptPassword } = require('../utils/passwordView');
+const { decryptPassword, encryptPassword } = require('../utils/passwordView');
+const bcrypt = require('bcrypt');
 const isProduction = process.env.NODE_ENV === 'production';
 
 const safeErrorBody = (error, fallbackMessage) => ({
@@ -395,6 +396,113 @@ router.get('/users', requireAdmin, async (req, res) => {
       stack: error.stack 
     });
     res.status(500).json(safeErrorBody(error, 'Failed to fetch users data'));
+  }
+});
+
+// Update user password (admin only, non-admin users)
+router.put('/users/:id/password', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = parseInt(id, 10);
+    const { password } = req.body || {};
+
+    if (Number.isNaN(userId)) {
+      return res.status(400).json({ success: false, error: 'Invalid user id' });
+    }
+    if (!password || typeof password !== 'string' || password.length < 6) {
+      return res.status(400).json({ success: false, error: 'Password must be at least 6 characters long' });
+    }
+
+    const userLookup = await pool.query(
+      `SELECT u.user_id, u.user_email, u.role_id, r.role_name
+       FROM microbrsoil_db.users u
+       LEFT JOIN microbrsoil_db.roles r ON u.role_id = r.role_id
+       WHERE u.user_id = $1`,
+      [userId]
+    );
+
+    if (userLookup.rowCount === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    const target = userLookup.rows[0];
+    const roleName = String(target.role_name || '').toLowerCase();
+    const isAdminTarget = roleName === 'admin' || String(target.role_id) === '1';
+    const isSystemTarget = String(target.user_email || '').toLowerCase() === 'system@microbrsoil.local';
+
+    if (isAdminTarget || isSystemTarget) {
+      return res.status(403).json({ success: false, error: 'Cannot update admin/system user password' });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordView = encryptPassword(password);
+    const canStoreView = await ensurePasswordViewColumn();
+
+    let updateQuery = 'UPDATE microbrsoil_db.users SET password_hash = $1 WHERE user_id = $2 RETURNING user_id, user_email';
+    let updateValues = [passwordHash, userId];
+
+    if (canStoreView) {
+      updateQuery = 'UPDATE microbrsoil_db.users SET password_hash = $1, password_view = $2 WHERE user_id = $3 RETURNING user_id, user_email';
+      updateValues = [passwordHash, passwordView, userId];
+    }
+
+    const result = await pool.query(updateQuery, updateValues);
+    return res.json({ success: true, user: result.rows[0] });
+  } catch (error) {
+    req.logger?.error('Error updating user password', {
+      error: error.message,
+      stack: error.stack
+    });
+    return res.status(500).json(safeErrorBody(error, 'Failed to update user password'));
+  }
+});
+
+// Delete user (admin only, non-admin users)
+router.delete('/users/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = parseInt(id, 10);
+
+    if (Number.isNaN(userId)) {
+      return res.status(400).json({ success: false, error: 'Invalid user id' });
+    }
+    if (String(req.user?.id) === String(userId)) {
+      return res.status(403).json({ success: false, error: 'Cannot delete current admin user' });
+    }
+
+    const userLookup = await pool.query(
+      `SELECT u.user_id, u.user_email, u.role_id, r.role_name
+       FROM microbrsoil_db.users u
+       LEFT JOIN microbrsoil_db.roles r ON u.role_id = r.role_id
+       WHERE u.user_id = $1`,
+      [userId]
+    );
+
+    if (userLookup.rowCount === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    const target = userLookup.rows[0];
+    const roleName = String(target.role_name || '').toLowerCase();
+    const isAdminTarget = roleName === 'admin' || String(target.role_id) === '1';
+    const isSystemTarget = String(target.user_email || '').toLowerCase() === 'system@microbrsoil.local';
+
+    if (isAdminTarget || isSystemTarget) {
+      return res.status(403).json({ success: false, error: 'Cannot delete admin/system user' });
+    }
+
+    const result = await pool.query(
+      'DELETE FROM microbrsoil_db.users WHERE user_id = $1 RETURNING user_id, user_email',
+      [userId]
+    );
+
+    return res.json({ success: true, deleted: result.rows[0] });
+  } catch (error) {
+    req.logger?.error('Error deleting user', {
+      error: error.message,
+      stack: error.stack
+    });
+    return res.status(500).json(safeErrorBody(error, 'Failed to delete user'));
   }
 });
 

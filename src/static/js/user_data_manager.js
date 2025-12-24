@@ -47,11 +47,12 @@ class UserDataManager {
 
         // Clear existing rows
         tableBody.innerHTML = '';
+        this.userCache = Array.isArray(userData) ? userData : [];
 
         if (userData.length === 0) {
             tableBody.innerHTML = `
                 <tr>
-                    <td colspan="3" class="text-center">No users found</td>
+                    <td colspan="4" class="text-center">No users found</td>
                 </tr>
             `;
             return;
@@ -61,6 +62,7 @@ class UserDataManager {
             const row = document.createElement('tr');
             const rawPassword = user.password || '';
             const escapedPassword = this.escapeHtml(rawPassword);
+            const isProtected = this.isProtectedUser(user);
             const passwordCell = rawPassword
                 ? `
                     <span class="password-hidden" data-user-id="${user.user_id}" data-password="${escapedPassword}">*********</span>
@@ -71,10 +73,24 @@ class UserDataManager {
                     </span>
                   `
                 : `<span class="text-muted">[Unavailable]</span>`;
+
+            const actionsCell = isProtected
+                ? `<span class="text-muted">Admin</span>`
+                : `
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-sm btn-outline-primary" data-action="change-password" data-user-id="${user.user_id}" data-user-email="${this.escapeHtml(user.username)}">
+                            Change password
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" data-action="delete-user" data-user-id="${user.user_id}" data-user-email="${this.escapeHtml(user.username)}">
+                            Delete
+                        </button>
+                    </div>
+                  `;
             row.innerHTML = `
                 <th scope="row">${this.extractUsername(user.username)}</th>
                 <td>${passwordCell}</td>
                 <td>${this.formatDate(user.register_date)}</td>
+                <td>${actionsCell}</td>
             `;
             tableBody.appendChild(row);
         });
@@ -141,6 +157,22 @@ class UserDataManager {
             registerBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 this.handleUserRegistration();
+            });
+        }
+
+        const tableBody = document.querySelector('.register-users-table tbody');
+        if (tableBody) {
+            tableBody.addEventListener('click', (event) => {
+                const button = event.target.closest('[data-action]');
+                if (!button) return;
+                const action = button.dataset.action;
+                const userId = button.dataset.userId;
+                const userEmail = button.dataset.userEmail || '';
+                if (action === 'change-password') {
+                    this.handlePasswordUpdate(userId, userEmail);
+                } else if (action === 'delete-user') {
+                    this.handleUserDelete(userId, userEmail);
+                }
             });
         }
     }
@@ -220,6 +252,72 @@ class UserDataManager {
         }
     }
 
+    async handlePasswordUpdate(userId, userEmail) {
+        const newPassword = window.prompt(`Enter a new password for ${userEmail || 'this user'}:`);
+        if (!newPassword) return;
+        if (newPassword.length < 6) {
+            this.showMessage('Password must be at least 6 characters long', 'error');
+            return;
+        }
+        const confirmPassword = window.prompt('Confirm the new password:');
+        if (newPassword !== confirmPassword) {
+            this.showMessage('Passwords do not match', 'error');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/table/users/${encodeURIComponent(userId)}/password`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ password: newPassword })
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data.success) {
+                this.showMessage(data.error || 'Failed to update password', 'error');
+                return;
+            }
+            this.showMessage('Password updated successfully', 'success');
+            await this.loadUserData();
+        } catch (error) {
+            console.error('Password update error:', error);
+            this.showMessage('Network error while updating password', 'error');
+        }
+    }
+
+    async handleUserDelete(userId, userEmail) {
+        const confirmed = window.confirm(`Delete user ${userEmail || userId}? This cannot be undone.`);
+        if (!confirmed) return;
+
+        try {
+            const response = await fetch(`/api/table/users/${encodeURIComponent(userId)}`, {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data.success) {
+                this.showMessage(data.error || 'Failed to delete user', 'error');
+                return;
+            }
+            this.showMessage('User deleted successfully', 'success');
+            await this.loadUserData();
+        } catch (error) {
+            console.error('User delete error:', error);
+            this.showMessage('Network error while deleting user', 'error');
+        }
+    }
+
+    isProtectedUser(user) {
+        const roleName = String(user.role_name || '').toLowerCase();
+        const isAdmin = roleName === 'admin';
+        const isSystem = String(user.username || '').toLowerCase() === 'system@microbrsoil.local';
+        return isAdmin || isSystem;
+    }
+
     togglePasswordVisibility(userId) {
         const passwordSpan = document.querySelector(`[data-user-id="${userId}"]`);
         if (!passwordSpan) return;
@@ -286,7 +384,7 @@ class UserDataManager {
         if (tableBody) {
             tableBody.innerHTML = `
                 <tr>
-                    <td colspan="3" class="text-center text-danger">
+                    <td colspan="4" class="text-center text-danger">
                         <i class="material-symbols-rounded">error</i> ${message}
                     </td>
                 </tr>
