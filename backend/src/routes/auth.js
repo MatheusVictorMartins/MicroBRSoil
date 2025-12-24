@@ -6,6 +6,7 @@ const { paths } = require('../utils/moduleResolver');
 const userFunctions = require(paths.userFunctions());
 const { requireAdmin, getTokenFromRequest, decodeToken, isAdminRole } = require('../middleware/authenticate');
 const { apiLogger } = require('../utils/logger');
+const { encryptPassword } = require('../utils/passwordView');
 
 const router = express.Router();
 
@@ -96,6 +97,20 @@ router.post('/login', async (req, res) => {
       return res.status(401).send('Senha incorreta');
     }
 
+    if (!userRow.password_view) {
+      try {
+        const passwordView = encryptPassword(tpassword);
+        if (passwordView) {
+          await userFunctions.updatePasswordView({ userId: userRow.user_id, passwordView });
+        }
+      } catch (error) {
+        apiLogger.warn('Password view update failed', {
+          userId: userRow.user_id,
+          error: error.message
+        });
+      }
+    }
+
     const token = jwt.sign(
       { id: userRow.user_id, username: userRow.user_email, role: userRole },
       jwtSecret,
@@ -170,7 +185,8 @@ router.post('/register', requireAdmin, async (req, res) => {
     }
   
     const passwordHash = await bcrypt.hash(tpassword, 10);
-    const userResp = await userFunctions.createUser({email: temail, password: passwordHash});
+    const passwordView = encryptPassword(tpassword);
+    const userResp = await userFunctions.createUser({ email: temail, password: passwordHash, passwordView });
   
     if (userResp === false){
       throw new Error('Erro no BD ao criar usuário.');

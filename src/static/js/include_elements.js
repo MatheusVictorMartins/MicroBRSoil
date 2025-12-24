@@ -126,12 +126,34 @@ async function loadLeftMenu() {
     if (!leftMenuPlaceholder) return;
 
     try {
-        const response = await fetch("left_menu.html");
+        let response = await fetch("left_menu.html", { cache: "no-store" });
+        if (!response.ok) {
+            response = await fetch("/left_menu.html", { cache: "no-store" });
+        }
+        if (!response.ok) {
+            throw new Error(`Left menu fetch failed: ${response.status}`);
+        }
         leftMenuPlaceholder.innerHTML = await response.text();
         const status = await getAuthStatus();
+        const cookieAuth = document.cookie.includes("auth_status=1");
+        const isAuthenticated = Boolean(status.authenticated || cookieAuth);
         const newUserButton = leftMenuPlaceholder.querySelector('button[onclick*="/register"]');
-        if (newUserButton && (!status.authenticated || !status.isAdmin)) {
+        if (newUserButton && (!isAuthenticated || !status.isAdmin)) {
             newUserButton.remove();
+        }
+
+        if (!isAuthenticated) {
+            const restrictedButtons = [
+                '#btn_left_menu_upload',
+                '#btn_left_menu_pipeline_status',
+                '#btn_left_menu_taxon',
+                '#btn_left_menu_sequence',
+                '#btn_left_menu_geosearch'
+            ];
+            restrictedButtons.forEach((selector) => {
+                const button = leftMenuPlaceholder.querySelector(selector);
+                if (button) button.remove();
+            });
         }
     } catch (error) {
         console.error("Erro ao carregar o menu lateral:", error);

@@ -11,18 +11,116 @@ class SoilDataManager {
             material: '',
             location: ''
         };
+        this.authState = { authenticated: false, isAdmin: false, user: null };
         this.init();
     }
 
     async init() {
-        await this.loadFilters();
-        await this.loadSoilData();
+        await this.refreshAuthState();
+        this.configureTableHeader();
+        if (this.authState.authenticated) {
+            await this.loadFilters();
+            await this.loadSoilData();
+        } else {
+            this.renderBlankTable();
+        }
         this.setupEventListeners();
     }
 
+    async refreshAuthState(forceRefresh = false) {
+        if (typeof getAuthStatus !== 'function') {
+            this.authState = { authenticated: false, isAdmin: false, user: null };
+            return this.authState;
+        }
+
+        try {
+            const status = await getAuthStatus(forceRefresh);
+            if (typeof isAdminRole === 'function') {
+                status.isAdmin = status.isAdmin ?? isAdminRole(status.user?.role);
+            }
+            this.authState = status;
+            return status;
+        } catch (error) {
+            this.authState = { authenticated: false, isAdmin: false, user: null };
+            return this.authState;
+        }
+    }
+
+    configureTableHeader() {
+        const headerRow = document.querySelector('.dashboard-table thead tr');
+        if (!headerRow) return;
+
+        const existingOwner = headerRow.querySelector('[data-owner-col="true"]');
+        const existingAction = headerRow.querySelector('[data-actions-col="true"]');
+        if (this.authState.isAdmin) {
+            if (!existingOwner) {
+                const thOwner = document.createElement('th');
+                thOwner.textContent = 'USER';
+                thOwner.setAttribute('data-owner-col', 'true');
+                const locationHeader = headerRow.children[3] || null;
+                headerRow.insertBefore(thOwner, locationHeader);
+            }
+            if (!existingAction) {
+                const th = document.createElement('th');
+                th.textContent = 'ACTIONS';
+                th.setAttribute('data-actions-col', 'true');
+                headerRow.appendChild(th);
+            }
+        } else {
+            if (existingOwner) {
+                existingOwner.remove();
+            }
+            if (existingAction) {
+                existingAction.remove();
+            }
+        }
+    }
+
+    clearPagination() {
+        const paginationDiv = document.querySelector('.pagination-controls');
+        if (paginationDiv) {
+            paginationDiv.remove();
+        }
+    }
+
+    renderBlankTable() {
+        const tableBody = document.querySelector('.dashboard-table tbody');
+        if (!tableBody) return;
+
+        this.clearPagination();
+        tableBody.innerHTML = '';
+
+        const headerCells = document.querySelectorAll('.dashboard-table thead th');
+        const columnCount = headerCells.length || 5;
+        const blankCells = Array.from({ length: columnCount }, (_, idx) => {
+            return idx === 0 ? '<th scope="row">&nbsp;</th>' : '<td>&nbsp;</td>';
+        }).join('');
+
+        tableBody.innerHTML = `<tr>${blankCells}</tr>`;
+    }
+
+    showLoading() {
+        const tableBody = document.querySelector('.dashboard-table tbody');
+        if (!tableBody) return;
+
+        this.clearPagination();
+        const headerCells = document.querySelectorAll('.dashboard-table thead th');
+        const columnCount = headerCells.length || 5;
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="${columnCount}" class="text-center">Loading...</td>
+            </tr>
+        `;
+    }
+
     async loadFilters() {
+        if (!this.authState.authenticated) return;
         try {
             const response = await fetch('/api/table/soil/filters');
+            if (response.status === 401 || response.status === 403) {
+                this.renderBlankTable();
+                return;
+            }
             const data = await response.json();
             
             if (data.success) {
@@ -89,6 +187,12 @@ class SoilDataManager {
     }
 
     async loadSoilData() {
+        if (!this.authState.authenticated) {
+            this.renderBlankTable();
+            return;
+        }
+
+        this.showLoading();
         try {
             const queryParams = new URLSearchParams({
                 page: this.currentPage,
@@ -97,6 +201,10 @@ class SoilDataManager {
             });
 
             const response = await fetch(`/api/table/soil?${queryParams}`);
+            if (response.status === 401 || response.status === 403) {
+                this.renderBlankTable();
+                return;
+            }
             const data = await response.json();
             
             if (data.success) {
@@ -120,9 +228,11 @@ class SoilDataManager {
         tableBody.innerHTML = '';
 
         if (soilData.length === 0) {
+            const headerCells = document.querySelectorAll('.dashboard-table thead th');
+            const columnCount = headerCells.length || 5;
             tableBody.innerHTML = `
                 <tr>
-                    <td colspan="5" class="text-center">No soil samples found</td>
+                    <td colspan="${columnCount}" class="text-center">No soil samples found</td>
                 </tr>
             `;
             return;
@@ -130,12 +240,18 @@ class SoilDataManager {
 
         soilData.forEach(soil => {
             const row = document.createElement('tr');
+            const ownerCell = this.authState.isAdmin ? `<td>${soil.owner || 'N/A'}</td>` : '';
+            const actionCell = this.authState.isAdmin
+                ? `<td><button class="btn btn-sm btn-outline-danger" data-action="delete">Delete</button></td>`
+                : '';
             row.innerHTML = `
                 <th scope="row">${soil.id.toString().padStart(5, '0')}</th>
                 <td>${soil.material || 'N/A'}</td>
                 <td>${soil.project_name || 'N/A'}</td>
+                ${ownerCell}
                 <td>${soil.location || 'N/A'}</td>
                 <td>${soil.creation_date || 'N/A'}</td>
+                ${actionCell}
             `;
             
             // Make row clickable to navigate to individual page
@@ -143,6 +259,16 @@ class SoilDataManager {
             row.addEventListener('click', () => {
                 window.location.href = `/individual_page?soilId=${soil.id}`;
             });
+
+            if (this.authState.isAdmin) {
+                const deleteButton = row.querySelector('[data-action="delete"]');
+                if (deleteButton) {
+                    deleteButton.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        this.deleteSoilRecord(soil.id, row);
+                    });
+                }
+            }
             
             tableBody.appendChild(row);
         });
@@ -179,6 +305,38 @@ class SoilDataManager {
                 </button>
             </div>
         `;
+    }
+
+    async deleteSoilRecord(soilId, rowElement) {
+        if (!soilId) return;
+        if (!window.confirm('Delete this soil sample? This cannot be undone.')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/table/soil/${soilId}`, {
+                method: 'DELETE',
+                headers: { Accept: 'application/json' }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => null);
+                const message = errorData?.error || 'Failed to delete soil sample';
+                this.showError(message);
+                return;
+            }
+
+            if (rowElement) {
+                rowElement.remove();
+            }
+
+            const tableBody = document.querySelector('.dashboard-table tbody');
+            if (tableBody && tableBody.children.length === 0) {
+                await this.loadSoilData();
+            }
+        } catch (error) {
+            this.showError('Network error while deleting sample');
+        }
     }
 
     async showSoilDetails(soilId) {
@@ -304,9 +462,11 @@ class SoilDataManager {
     showError(message) {
         const tableBody = document.querySelector('.dashboard-table tbody');
         if (tableBody) {
+            const headerCells = document.querySelectorAll('.dashboard-table thead th');
+            const columnCount = headerCells.length || 5;
             tableBody.innerHTML = `
                 <tr>
-                    <td colspan="5" class="text-center text-danger">
+                    <td colspan="${columnCount}" class="text-center text-danger">
                         <i class="material-symbols-rounded">error</i> ${message}
                     </td>
                 </tr>

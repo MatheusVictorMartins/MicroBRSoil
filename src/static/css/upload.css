@@ -168,3 +168,7 @@
     border-color: #1e7e34;
     background-color: rgba(40, 167, 69, 0.1);
 }
+
+.upload-progress .progress-bar {
+    transition: width 0.2s ease;
+}

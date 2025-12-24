@@ -59,16 +59,21 @@ class UserDataManager {
 
         userData.forEach((user, index) => {
             const row = document.createElement('tr');
-            row.innerHTML = `
-                <th scope="row">${this.extractUsername(user.username)}</th>
-                <td>
-                    <span class="password-hidden" data-user-id="${user.user_id}">*********</span>
+            const rawPassword = user.password || '';
+            const escapedPassword = this.escapeHtml(rawPassword);
+            const passwordCell = rawPassword
+                ? `
+                    <span class="password-hidden" data-user-id="${user.user_id}" data-password="${escapedPassword}">*********</span>
                     <span class="material-symbols-rounded txt-icon btn-visibility" 
                           onclick="userManager.togglePasswordVisibility(${user.user_id})"
                           style="cursor: pointer;">
                         visibility
                     </span>
-                </td>
+                  `
+                : `<span class="text-muted">[Unavailable]</span>`;
+            row.innerHTML = `
+                <th scope="row">${this.extractUsername(user.username)}</th>
+                <td>${passwordCell}</td>
                 <td>${this.formatDate(user.register_date)}</td>
             `;
             tableBody.appendChild(row);
@@ -217,15 +222,28 @@ class UserDataManager {
 
     togglePasswordVisibility(userId) {
         const passwordSpan = document.querySelector(`[data-user-id="${userId}"]`);
+        if (!passwordSpan) return;
         const visibilityIcon = passwordSpan.nextElementSibling;
-        
+        const rawPassword = passwordSpan.dataset.password || '';
+
+        if (!rawPassword) return;
+
         if (passwordSpan.textContent === '*********') {
-            passwordSpan.textContent = '[Hidden for security]';
-            visibilityIcon.textContent = 'visibility_off';
+            passwordSpan.textContent = rawPassword;
+            if (visibilityIcon) visibilityIcon.textContent = 'visibility_off';
         } else {
             passwordSpan.textContent = '*********';
-            visibilityIcon.textContent = 'visibility';
+            if (visibilityIcon) visibilityIcon.textContent = 'visibility';
         }
+    }
+
+    escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     }
 
     extractUsername(email) {
@@ -248,9 +266,13 @@ class UserDataManager {
     }
 
     clearForm() {
-        document.getElementById('tname').value = '';
-        document.getElementById('tpassword').value = '';
-        document.getElementById('tconfpassword').value = '';
+        const emailField = document.getElementById('temail');
+        const passwordField = document.getElementById('tpassword');
+        const confirmField = document.getElementById('tconfpassword');
+
+        if (emailField) emailField.value = '';
+        if (passwordField) passwordField.value = '';
+        if (confirmField) confirmField.value = '';
     }
 
     goToPage(page) {

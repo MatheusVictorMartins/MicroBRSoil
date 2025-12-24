@@ -5,6 +5,7 @@ const path = require('path');
 const { paths } = require('../utils/moduleResolver');
 const sampleFunctions = require(paths.sampleFunctions());
 const writeLog = require(paths.logHandler());
+const { requireAuth } = require('../middleware/authenticate');
 
 const htmlPath = path.join(path.dirname(__dirname), 'src', 'html');
 
@@ -30,7 +31,7 @@ const htmlPath = path.join(path.dirname(__dirname), 'src', 'html');
 
 // router.post('/'); // -> taxon_search/submit
 
-router.get('/api/getLists', async (req, res) => {
+router.get('/api/getLists', requireAuth, async (req, res) => {
     const speciesList = await sampleFunctions.getDistinctSpecies();
     const genusList = await sampleFunctions.getDistinctGenus();
     
@@ -54,7 +55,7 @@ router.post('/submit', async (req, res) => {
 // router.get('taxon_search/:parameterType/:selectedParameter/result', (req,res)=>{});// -> taxon_search/:parameterType/:selectedParameter/result
 
 //fetch api
-router.get('/api/:parameterType/:selectedParameter/result', async (req, res) => {//a ideia é que podem ser 2 opções de pesquisa, genus e species
+router.get('/api/:parameterType/:selectedParameter/result', requireAuth, async (req, res) => {//a ideia é que podem ser 2 opções de pesquisa, genus e species
     writeLog("\n[REQUISIÇÃO.PARAMS]: " + JSON.stringify(req.params));
     const parameterType = req.params.parameterType;
     const selectedParameter = req.params.selectedParameter;

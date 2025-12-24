@@ -421,6 +421,32 @@ router.get('/download/:runId/:filename', async (req, res) => {
   }
 });
 
+// Admin cleanup: delete all uploaded files from server storage
+router.delete('/admin/cleanup', async (req, res) => {
+  try {
+    if (!isAdminRole(req.user?.role)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    if (!fs.existsSync(UPLOADS_DIR)) {
+      return res.json({ success: true, removed: 0 });
+    }
+
+    const entries = fs.readdirSync(UPLOADS_DIR);
+    let removed = 0;
+    entries.forEach((entry) => {
+      const entryPath = path.join(UPLOADS_DIR, entry);
+      fs.rmSync(entryPath, { recursive: true, force: true });
+      removed += 1;
+    });
+
+    return res.json({ success: true, removed });
+  } catch (error) {
+    console.error('Upload cleanup error:', error);
+    return res.status(500).json({ error: safeErrorMessage(error) });
+  }
+});
+
 module.exports = router;
 
 function canAccessRun(user, run) {

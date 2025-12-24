@@ -61,28 +61,63 @@
 
             <div class="basic-frame" style="margin-bottom: 16px;">
                 <div class="row g-3 align-items-end">
-                    <div class="col-md-6 col-lg-5">
-                        <label class="form-label text-input-label" for="trackerRunInput">RUN ID</label>
-                        <input type="text" id="trackerRunInput" class="form-control" placeholder="Enter a run ID">
-                    </div>
                     <div class="col-md-3 col-lg-2">
                         <label class="form-label text-input-label" for="pollInterval">REFRESH (s)</label>
                         <input type="number" min="3" max="60" step="1" id="pollInterval" class="form-control" value="5">
                     </div>
-                    <div class="col-md-12 col-lg-5 d-flex justify-content-start justify-content-lg-end gap-2">
-                        <button class="btn btn-primary px-3" id="startTrackingBtn">
-                            <span class="material-symbols-rounded align-middle">play_arrow</span>
-                            <span class="align-middle">Start</span>
+                    <div class="col-md-4 col-lg-3">
+                        <label class="form-label text-input-label">FILTRO</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="showCompletedToggle">
+                            <label class="form-check-label" for="showCompletedToggle">Mostrar concluidos</label>
+                        </div>
+                    </div>
+                    <div class="col-md-12 col-lg-7 d-flex justify-content-start justify-content-lg-end gap-2">
+                        <button class="btn btn-primary px-3" id="refreshRunsBtn">
+                            <span class="material-symbols-rounded align-middle">refresh</span>
+                            <span class="align-middle">Atualizar agora</span>
                         </button>
-                        <button class="btn btn-outline-secondary px-3" id="stopTrackingBtn">
-                            <span class="material-symbols-rounded align-middle">stop_circle</span>
-                            <span class="align-middle">Stop</span>
+                        <button class="btn btn-outline-secondary px-3" id="toggleAutoRefreshBtn">
+                            <span class="material-symbols-rounded align-middle" id="autoRefreshIcon">pause_circle</span>
+                            <span class="align-middle" id="autoRefreshLabel">Pausar atualizacao</span>
                         </button>
                         <button class="btn btn-outline-primary px-3" onclick="ButtonGoTo('/upload')">
                             <span class="material-symbols-rounded align-middle">cloud_upload</span>
                             <span class="align-middle">Upload</span>
                         </button>
+                        <button class="btn btn-outline-danger px-3 d-none" id="clearUploadsBtn">
+                            <span class="material-symbols-rounded align-middle">delete</span>
+                            <span class="align-middle">Limpar uploads</span>
+                        </button>
                     </div>
+                </div>
+            </div>
+
+            <div class="basic-frame" id="pipelineListPanel" style="margin-bottom: 16px;">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <div class="fw-bold">Pipelines em acompanhamento</div>
+                        <div class="small text-muted" id="runsSubtitle">Clique em um pipeline para ver detalhes.</div>
+                    </div>
+                    <div class="small text-muted" id="runsCount"></div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead>
+                            <tr>
+                                <th>PIPELINE</th>
+                                <th id="runsUserHeader" class="d-none">USER</th>
+                                <th>STATUS</th>
+                                <th>CRIADO EM</th>
+                                <th>ACOES</th>
+                            </tr>
+                        </thead>
+                        <tbody id="runsTableBody">
+                            <tr>
+                                <td colspan="4" class="text-center">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -93,6 +128,7 @@
                         <div class="small text-muted" id="trackerPipelineType"></div>
                         <div class="small text-muted" id="trackerRunId"></div>
                         <div class="small text-muted" id="trackerJobId"></div>
+                        <div class="small text-muted" id="trackerQueue"></div>
                     </div>
                     <div class="text-end">
                         <div>Status: <span id="trackerStatus" class="text-primary">—</span></div>
@@ -104,7 +140,7 @@
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <div>
                         <div class="fw-bold text-uppercase small" style="letter-spacing: 0.08em;">Etapas do pipeline</div>
-                        <div class="small text-muted">Últimos eventos registrados</div>
+                        <div class="small text-muted">Ultimos eventos registrados</div>
                         </div>
                         <div class="small text-muted" id="logsCount"></div>
                     </div>
@@ -121,8 +157,11 @@
     <script>
       const tracker = {
         intervalId: null,
-        runId: null
+        runId: null,
+        autoRefresh: true,
+        manualSelection: false
       };
+      let isAdminUser = false;
 
       const statusEl = () => document.getElementById('trackerStatus');
       const updatedEl = () => document.getElementById('trackerUpdated');
@@ -130,44 +169,230 @@
       const runEl = () => document.getElementById('trackerRunId');
       const jobEl = () => document.getElementById('trackerJobId');
       const typeEl = () => document.getElementById('trackerPipelineType');
+      const queueEl = () => document.getElementById('trackerQueue');
       const trackerBox = () => document.getElementById('pipelineTracker');
       const logsEl = () => document.getElementById('trackerLogs');
       const logsCountEl = () => document.getElementById('logsCount');
+      const runsBodyEl = () => document.getElementById('runsTableBody');
+      const runsCountEl = () => document.getElementById('runsCount');
+      const runsSubtitleEl = () => document.getElementById('runsSubtitle');
+      const runsUserHeaderEl = () => document.getElementById('runsUserHeader');
       const lastRunKey = 'lastPipelineRun';
 
-      document.addEventListener('DOMContentLoaded', () => {
-        try {
-          localStorage.removeItem(lastRunKey);
-        } catch (e) {
-          // ignore
-        }
-      });
-
-      function startTracking(runId) {
-        if (!runId) return;
-        stopTracking();
-
-        tracker.runId = runId.trim();
-
-        if (trackerBox()) trackerBox().style.display = 'block';
-        if (runEl()) runEl().textContent = `Run ID: ${tracker.runId}`;
-        if (jobEl()) jobEl().textContent = '';
-        if (typeEl()) typeEl().textContent = '';
-        if (statusEl()) statusEl().textContent = 'queued';
-        if (updatedEl()) updatedEl().textContent = 'Waiting for status...';
-        if (messageEl()) messageEl().textContent = '';
-        if (logsEl()) logsEl().innerHTML = '';
-
-        const pollSeconds = Math.max(3, Math.min(60, parseInt(document.getElementById('pollInterval').value, 10) || 5));
-        tracker.intervalId = setInterval(fetchStatus, pollSeconds * 1000);
-        fetchStatus();
+      function getPollSeconds() {
+        const value = parseInt(document.getElementById('pollInterval')?.value, 10);
+        return Math.max(3, Math.min(60, value || 5));
       }
 
-      function stopTracking() {
+      function formatDate(value) {
+        if (!value) return "-";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return "-";
+        return date.toLocaleString();
+      }
+
+      function normalizeStatus(status) {
+        return String(status || "unknown").toLowerCase();
+      }
+
+      function statusBadge(status) {
+        const map = {
+          queued: 'warning',
+          running: 'primary',
+          completed: 'success',
+          failed: 'danger'
+        };
+        const normalized = normalizeStatus(status);
+        const cls = map[normalized] || "secondary";
+        return `<span class="badge bg-${cls}">${normalized}</span>`;
+      }
+
+      async function resolveAuth() {
+        if (typeof getAuthStatus !== 'function') return;
+        try {
+          const status = await getAuthStatus();
+          isAdminUser = Boolean(status?.isAdmin);
+        } catch (e) {
+          isAdminUser = false;
+        }
+
+        const header = runsUserHeaderEl();
+        if (header) {
+          header.classList.toggle('d-none', !isAdminUser);
+        }
+        const clearUploadsBtn = document.getElementById('clearUploadsBtn');
+        if (clearUploadsBtn) {
+          clearUploadsBtn.classList.toggle('d-none', !isAdminUser);
+        }
+      }
+
+      function getSavedRunId() {
+        try {
+          const saved = localStorage.getItem(lastRunKey);
+          if (!saved) return null;
+          const data = JSON.parse(saved);
+          return data?.runId || null;
+        } catch (e) {
+          return null;
+        }
+      }
+
+      function stopAutoRefresh() {
         if (tracker.intervalId) {
           clearInterval(tracker.intervalId);
           tracker.intervalId = null;
         }
+      }
+
+      function startAutoRefresh() {
+        stopAutoRefresh();
+        if (!tracker.autoRefresh) return;
+        const pollSeconds = getPollSeconds();
+        tracker.intervalId = setInterval(() => {
+          loadRuns();
+          if (tracker.runId) fetchStatus();
+        }, pollSeconds * 1000);
+      }
+
+      function setAutoRefresh(enabled) {
+        tracker.autoRefresh = enabled;
+        const label = document.getElementById('autoRefreshLabel');
+        const icon = document.getElementById('autoRefreshIcon');
+        if (label) label.textContent = enabled ? 'Pausar atualizacao' : 'Retomar atualizacao';
+        if (icon) icon.textContent = enabled ? 'pause_circle' : 'play_circle';
+        if (enabled) {
+          startAutoRefresh();
+        } else {
+          stopAutoRefresh();
+        }
+      }
+
+      function highlightSelectedRun() {
+        const body = runsBodyEl();
+        if (!body) return;
+        body.querySelectorAll('tr[data-run-id]').forEach((row) => {
+          row.classList.toggle("table-active", row.dataset.runId === tracker.runId);
+        });
+      }
+
+      function renderRuns(runs, emptyMessage) {
+        const body = runsBodyEl();
+        if (!body) return;
+        const columnCount = isAdminUser ? 5 : 4;
+
+        if (!Array.isArray(runs) || runs.length === 0) {
+          const message = emptyMessage || "Nenhum pipeline encontrado.";
+          body.innerHTML = `<tr><td colspan="${columnCount}" class="text-center">${message}</td></tr>`;
+          if (runsCountEl()) runsCountEl().textContent = '0 pipelines';
+          highlightSelectedRun();
+          return;
+        }
+
+        body.innerHTML = runs.map((run) => {
+          const type = String(run.pipeline_type || run.pipelineType || "default").toUpperCase();
+          const status = normalizeStatus(run.status);
+          const createdAt = formatDate(run.created_at || run.createdAt);
+          const userLabel = run.user_email || run.userEmail || '-';
+          const userCell = isAdminUser ? `<td>${userLabel}</td>` : '';
+          return `
+            <tr data-run-id="${run.run_id}">
+              <td>${type}</td>
+              ${userCell}
+              <td>${statusBadge(status)}</td>
+              <td>${createdAt}</td>
+              <td>
+                <button class="btn btn-sm btn-outline-primary" data-action="details" data-run-id="${run.run_id}">
+                  Detalhes
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join("");
+
+        if (runsCountEl()) runsCountEl().textContent = `${runs.length} pipeline(s)`;
+        highlightSelectedRun();
+      }
+
+      function maybeAutoSelect(runs) {
+        if (tracker.runId) return;
+        if (!Array.isArray(runs) || runs.length === 0) return;
+
+        const savedRunId = getSavedRunId();
+        const savedMatch = savedRunId ? runs.find(r => r.run_id === savedRunId) : null;
+        if (savedMatch) {
+          selectRun(savedRunId, false);
+          return;
+        }
+
+        if (!tracker.manualSelection) {
+          selectRun(runs[0].run_id, false);
+        }
+      }
+
+      async function loadRuns() {
+        const body = runsBodyEl();
+        if (body) {
+          const columnCount = isAdminUser ? 5 : 4;
+          body.innerHTML = `<tr><td colspan="${columnCount}" class="text-center">Loading...</td></tr>`;
+        }
+
+        const showCompleted = Boolean(document.getElementById("showCompletedToggle")?.checked);
+        if (runsSubtitleEl()) {
+          runsSubtitleEl().textContent = showCompleted ? 'Mostrando todos' : 'Mostrando em andamento';
+        }
+
+        try {
+          const response = await fetch('/pipeline/runs?limit=50');
+          if (response.status === 401 || response.status === 403) {
+            renderRuns([], 'Sem acesso. Faca login para ver os pipelines.');
+            return;
+          }
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+          const data = await response.json();
+          let runs = Array.isArray(data.runs) ? data.runs : [];
+          if (!showCompleted) {
+            runs = runs.filter((run) => {
+              const status = normalizeStatus(run.status);
+              return status !== "completed" && status !== "failed";
+            });
+          }
+
+          if (tracker.runId && !runs.some(run => run.run_id === tracker.runId)) {
+            tracker.runId = null;
+            tracker.manualSelection = false;
+            resetTrackerUI('Selecione um pipeline para ver detalhes.');
+          }
+
+          if (runs.length === 0 && !showCompleted) {
+            renderRuns([], 'Sem pipelines em andamento.');
+          } else {
+            renderRuns(runs);
+          }
+          maybeAutoSelect(runs);
+        } catch (err) {
+          renderRuns([], 'Erro ao carregar pipelines.');
+          if (runsSubtitleEl()) runsSubtitleEl().textContent = 'Status indisponivel';
+        }
+      }
+
+      function selectRun(runId, manual = true) {
+        if (!runId) return;
+        tracker.runId = runId;
+        if (manual) tracker.manualSelection = true;
+
+        if (trackerBox()) trackerBox().style.display = "block";
+        if (statusEl()) statusEl().textContent = "Loading...";
+        if (updatedEl()) updatedEl().textContent = "Aguardando status...";
+        if (messageEl()) messageEl().textContent = "";
+        if (runEl()) runEl().textContent = "";
+        if (jobEl()) jobEl().textContent = "";
+        if (typeEl()) typeEl().textContent = "";
+        if (queueEl()) queueEl().textContent = "";
+        if (logsEl()) logsEl().innerHTML = "";
+        if (logsCountEl()) logsCountEl().textContent = "";
+        highlightSelectedRun();
+        fetchStatus();
       }
 
       async function fetchStatus() {
@@ -175,98 +400,146 @@
         try {
           const response = await fetch(`/pipeline/status/${tracker.runId}`);
           if (response.status === 404) {
-            // Run not found: clear saved run and reset UI
-            localStorage.removeItem(lastRunKey);
-            resetTrackerUI('Run not found. It may have been removed.');
-            stopTracking();
+            resetTrackerUI('Pipeline nao encontrado.');
+            tracker.runId = null;
             return;
           }
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           const data = await response.json();
-          if (!data.success || !data.run) throw new Error(data.error || 'Status unavailable');
+          if (!data.success || !data.run) throw new Error(data.error || "Status indisponivel");
 
           const run = data.run;
-          const status = run.status || 'unknown';
+          const status = normalizeStatus(run.status);
           const started = run.started_at || run.startedAt;
           const finished = run.finished_at || run.finishedAt;
           const errorMessage = run.error_message || run.errorMessage;
+          const queueInfo = data.queue || null;
 
           if (statusEl()) statusEl().textContent = status;
-          if (updatedEl()) updatedEl().textContent = `Updated: ${new Date().toLocaleTimeString()}`;
-          if (typeEl()) typeEl().textContent = run.pipeline_type ? run.pipeline_type.toUpperCase() : '';
-          if (jobEl()) jobEl().textContent = run.job_id ? `Job ID: ${run.job_id}` : '';
+          if (updatedEl()) updatedEl().textContent = `Atualizado: ${new Date().toLocaleTimeString()}`;
+          const pipelineType = run.pipeline_type || run.pipelineType;
+          const createdAt = run.created_at || run.createdAt;
+          if (typeEl()) typeEl().textContent = pipelineType ? String(pipelineType).toUpperCase() : "";
+          if (runEl()) runEl().textContent = createdAt ? `Criado em: ${formatDate(createdAt)}` : "";
+          if (jobEl()) jobEl().textContent = "";
+          if (queueEl()) {
+            if (queueInfo && queueInfo.state) {
+              const hasPosition = Number.isInteger(queueInfo.position) && queueInfo.position >= 0;
+              const positionText = hasPosition ? ` (posicao ${queueInfo.position + 1})` : "";
+              queueEl().textContent = `Fila: ${queueInfo.state}${positionText}`;
+            } else {
+              queueEl().textContent = "";
+            }
+          }
           if (logsEl()) {
             const logs = Array.isArray(run.logs) ? run.logs : [];
             const count = logs.length;
             if (logsCountEl()) logsCountEl().textContent = count ? `${count} eventos` : 'Sem eventos';
 
             if (logs.length === 0) {
-              logsEl().innerHTML = '<div class="text-muted small py-2">Sem logs registrados ainda.</div>';
+              logsEl().innerHTML = "<div class=\"text-muted small py-2\">Sem logs registrados ainda.</div>";
             } else {
-              const recent = logs.slice(-20).reverse(); // últimos 20, mais recentes no topo
+              const recent = logs.slice(-20).reverse();
               logsEl().innerHTML = recent.map(log => `
                 <div class="log-item">
                   <div class="log-dot"></div>
                   <div class="log-text">${log}</div>
                 </div>
-              `).join('');
+              `).join("");
             }
           }
 
           if (messageEl()) {
-            if (status === 'failed' && errorMessage) {
-              messageEl().textContent = `Error: ${errorMessage}`;
-            } else if (status === 'running' && started) {
-              messageEl().textContent = `Started at: ${started}`;
-            } else if (status === 'completed' && finished) {
-              messageEl().textContent = `Finished at: ${finished}`;
+            if (status === "failed" && errorMessage) {
+              messageEl().textContent = `Erro: ${errorMessage}`;
+            } else if (status === "running" && started) {
+              messageEl().textContent = `Iniciado em: ${formatDate(started)}`;
+            } else if (status === "completed" && finished) {
+              messageEl().textContent = `Finalizado em: ${formatDate(finished)}`;
             } else {
-              messageEl().textContent = '';
+              messageEl().textContent = "";
             }
-          }
-
-          if (['completed', 'failed'].includes(status)) {
-            stopTracking();
           }
         } catch (err) {
-          if (updatedEl()) updatedEl().textContent = 'Status unavailable';
-          if (messageEl()) messageEl().textContent = `Status check error: ${err.message}`;
+          if (updatedEl()) updatedEl().textContent = "Status indisponivel";
+          if (messageEl()) messageEl().textContent = `Erro ao consultar status: ${err.message}`;
         }
       }
-
-      document.getElementById('startTrackingBtn').addEventListener('click', () => {
-        const runId = document.getElementById('trackerRunInput').value;
-        startTracking(runId);
-      });
-
-      document.getElementById('stopTrackingBtn').addEventListener('click', () => {
-        stopTracking();
-      });
-
-      // Auto-fill with last run (from upload) if available
-      (() => {
-        try {
-          const saved = localStorage.getItem(lastRunKey);
-          if (saved) {
-            const data = JSON.parse(saved);
-            if (data.runId) {
-              document.getElementById('trackerRunInput').value = data.runId;
-              startTracking(data.runId);
-            }
-          }
-        } catch (e) {
-          // ignore
-        }
-      })();
 
       function resetTrackerUI(message) {
-        if (trackerBox()) trackerBox().style.display = 'none';
-        if (statusEl()) statusEl().textContent = '-';
-        if (updatedEl()) updatedEl().textContent = '';
-        if (messageEl()) messageEl().textContent = message || '';
-        if (logsEl()) logsEl().innerHTML = '';
-        if (logsCountEl()) logsCountEl().textContent = '';
+        if (trackerBox()) trackerBox().style.display = "none";
+        if (statusEl()) statusEl().textContent = "-";
+        if (updatedEl()) updatedEl().textContent = "";
+        if (messageEl()) messageEl().textContent = message || "";
+        if (queueEl()) queueEl().textContent = "";
+        if (logsEl()) logsEl().innerHTML = "";
+        if (logsCountEl()) logsCountEl().textContent = "";
       }
+
+      document.addEventListener("DOMContentLoaded", async () => {
+        const body = runsBodyEl();
+        if (body) {
+          body.addEventListener("click", (event) => {
+            const button = event.target.closest("[data-action=\"details\"]");
+            if (!button) return;
+            selectRun(button.dataset.runId, true);
+          });
+        }
+
+        const showCompletedToggle = document.getElementById('showCompletedToggle');
+        if (showCompletedToggle) {
+          showCompletedToggle.addEventListener("change", () => loadRuns());
+        }
+
+        const refreshBtn = document.getElementById('refreshRunsBtn');
+        if (refreshBtn) {
+          refreshBtn.addEventListener("click", () => {
+            loadRuns();
+            if (tracker.runId) fetchStatus();
+          });
+        }
+
+        const toggleBtn = document.getElementById('toggleAutoRefreshBtn');
+        if (toggleBtn) {
+          toggleBtn.addEventListener("click", () => setAutoRefresh(!tracker.autoRefresh));
+        }
+
+        const pollInput = document.getElementById('pollInterval');
+        if (pollInput) {
+          pollInput.addEventListener("change", () => {
+            if (tracker.autoRefresh) startAutoRefresh();
+          });
+        }
+
+        const clearUploadsBtn = document.getElementById('clearUploadsBtn');
+        if (clearUploadsBtn) {
+          clearUploadsBtn.addEventListener('click', async () => {
+            if (!isAdminUser) return;
+            const confirmed = window.confirm('Deseja remover todos os uploads armazenados no servidor?');
+            if (!confirmed) return;
+            clearUploadsBtn.disabled = true;
+            try {
+              const response = await fetch('/upload/admin/cleanup', { method: 'DELETE' });
+              if (!response.ok) {
+                const payload = await response.json().catch(() => null);
+                const message = payload?.error || 'Falha ao limpar uploads.';
+                alert(message);
+                return;
+              }
+              const payload = await response.json().catch(() => ({}));
+              alert(`Uploads removidos: ${payload.removed || 0}`);
+            } catch (err) {
+              alert('Erro ao limpar uploads.');
+            } finally {
+              clearUploadsBtn.disabled = false;
+            }
+          });
+        }
+
+        await resolveAuth();
+        loadRuns();
+        startAutoRefresh();
+      });
     </script>
 </body>
 </html>

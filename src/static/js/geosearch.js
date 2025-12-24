@@ -195,7 +195,14 @@ function showSampleDetails(sample) {
 }
 
 // Load soil samples when page loads
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+  if (typeof getAuthStatus === 'function') {
+    const status = await getAuthStatus();
+    if (!status.authenticated) {
+      updateSampleCount(0);
+      return;
+    }
+  }
   loadSoilSamples();
 });
 

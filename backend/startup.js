@@ -46,6 +46,23 @@ async function checkDependencies() {
     } catch (queueErr) {
       console.warn('Queue reset warning:', queueErr.message);
     }
+
+    // Mark stale queued/running pipelines as failed after queue reset
+    try {
+      const message = 'Pipeline interrompido apos reinicio da fila.';
+      const result = await pool.query(
+        `UPDATE microbrsoil_db.pipeline_runs
+         SET status = 'failed',
+             finished_at = CURRENT_TIMESTAMP,
+             error_message = $1
+         WHERE status IN ('queued', 'running')
+           AND finished_at IS NULL`,
+        [message]
+      );
+      console.log(`Stale pipeline runs updated: ${result.rowCount}`);
+    } catch (dbErr) {
+      console.warn('Failed to update stale pipeline runs:', dbErr.message);
+    }
     
     // Test queue functionality
     console.log('Testing queue functionality...');

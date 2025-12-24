@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { paths } = require('../utils/moduleResolver');
 const pool = require(paths.db());
+const { requireAuth, requireAdmin, isAdminRole } = require('../middleware/authenticate');
+const { decryptPassword } = require('../utils/passwordView');
 const isProduction = process.env.NODE_ENV === 'production';
 
 const safeErrorBody = (error, fallbackMessage) => ({
@@ -10,13 +12,51 @@ const safeErrorBody = (error, fallbackMessage) => ({
   ...(isProduction ? {} : { message: error.message })
 });
 
+let passwordViewColumnCached = null;
+
+async function ensurePasswordViewColumn() {
+  if (passwordViewColumnCached === true) return true;
+  try {
+    await pool.query(
+      `ALTER TABLE microbrsoil_db.users
+       ADD COLUMN IF NOT EXISTS password_view TEXT`
+    );
+    passwordViewColumnCached = true;
+    return true;
+  } catch (error) {
+    passwordViewColumnCached = false;
+    return false;
+  }
+}
+
+async function hasPasswordViewColumn() {
+  if (passwordViewColumnCached !== null) return passwordViewColumnCached;
+  try {
+    const result = await pool.query(
+      `SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'microbrsoil_db'
+         AND table_name = 'users'
+         AND column_name = 'password_view'
+       LIMIT 1`
+    );
+    passwordViewColumnCached = result.rowCount > 0;
+  } catch (error) {
+    passwordViewColumnCached = false;
+  }
+  if (!passwordViewColumnCached) {
+    await ensurePasswordViewColumn();
+  }
+  return passwordViewColumnCached;
+}
+
 // Get soil data for index.html and upload.html
-router.get('/soil', async (req, res) => {
+router.get('/soil', requireAuth, async (req, res) => {
   try {
     const { page = 1, limit = 20, search = '', material = '', location = '' } = req.query;
     const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
     const limitNumber = Math.max(1, Math.min(parseInt(limit, 10) || 20, 100));
     const offset = (pageNumber - 1) * limitNumber;
+    const isAdmin = isAdminRole(req.user?.role);
 
     let whereConditions = [];
     let queryParams = [];
@@ -45,6 +85,12 @@ router.get('/soil', async (req, res) => {
       paramCount++;
       whereConditions.push(`s.geo_loc_name ILIKE $${paramCount}`);
       queryParams.push(`%${location}%`);
+    }
+
+    if (!isAdmin) {
+      paramCount++;
+      whereConditions.push(`s.owner_id = $${paramCount}`);
+      queryParams.push(req.user.id);
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
@@ -113,17 +159,25 @@ router.get('/soil', async (req, res) => {
 });
 
 // Get unique values for filters
-router.get('/soil/filters', async (req, res) => {
+router.get('/soil/filters', requireAuth, async (req, res) => {
   try {
+    const isAdmin = isAdminRole(req.user?.role);
+    const queryParams = [];
+    const whereClause = isAdmin ? '' : 'WHERE s.owner_id = $1';
+    if (!isAdmin) {
+      queryParams.push(req.user.id);
+    }
+
     const filtersQuery = `
       SELECT 
         ARRAY_AGG(DISTINCT s.env_medium) FILTER (WHERE s.env_medium IS NOT NULL) as materials,
         ARRAY_AGG(DISTINCT s.geo_loc_name) FILTER (WHERE s.geo_loc_name IS NOT NULL) as locations,
         ARRAY_AGG(DISTINCT s.soil_type) FILTER (WHERE s.soil_type IS NOT NULL) as soil_types
       FROM microbrsoil_db.soil s
+      ${whereClause}
     `;
 
-    const result = await pool.query(filtersQuery);
+    const result = await pool.query(filtersQuery, queryParams);
     
     res.json({
       success: true,
@@ -144,9 +198,10 @@ router.get('/soil/filters', async (req, res) => {
 });
 
 // Get detailed soil data by ID
-router.get('/soil/:id', async (req, res) => {
+router.get('/soil/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
+    const isAdmin = isAdminRole(req.user?.role);
 
     // Validate ID
     const soilId = parseInt(id, 10);
@@ -178,9 +233,11 @@ router.get('/soil/:id', async (req, res) => {
       FROM microbrsoil_db.soil s
       LEFT JOIN microbrsoil_db.users u ON s.owner_id = u.user_id
       WHERE s.soil_id = $1
+      ${isAdmin ? '' : 'AND s.owner_id = $2'}
     `;
 
-    const result = await pool.query(query, [soilId]);
+    const params = isAdmin ? [soilId] : [soilId, req.user.id];
+    const result = await pool.query(query, params);
 
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -223,8 +280,41 @@ router.get('/soil/:id', async (req, res) => {
   }
 });
 
+// Delete soil data by ID (admin only)
+router.delete('/soil/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const soilId = parseInt(id, 10);
+
+    if (isNaN(soilId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid soil ID - must be a number'
+      });
+    }
+
+    const result = await pool.query(
+      'DELETE FROM microbrsoil_db.soil WHERE soil_id = $1 RETURNING soil_id',
+      [soilId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ success: false, error: 'Soil sample not found' });
+    }
+
+    return res.json({ success: true, deleted: result.rows[0] });
+  } catch (error) {
+    req.logger?.error('Error deleting soil', {
+      error: error.message,
+      stack: error.stack,
+      soilId: req.params.id
+    });
+    res.status(500).json(safeErrorBody(error, 'Failed to delete soil sample'));
+  }
+});
+
 // Get user data for register.html
-router.get('/users', async (req, res) => {
+router.get('/users', requireAdmin, async (req, res) => {
   try {
     const { page = 1, limit = 20, search = '' } = req.query;
     const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
@@ -260,11 +350,14 @@ router.get('/users', async (req, res) => {
     paramCount++;
     queryParams.push(offset);
 
+    const includePasswordView = await hasPasswordViewColumn();
+    const passwordSelect = includePasswordView ? 'u.password_view' : "NULL as password_view";
+
     const dataQuery = `
       SELECT 
         u.user_id,
         u.user_email as username,
-        '********* ' as password,
+        ${passwordSelect},
         u.created_at::date as register_date,
         u.last_login_at::date as last_login,
         u.is_active,
@@ -280,7 +373,14 @@ router.get('/users', async (req, res) => {
 
     res.json({
       success: true,
-      data: dataResult.rows,
+      data: dataResult.rows.map((user) => {
+        const decrypted = user.password_view ? decryptPassword(user.password_view) : null;
+        return {
+          ...user,
+          password: decrypted || '',
+          password_view: undefined
+        };
+      }),
       pagination: {
         currentPage: pageNumber,
         totalPages: Math.ceil(totalRecords / limitNumber),
@@ -299,12 +399,13 @@ router.get('/users', async (req, res) => {
 });
 
 // Get pipeline results data
-router.get('/pipeline-results', async (req, res) => {
+router.get('/pipeline-results', requireAuth, async (req, res) => {
   try {
     const { page = 1, limit = 20, status = '', user_id = '' } = req.query;
     const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
     const limitNumber = Math.max(1, Math.min(parseInt(limit, 10) || 20, 100));
     const offset = (pageNumber - 1) * limitNumber;
+    const isAdmin = isAdminRole(req.user?.role);
 
     let whereConditions = [];
     let queryParams = [];
@@ -317,11 +418,12 @@ router.get('/pipeline-results', async (req, res) => {
       queryParams.push(status);
     }
 
-    // Add user filter
-    if (user_id) {
+    // Add user filter (enforced for non-admins)
+    const effectiveUserId = isAdmin ? user_id : req.user?.id;
+    if (effectiveUserId) {
       paramCount++;
       whereConditions.push(`pr.user_id = $${paramCount}`);
-      queryParams.push(user_id);
+      queryParams.push(effectiveUserId);
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
@@ -386,7 +488,7 @@ router.get('/pipeline-results', async (req, res) => {
 });
 
 // Get statistics for dashboard
-router.get('/stats', async (req, res) => {
+router.get('/stats', requireAuth, async (req, res) => {
   try {
     const statsQuery = `
       SELECT 
@@ -414,9 +516,10 @@ router.get('/stats', async (req, res) => {
 });
 
 // Get alpha diversity tests by soil ID
-router.get('/alpha/soil/:soilId', async (req, res) => {
+router.get('/alpha/soil/:soilId', requireAuth, async (req, res) => {
   try {
     const { soilId } = req.params;
+    const isAdmin = isAdminRole(req.user?.role);
     
     // Validate ID
     const id = parseInt(soilId, 10);
@@ -429,19 +532,22 @@ router.get('/alpha/soil/:soilId', async (req, res) => {
 
     const query = `
       SELECT 
-        alpha_id,
-        soil_id,
-        alpha_observed,
-        alpha_shannon,
-        alpha_simpson,
-        alpha_chao1,
-        alpha_goods
+        alpha_tests.alpha_id,
+        alpha_tests.soil_id,
+        alpha_tests.alpha_observed,
+        alpha_tests.alpha_shannon,
+        alpha_tests.alpha_simpson,
+        alpha_tests.alpha_chao1,
+        alpha_tests.alpha_goods
       FROM microbrsoil_db.alpha_tests
-      WHERE soil_id = $1
-      ORDER BY alpha_id DESC
+      ${isAdmin ? '' : 'JOIN microbrsoil_db.soil s ON alpha_tests.soil_id = s.soil_id'}
+      WHERE alpha_tests.soil_id = $1
+      ${isAdmin ? '' : 'AND s.owner_id = $2'}
+      ORDER BY alpha_tests.alpha_id DESC
     `;
 
-    const result = await pool.query(query, [id]);
+    const params = isAdmin ? [id] : [id, req.user.id];
+    const result = await pool.query(query, params);
 
     res.json({
       success: true,
@@ -460,28 +566,32 @@ router.get('/alpha/soil/:soilId', async (req, res) => {
 });
 
 // Get all alpha diversity tests (with optional pagination)
-router.get('/alpha', async (req, res) => {
+router.get('/alpha', requireAuth, async (req, res) => {
   try {
     const { page = 1, limit = 100 } = req.query;
     const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
     const limitNumber = Math.max(1, Math.min(parseInt(limit, 10) || 100, 500));
     const offset = (pageNumber - 1) * limitNumber;
+    const isAdmin = isAdminRole(req.user?.role);
 
     const query = `
       SELECT 
-        alpha_id,
-        soil_id,
-        alpha_observed,
-        alpha_shannon,
-        alpha_simpson,
-        alpha_chao1,
-        alpha_goods
+        alpha_tests.alpha_id,
+        alpha_tests.soil_id,
+        alpha_tests.alpha_observed,
+        alpha_tests.alpha_shannon,
+        alpha_tests.alpha_simpson,
+        alpha_tests.alpha_chao1,
+        alpha_tests.alpha_goods
       FROM microbrsoil_db.alpha_tests
-      ORDER BY alpha_id DESC
+      ${isAdmin ? '' : 'JOIN microbrsoil_db.soil s ON alpha_tests.soil_id = s.soil_id'}
+      ${isAdmin ? '' : 'WHERE s.owner_id = $3'}
+      ORDER BY alpha_tests.alpha_id DESC
       LIMIT $1 OFFSET $2
     `;
 
-    const result = await pool.query(query, [limitNumber, offset]);
+    const params = isAdmin ? [limitNumber, offset] : [limitNumber, offset, req.user.id];
+    const result = await pool.query(query, params);
 
     res.json({
       success: true,
@@ -499,9 +609,10 @@ router.get('/alpha', async (req, res) => {
 });
 
 // Get samples by soil ID
-router.get('/samples/soil/:soilId', async (req, res) => {
+router.get('/samples/soil/:soilId', requireAuth, async (req, res) => {
   try {
     const { soilId } = req.params;
+    const isAdmin = isAdminRole(req.user?.role);
     
     // Validate ID
     const id = parseInt(soilId, 10);
@@ -514,24 +625,27 @@ router.get('/samples/soil/:soilId', async (req, res) => {
 
     const query = `
       SELECT 
-        sample_id,
-        soil_id,
-        plant_sequence,
-        tax_kingdom,
-        tax_phylum,
-        tax_class,
-        tax_order,
-        tax_family,
-        tax_genus,
-        tax_species,
-        otu_test1,
-        otu_test2
+        sample.sample_id,
+        sample.soil_id,
+        sample.plant_sequence,
+        sample.tax_kingdom,
+        sample.tax_phylum,
+        sample.tax_class,
+        sample.tax_order,
+        sample.tax_family,
+        sample.tax_genus,
+        sample.tax_species,
+        sample.otu_test1,
+        sample.otu_test2
       FROM microbrsoil_db.sample
-      WHERE soil_id = $1
-      ORDER BY sample_id ASC
+      ${isAdmin ? '' : 'JOIN microbrsoil_db.soil s ON sample.soil_id = s.soil_id'}
+      WHERE sample.soil_id = $1
+      ${isAdmin ? '' : 'AND s.owner_id = $2'}
+      ORDER BY sample.sample_id ASC
     `;
 
-    const result = await pool.query(query, [id]);
+    const params = isAdmin ? [id] : [id, req.user.id];
+    const result = await pool.query(query, params);
 
     res.json({
       success: true,
@@ -551,9 +665,10 @@ router.get('/samples/soil/:soilId', async (req, res) => {
 });
 
 // Get pipeline runs by soil ID
-router.get('/pipeline-runs/soil/:soilId', async (req, res) => {
+router.get('/pipeline-runs/soil/:soilId', requireAuth, async (req, res) => {
   try {
     const { soilId } = req.params;
+    const isAdmin = isAdminRole(req.user?.role);
     
     // Validate ID
     const id = parseInt(soilId, 10);
@@ -575,18 +690,23 @@ router.get('/pipeline-runs/soil/:soilId', async (req, res) => {
         pr.finished_at,
         pr.error_message,
         pr.logs,
+        u.user_email as user_email,
         pres.alpha_diversity_file,
         pres.otu_table_file,
         pres.taxonomy_file,
         pres.metadata_file,
         pres.processed_at
       FROM microbrsoil_db.pipeline_runs pr
+      LEFT JOIN microbrsoil_db.users u ON pr.user_id = u.user_id
       LEFT JOIN microbrsoil_db.pipeline_results pres ON pr.run_id = pres.run_id
+      LEFT JOIN microbrsoil_db.soil s ON pres.soil_id = s.soil_id
       WHERE pres.soil_id = $1
+      ${isAdmin ? '' : 'AND s.owner_id = $2'}
       ORDER BY pr.created_at DESC
     `;
 
-    const result = await pool.query(query, [id]);
+    const params = isAdmin ? [id] : [id, req.user.id];
+    const result = await pool.query(query, params);
 
     res.json({
       success: true,

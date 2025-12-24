@@ -3,6 +3,9 @@ const router = express.Router();
 const { paths } = require('../utils/moduleResolver');
 const { getSoil } = require(paths.soilFunctions());
 const { apiLogger } = require('../utils/logger');
+const { requireAuth } = require('../middleware/authenticate');
+
+router.use(requireAuth);
 
 // Endpoint to get all soil samples for geosearch map
 router.get('/', async (req, res) => {

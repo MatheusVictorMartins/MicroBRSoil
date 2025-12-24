@@ -14,8 +14,12 @@ const ADMIN_ROLE_VALUES = ['admin', 'ADMIN', 1, '1'];
 function wantsJson(req) {
   const accept = req.headers.accept || '';
   const contentType = req.headers['content-type'] || '';
+  const originalUrl = req.originalUrl || '';
+  const baseUrl = req.baseUrl || '';
   return (
     req.path.startsWith('/api/') ||
+    baseUrl.startsWith('/api/') ||
+    originalUrl.includes('/api/') ||
     accept.includes('application/json') ||
     contentType.includes('application/json') ||
     req.xhr === true

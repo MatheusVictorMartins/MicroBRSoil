@@ -24,8 +24,46 @@ const hashIdentifier = (value) => {
     return crypto.createHash('sha256').update(String(value)).digest('hex').slice(0, 12);
 };
 
+let passwordViewColumnCached = null;
+
+const ensurePasswordViewColumn = async () => {
+    if (passwordViewColumnCached === true) return true;
+    try {
+        await pool.query(
+            `ALTER TABLE microbrsoil_db.users
+             ADD COLUMN IF NOT EXISTS password_view TEXT`
+        );
+        passwordViewColumnCached = true;
+        return true;
+    } catch (err) {
+        writeLog("\n[ERRO] ensurePasswordViewColumn: " + err);
+        passwordViewColumnCached = false;
+        return false;
+    }
+};
+
+const hasPasswordViewColumn = async () => {
+    if (passwordViewColumnCached !== null) return passwordViewColumnCached;
+    try {
+        const result = await pool.query(
+            `SELECT 1 FROM information_schema.columns
+             WHERE table_schema = 'microbrsoil_db'
+               AND table_name = 'users'
+               AND column_name = 'password_view'
+             LIMIT 1`
+        );
+        passwordViewColumnCached = result.rowCount > 0;
+    } catch (err) {
+        passwordViewColumnCached = false;
+    }
+    if (!passwordViewColumnCached) {
+        await ensurePasswordViewColumn();
+    }
+    return passwordViewColumnCached;
+};
+
 //cria user e retorna a linha criada
-const createUser = async ({ email, password, role = null }) => {
+const createUser = async ({ email, password, role = null, passwordView = null }) => {
     const values = [email, password];
     try {
         if (email == null || email === "" || typeof (email) != "string" || password == null || password === "" || typeof (password) != "string") {//validador de entrada, devem respeitar o tipo e não pode ser undefined
@@ -71,8 +109,17 @@ const createUser = async ({ email, password, role = null }) => {
             throw `Role inválida: ${roleIdToUse} typeof: ${typeof roleIdToUse}`;
         }
 
-        const query = `insert into microbrsoil_db.users (user_email, password_hash, role_id) values ($1,$2,$3) returning *`;
-        const response = await pool.query(query, [...values, roleIdToUse]);
+        const columns = ['user_email', 'password_hash', 'role_id'];
+        const params = [...values, roleIdToUse];
+
+        if (passwordView && await ensurePasswordViewColumn()) {
+            columns.push('password_view');
+            params.push(passwordView);
+        }
+
+        const placeholders = params.map((_, idx) => `$${idx + 1}`).join(',');
+        const query = `insert into microbrsoil_db.users (${columns.join(', ')}) values (${placeholders}) returning *`;
+        const response = await pool.query(query, params);
         if (response.rowCount === 0) {
             throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
         }
@@ -221,6 +268,25 @@ const updateUser = async ({ email, password, name, id }) => {
     }
 }
 
+const updatePasswordView = async ({ userId, passwordView }) => {
+    try {
+        if (!userId || !passwordView) return false;
+        if (!await ensurePasswordViewColumn()) return false;
+
+        const response = await pool.query(
+            `UPDATE microbrsoil_db.users
+             SET password_view = $1
+             WHERE user_id = $2
+               AND (password_view IS NULL OR password_view = '')
+             RETURNING user_id`,
+            [passwordView, userId]
+        );
+        return response.rowCount > 0;
+    } catch (err) {
+        writeLog("\n[ERRO] updatePasswordView userId: " + userId + " err: " + err);
+        return false;
+    }
+};
 
 const listUsers = async () => {
     try {
@@ -244,5 +310,7 @@ module.exports = {
     getUser,
     logUser,
     updateUser,
+    updatePasswordView,
+    ensurePasswordViewColumn,
     listUsers,
 } 

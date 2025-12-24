@@ -9,7 +9,7 @@ const fs = require('fs');
 const { requireAuth, isAdminRole } = require('../middleware/authenticate');
 
 // Use moduleResolver so the same code works locally and in Docker
-const { getPipelineRun, getPipelineRunsByUser, getPipelineResults } = require(paths.pipelineFunctions());
+const { getPipelineRun, getPipelineRunsByUser, getPipelineRunsAll, getPipelineResults } = require(paths.pipelineFunctions());
 const isProduction = process.env.NODE_ENV === 'production';
 
 // Get pipeline run status
@@ -101,11 +101,22 @@ router.get('/results/:runId', requireAuth, async (req, res) => {
 router.get('/runs', requireAuth, async (req, res) => {
   try {
     const userId = req.user?.id;
+    const limit = Math.max(1, Math.min(100, parseInt(req.query.limit, 10) || 20));
     if (!userId) {
       return res.status(401).json({ success: false, error: 'User not authenticated' });
     }
-    
-    const runs = await getPipelineRunsByUser(userId);
+
+    let runs = [];
+    if (isAdminRole(req.user?.role)) {
+      runs = await getPipelineRunsAll(limit);
+    } else {
+      runs = await getPipelineRunsByUser(userId);
+    }
+
+    if (Array.isArray(runs) && runs.length > limit) {
+      runs = runs.slice(0, limit);
+    }
+
     res.json({ success: true, runs });
   } catch (error) {
     console.error('Error getting user pipeline runs:', error);

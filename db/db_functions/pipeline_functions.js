@@ -71,13 +71,41 @@ const getPipelineRun = async (runId) => {
 const getPipelineRunsByUser = async (userId) => {
     try {
         const query = `
-            SELECT * FROM microbrsoil_db.pipeline_runs 
-            WHERE user_id = $1 
-            ORDER BY created_at DESC`;
+            SELECT 
+                pr.*,
+                u.user_email as user_email
+            FROM microbrsoil_db.pipeline_runs pr
+            LEFT JOIN microbrsoil_db.users u ON pr.user_id = u.user_id
+            WHERE pr.user_id = $1 
+            ORDER BY pr.created_at DESC`;
         const response = await pool.query(query, [userId]);
         return response.rows;
     } catch (err) {
         writeLog("\n[ERRO] Buscar pipeline runs por usuário: " + err);
+        throw err;
+    }
+};
+
+// Get all pipeline runs (admin only)
+const getPipelineRunsAll = async (limit = null) => {
+    try {
+        const safeLimit = Number.isInteger(limit) && limit > 0 ? limit : null;
+        let query = `
+            SELECT 
+                pr.*,
+                u.user_email as user_email
+            FROM microbrsoil_db.pipeline_runs pr
+            LEFT JOIN microbrsoil_db.users u ON pr.user_id = u.user_id
+            ORDER BY pr.created_at DESC`;
+        const values = [];
+        if (safeLimit) {
+            query += ` LIMIT $1`;
+            values.push(safeLimit);
+        }
+        const response = await pool.query(query, values);
+        return response.rows;
+    } catch (err) {
+        writeLog("\n[ERRO] Buscar pipeline runs (admin): " + err);
         throw err;
     }
 };
@@ -167,6 +195,7 @@ module.exports = {
     updatePipelineRunStatus,
     getPipelineRun,
     getPipelineRunsByUser,
+    getPipelineRunsAll,
     createPipelineResult,
     getPipelineResults
 };
