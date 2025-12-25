@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>microBRsoil</title>
+    <!--
+    Fala pessoal, o motivo de eu estar utilizando o bootstrap minimal é que eu não vejo muito motivo para utilizar
+    a versão mais "robusta" que o bootstrap possui, muito menos toda a pasta de módulos dele, entã optei pelo minimal que
+    tira alguns whitespaces, deixa uns comandos mais simples e diminui alguns MBs do projeto, deixando ele mais leve.
+
+    *Um adendo é sobre as versões CDN(CSS e JS) e Locais, onde optei por deixar a local pois caso tenha algum problema de conexão enquanto
+    eu ou alguém do grupo estiver mexendo com o front-end no geral, o bootstrap continue funcionando sem problemas. Caso alguém ache melhor
+    e tenha algum motivo que seja realmente benéfico utilizar o CDN ao invés do local(que particularmente eu não consigo ver nenhum)
+    por favor me avisa que a gente discute e muda isso. Mas creio eu que o local está de bom tamanho e não vejo algum malefício
+    em utilizar ele a não ser facilidade de instalação(que é 100% porque não precisa instalar nada :P), mas posso estar errado.
+    Mas caso queira utilizar a versão CDN(Tanto CSS quanto JS), ela já está pronta no projeto, basta comentar a versão local e 
+    descomentar a versão CDN, mas se for fazer isso por favor avise o grupo antes de fazer isso.
+
+    Ass.: Matheus(non-regular-bootstrapuser-sorry)
+    -->
+
+    <!--#region BOOTSTRAP CSS IMPORT-->
+    <!--===================================================================================================================================-->
+    <!--BOOTSTRAP CDN CSS IMPORT *USE IF YOU NEED IT; **COMMENT THE BOOTSTRAP LOCAL CSS IMPORT BELOW BEFORE USE CDN-->
+    <!--<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-SgOJa3DmI69IUzQ2PVdRZhwQ+dy64/BUtbMJw1MZ8t5HZApcHrRKUc4W0kG879m7" crossorigin="anonymous">-->
+
+    <!--BOOTSTRAP MINIMAL LOCAL CSS IMPORT-->
+    <link rel="stylesheet" href="../static/css/bootstrap.min.css">
+    <!--===================================================================================================================================-->
+    <!--#endregion-->
+    
+    <!--LOCAL CSS IMPORT-->
+    <link rel="stylesheet" href="../static/css/reset.css">
+    <link rel="stylesheet" href="../static/css/style.css">
+    <link rel="stylesheet" href="../static/css/header.css">
+    <link rel="stylesheet" href="../static/css/footer.css">
+    <link rel="stylesheet" href="../static/css/help.css">
+    <link rel="stylesheet" href="../static/css/left_menu.css">
+    <!--FONT IMPORT-->
+    <!--INTER-->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap" rel="stylesheet">
+    <!--TIENNE-->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tienne:wght@400;700;900&display=swap" rel="stylesheet">
+    <!--ICONS IMPORT-->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:wght@300" rel="stylesheet" />
+  </head>
+  
+<body>
+  <!--HEADER PLACEHOLDER-->
+  <div id="header-placeholder"></div>
+  
+  <!--#region LAYOUT-->
+  <div class="layout">
+    <!--LEFT MENU PLACEHOLDER-->
+    <div id="leftmenu-placeholder"></div>
+    <!--#region MAIN -->
+    <main class="main-content">
+    <h1 id="-microbrsoils-a-gateway-to-understanding-soil-quality-in-brazil">🌱 MicroBRSoils — A Gateway to Understanding Soil Quality in Brazil</h1>
+<p>MicroBRSoils is a living, expanding database designed to reveal the biological complexity beneath Brazilian soils. Built within the scope of the CNPq-funded <em>microBRsoil</em> project, it aggregates <strong>physical, chemical, enzymatic, and microbiome data</strong> to create the foundations of a national <strong>Intelligent Soil Quality Index (ISQI)</strong>.<br>Our long-term vision is to transform raw metataxonomic and metagenomic data into <strong>actionable, AI-driven insights for agriculture</strong>, supporting sustainable crop production across all Brazilian biomes.  </p>
+<hr>
+<h1 id="-why-microbrsoils-">🔎 Why MicroBRSoils?</h1>
+<p>Healthy soils underpin resilient agroecosystems. Microbes regulate nutrient cycling, influence plant health, and respond rapidly to environmental and management changes. Yet <strong>Brazil still lacks a unified, accessible, microbiome-based soil quality reference</strong>.</p>
+<p>MicroBRSoils fills this gap by offering:</p>
+<ul>
+<li><strong>A curated, high-quality reference dataset</strong> of Brazilian agricultural and native soils.  </li>
+<li><strong>AI-ready, harmonized metadata</strong> following best practices of the Brazilian Microbiome Project.  </li>
+<li><strong>Simple tools for exploration</strong>, comparison, and interpretation of your own soil microbiome data.  </li>
+<li><strong>A foundation for precision agriculture</strong>, enabling early detection of soil degradation and more informed management decisions.  </li>
+</ul>
+<p>Initially restricted to internal samples, the platform is being built to soon allow <strong>upload and automated analysis</strong> of external microbial datasets, supporting farmers, researchers, extensionists, and industry partners.</p>
+<hr>
+<h1 id="-creators-core-development-team">👥 Creators &amp; Core Development Team</h1>
+<p>MicroBRSoils is developed collaboratively by experts in soil microbiology, bioinformatics, and artificial intelligence:</p>
+<ul>
+<li><strong>Dr. Victor Pylro</strong> — Federal University of Lavras (UFLA), Brazil  </li>
+<li><strong>Dr. Daniel Morais</strong> — UiT The Arctic University of Norway, Norway  </li>
+<li><strong>Dr. Fernando Dini Andreote</strong> — ESALQ/USP, Brazil  </li>
+<li><strong>Dra. Vanessa Nessner Kavamura</strong> — Rothamsted Research, UK  </li>
+<li><strong>Dr. Robson Parmezan Bonidia</strong> — UTFPR, Brazil  </li>
+</ul>
+<p>These researchers also contribute to the broader <em>microBRsoil</em> initiative, which includes additional international partners and lab infrastructure.</p>
+<hr>
+<h1 id="-sponsors-institutional-support">💰 Sponsors &amp; Institutional Support</h1>
+<p>MicroBRSoils is possible thanks to a combination of <strong>public funding</strong>, <strong>scientific collaboration</strong>, and <strong>private-sector innovation</strong>:</p>
+<h3 id="-public-funding-"><strong>Public Funding</strong></h3>
+<ul>
+<li><strong>CNPq – Conselho Nacional de Desenvolvimento Científico e Tecnológico (Brazil)</strong>  </li>
+<li><strong>INCT – Soil Biodiversity (CNPq/CAPES/FAPEMIG)</strong>  </li>
+</ul>
+<h3 id="-private-sector-"><strong>Private Sector</strong></h3>
+<ul>
+<li><strong>Andrios Assessoria em Microbiologia do Solo</strong>  </li>
+<li><strong>Biome Solutions – Microbial Analytics &amp; Biocontrol</strong>  </li>
+</ul>
+<p>Their support ensures an affordable and scalable platform, without the need for costly user fees during the initial rollout.</p>
+<hr>
+<h1 id="-how-to-use-microbrsoils">🚀 How to Use MicroBRSoils</h1>
+<p>MicroBRSoils was designed to be intuitive and scientifically rigorous, enabling users to explore and contextualize the microbial composition of Brazilian soils.</p>
+<p>Brazil hosts some of the most diverse agroecosystems on Earth. Here you can explore microbial communities across crops, regions, and management systems — from <strong>coffee plantations in Cerrado and Mata Atlântica</strong> to adjacent native vegetation reference sites, as described in the project design.</p>
+<hr>
+<h2 id="-1-taxonomic-search-">🔍 <strong>1. Taxonomic Search</strong></h2>
+<p>Filter samples by <strong>phylum, class, family, genus, or species</strong>.<br>Use this tool to answer questions such as:</p>
+<ul>
+<li><em>Where is a given taxon abundant?</em>  </li>
+<li><em>Does it respond to fertilization, pH, or management practices?</em>  </li>
+<li><em>How does it differ between agricultural and native soils?</em></li>
+</ul>
+<p>You may also run <strong>sequence similarity searches</strong> (≥98% identity) to find samples containing sequences similar to your own.</p>
+<hr>
+<h2 id="-2-geo-search-metadata-exploration-">🌎 <strong>2. Geo-Search &amp; Metadata Exploration</strong></h2>
+<p>Visualize sampling locations on an interactive map.<br>You can:</p>
+<ul>
+<li>Select samples by biome, crop, soil type, or productivity class.  </li>
+<li>Download <strong>raw FASTQ</strong>, metadata, and processed taxonomic profiles.  </li>
+<li>Compare community patterns between managed and conserved areas.</li>
+</ul>
+<p>This feature draws directly on the project&#39;s standardized sampling design across biomes and productivity gradients.</p>
+<hr>
+<h2 id="-3-sample-upload-coming-soon-">📤 <strong>3. Sample Upload (Coming Soon)</strong></h2>
+<p>External sample submission will be enabled after the platform’s first stable release.</p>
+<p>Registered users will be able to upload their own <strong>Illumina</strong> or <strong>IonTorrent</strong> metabarcoding datasets and receive:</p>
+<ul>
+<li>✔ Automated quality filtering and taxonomic profiling  </li>
+<li>✔ Alpha diversity metrics  </li>
+<li>✔ Beta diversity comparison against reference soils  </li>
+<li>✔ Soil Quality Index estimation (beta version)  </li>
+<li>✔ Access to a harmonized metadata template (TXT format)</li>
+</ul>
+<h3 id="-upload-requirements-"><strong>Upload Requirements</strong></h3>
+<ul>
+<li><strong>Demultiplexed FASTQ files</strong> (single or paired-end)  </li>
+<li><strong>Metadata file (.txt)</strong> following MicroBRSoils guidelines  </li>
+<li>Target genes: <strong>16S rRNA</strong>, <strong>ITS</strong>, and (future releases) <strong>shotgun metagenomics</strong>  </li>
+</ul>
+<p>This ensures compatibility with the analytical workflows described in the project (e.g., 515F/806R and ITS1F/ITS2 markers).</p>
+<hr>
+<h2 id="-4-interpretation-insights-">📊 <strong>4. Interpretation &amp; Insights</strong></h2>
+<p>Once processed, users can navigate:</p>
+<ul>
+<li><strong>Community composition plots</strong>  </li>
+<li><strong>Diversity indices</strong>  </li>
+<li><strong>Relative abundance heatmaps</strong>  </li>
+<li><strong>Environmental correlations</strong> (pH, nutrients, texture, enzymatic activity)  </li>
+<li><strong>Comparisons with native soils</strong> as ecological baselines  </li>
+</ul>
+<p>In future iterations, AI models trained on the <em>microBRsoil</em> dataset will provide:</p>
+<ul>
+<li><strong>Predictive soil quality scores</strong>  </li>
+<li><strong>Management sensitivity alerts</strong>  </li>
+<li><strong>Interpretability dashboards</strong>  </li>
+<li><strong>Prescriptive recommendations based on microbiome patterns</strong></li>
+</ul>
+<hr>
+<h1 id="-technology-behind-microbrsoils">🔧 Technology Behind MicroBRSoils</h1>
+<p>The database integrates:</p>
+<ul>
+<li>Relational SQL backend  </li>
+<li>Python-based analytics  </li>
+<li>Web interface in PHP &amp; modern frameworks  </li>
+<li>Pipelines aligned with BMPOS and international microbiome standards  </li>
+<li>AI models for classification, regression, and pattern detection  </li>
+</ul>
+<p>This technical foundation matches the infrastructure and methods described in the project (webserver, HPC resources, multi-omics integration, machine learning modeling).</p>
+<hr>
+<h1 id="-our-commitment">🤝 Our Commitment</h1>
+<p>MicroBRSoils is built to be:</p>
+<ul>
+<li><strong>Scientifically robust</strong>  </li>
+<li><strong>Accessible and affordable</strong>  </li>
+<li><strong>Continuously updated</strong>  </li>
+<li><strong>Open for collaboration</strong>  </li>
+<li><strong>Transparent and guided by Brazilian biodiversity regulations</strong> (SISGen-compliant)</li>
+</ul>
+<p>Our goal is simple:<br><strong>Enable Brazil and the world to understand soil health through the lens of microbial ecology and artificial intelligence.</strong></p>
+<hr>
+<h1 id="-contact-collaboration">📫 Contact &amp; Collaboration</h1>
+<p>Researchers, companies, and producers interested in collaboration or early access are welcome to get in touch.  </p>
+<ul>
+<li>Dr. Victor Pylro - MicroBRSoil Coordinator
+Email: victor.pylro@ufla.br</li>
+</ul>
+</main>
+    <!--#endregion-->
+  </div>
+  <!--#endregion-->
+
+  <!--#region HEADER INCLUDE-->
+    <script src="../static/js/include_elements.js"></script>
+  <!--#endregion-->
+  <!--#region BOOTSTRAP JS LINK-->
+    <script src="../static/js/button.js"></script>
+    <!--===================================================================================================================================-->
+    <!--BOOTSTRAP CDN JAVASCRIPT IMPORT *USE IF YOU NEED IT; **COMMENT THE "BOOTSTRAP LOCAL JAVASCRIPT IMPORT" BELOW BEFORE USE CDN-->
+    <!--
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js" integrity="sha384-k6d4wzSIapyDyv1kpU366/PK5hCdSbCRGRCMv+eplOQJWyd1fbcAu9OCUj5zNLiq" crossorigin="anonymous"></script>
+    -->
+
+    <!--BOOSTRAP MINIMAL LOCAL JAVASCRIPT IMPORT-->
+    <script src="../static/js/bootstrap.bundle.min.js"></script>
+    <!--===================================================================================================================================-->
+  <!--#endregion-->
+</body>
+</html>
