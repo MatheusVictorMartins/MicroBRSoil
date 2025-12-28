@@ -134,7 +134,7 @@ run_dada2_pipeline <- function(path1,
   barcode_ids  <- as.character(id(barcodes))
   barcode_seqs <- as.character(sread(barcodes))
 
-  # limpa saídas
+  # clear outputs
   for (sid in barcode_ids) {
     out_fastq <- file.path(demux_path, paste0(sid, ".fastq.gz"))
     if (file.exists(out_fastq)) file.remove(out_fastq)
@@ -490,7 +490,7 @@ run_dada2_pipeline <- function(path1,
 
   status <- list(
     status = "success",
-    message = "Pipeline concluido com sucesso",
+    message = "Pipeline completed successfully",
     pipeline_type = type,
     timestamp = Sys.time(),
     files_created = c(
@@ -510,5 +510,5 @@ run_dada2_pipeline <- function(path1,
 
   cat("Output directory:", result_path, "\n")
   cat("========================================\n\n")
-  return("Pipeline concluido com sucesso.")
+  return("Pipeline completed successfully.")
 }

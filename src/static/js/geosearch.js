@@ -2,7 +2,7 @@
 const map = L.map('map').setView([-15.5, -50], 5);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '© OpenStreetMap contributors'
+  attribution: 'OpenStreetMap contributors'
 }).addTo(map);
 
 const markers = L.markerClusterGroup();
@@ -61,7 +61,7 @@ async function loadSoilSamples() {
             ${sample.currentVegetation ? `<strong>Vegetation:</strong> ${sample.currentVegetation}<br/>` : ''}
           </div>
           <div class="popup-actions">
-            <button class="btn btn-primary btn-sm" onclick="verDetalhes('${sample.id}')">Ver detalhes</button>
+            <button class="btn btn-primary btn-sm" onclick="viewDetails('${sample.id}')">View details</button>
           </div>
         </div>
       `;
@@ -90,7 +90,7 @@ function updateSampleCount(count) {
 }
 
 // Function to view sample details
-window.verDetalhes = async function(id) {
+window.viewDetails = async function(id) {
   try {
     const response = await fetch(`/api/geosearch/${id}`);
     const result = await response.json();
@@ -157,7 +157,7 @@ function showSampleDetails(sample) {
                   <tr><td><strong>Current Land Use:</strong></td><td>${sample.currentLandUse || 'N/A'}</td></tr>
                   <tr><td><strong>Current Vegetation:</strong></td><td>${sample.currentVegetation || 'N/A'}</td></tr>
                   <tr><td><strong>Previous Land Use:</strong></td><td>${sample.previousLandUse || 'N/A'}</td></tr>
-                  <tr><td><strong>Climate - Annual Temp:</strong></td><td>${sample.annualTemperature !== null ? sample.annualTemperature.toFixed(1) + '°C' : 'N/A'}</td></tr>
+                  <tr><td><strong>Climate - Annual Temp:</strong></td><td>${sample.annualTemperature !== null ? sample.annualTemperature.toFixed(1) + ' C' : 'N/A'}</td></tr>
                   <tr><td><strong>Climate - Annual Precip:</strong></td><td>${sample.annualPrecipitation !== null ? sample.annualPrecipitation.toFixed(1) + 'mm' : 'N/A'}</td></tr>
                 </table>
               </div>

@@ -1,6 +1,16 @@
+(() => {
 /**
  * Dynamic content loader for index.html (soil data)
  */
+
+const APP_CONSTANTS = window.APP_CONSTANTS || {};
+const ROUTES = APP_CONSTANTS.ROUTES || {};
+const MESSAGES = APP_CONSTANTS.MESSAGES || {};
+const TABLE_BASE = ROUTES.TABLE_BASE || '/api/table';
+const TABLE_SOIL_ROUTE = ROUTES.TABLE_SOIL || `${TABLE_BASE}/soil`;
+const TABLE_SOIL_FILTERS_ROUTE = ROUTES.TABLE_SOIL_FILTERS || `${TABLE_BASE}/soil/filters`;
+const STATS_ROUTE = ROUTES.PIPELINE_STATS || `${TABLE_BASE}/stats`;
+const LOADING_MESSAGE = MESSAGES.LOADING || 'Loading...';
 
 class SoilDataManager {
     constructor() {
@@ -18,6 +28,7 @@ class SoilDataManager {
     async init() {
         await this.refreshAuthState();
         this.configureTableHeader();
+        await this.loadAdminStats();
         if (this.authState.authenticated) {
             await this.loadFilters();
             await this.loadSoilData();
@@ -108,15 +119,83 @@ class SoilDataManager {
         const columnCount = headerCells.length || 5;
         tableBody.innerHTML = `
             <tr>
-                <td colspan="${columnCount}" class="text-center">Loading...</td>
+                <td colspan="${columnCount}" class="text-center">${LOADING_MESSAGE}</td>
             </tr>
         `;
+    }
+
+    formatDuration(ms) {
+        const value = Number(ms);
+        if (!Number.isFinite(value) || value <= 0) return '-';
+        const totalSeconds = Math.round(value / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        if (minutes > 0) return `${minutes}m ${seconds}s`;
+        return `${seconds}s`;
+    }
+
+    formatBytes(bytes) {
+        const value = Number(bytes);
+        if (!Number.isFinite(value) || value <= 0) return '0 B';
+        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        let size = value;
+        let unitIndex = 0;
+        while (size >= 1024 && unitIndex < units.length - 1) {
+            size /= 1024;
+            unitIndex += 1;
+        }
+        return `${size.toFixed(1)} ${units[unitIndex]}`;
+    }
+
+    async loadAdminStats() {
+        const panel = document.getElementById('adminDashboard');
+        if (!panel) return;
+
+        panel.classList.toggle('d-none', !this.authState.isAdmin);
+        if (!this.authState.isAdmin) return;
+
+        const setText = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = value;
+        };
+
+        setText('adminQueuedCount', LOADING_MESSAGE);
+        setText('adminRunningCount', LOADING_MESSAGE);
+        setText('adminFailedCount', LOADING_MESSAGE);
+        setText('adminAvgDuration', LOADING_MESSAGE);
+        setText('adminTotalUpload', LOADING_MESSAGE);
+
+        try {
+            const response = await fetch(STATS_ROUTE);
+            if (response.status === 401 || response.status === 403) {
+                panel.classList.add('d-none');
+                return;
+            }
+
+            const payload = await response.json();
+            const stats = payload.stats || {};
+            setText('adminQueuedCount', stats.queued_pipelines ?? 0);
+            setText('adminRunningCount', stats.running_pipelines ?? 0);
+            setText('adminFailedCount', stats.failed_pipelines ?? 0);
+            setText('adminAvgDuration', this.formatDuration(stats.avg_pipeline_duration_ms));
+            setText('adminTotalUpload', this.formatBytes(stats.total_upload_bytes));
+
+            const updated = document.getElementById('adminStatsUpdated');
+            if (updated) {
+                updated.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
+            }
+        } catch (error) {
+            const updated = document.getElementById('adminStatsUpdated');
+            if (updated) {
+                updated.textContent = 'Stats unavailable';
+            }
+        }
     }
 
     async loadFilters() {
         if (!this.authState.authenticated) return;
         try {
-            const response = await fetch('/api/table/soil/filters');
+            const response = await fetch(TABLE_SOIL_FILTERS_ROUTE);
             if (response.status === 401 || response.status === 403) {
                 this.renderBlankTable();
                 return;
@@ -200,7 +279,7 @@ class SoilDataManager {
                 ...this.filters
             });
 
-            const response = await fetch(`/api/table/soil?${queryParams}`);
+            const response = await fetch(`${TABLE_SOIL_ROUTE}?${queryParams}`);
             if (response.status === 401 || response.status === 403) {
                 this.renderBlankTable();
                 return;
@@ -341,7 +420,7 @@ class SoilDataManager {
 
     async showSoilDetails(soilId) {
         try {
-            const response = await fetch(`/api/table/soil/${soilId}`);
+            const response = await fetch(`${TABLE_SOIL_ROUTE}/${soilId}`);
             const data = await response.json();
             
             if (data.success) {
@@ -481,8 +560,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Check if we're on the index page
     if (document.querySelector('.dashboard-table')) {
         soilManager = new SoilDataManager();
+        window.soilManager = soilManager;
     }
 });
-
-// Export for global access
-window.soilManager = soilManager;
+})();

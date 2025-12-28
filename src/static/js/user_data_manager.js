@@ -98,8 +98,9 @@ class UserDataManager {
 
     renderPagination(pagination) {
         // Create pagination controls
-        const tableContainer = document.querySelector('.register-users-table').parentElement;
-        let paginationDiv = document.querySelector('.user-pagination-controls');
+        const tableContainer = document.querySelector('.register-users-table');
+        if (!tableContainer) return;
+        let paginationDiv = tableContainer.querySelector('.user-pagination-controls');
         
         if (!paginationDiv) {
             paginationDiv = document.createElement('div');

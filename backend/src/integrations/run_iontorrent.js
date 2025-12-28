@@ -30,7 +30,7 @@ async function checkRPackages() {
   }
 }
 
-async function runIonTorrentPipeline(fastqPath, outputDir = null) {
+async function runIonTorrentPipeline(fastqPath, outputDir = null, barcodesPath = null) {
   try {
     console.log('Starting IonTorrent pipeline...');
     console.log(`Input: ${fastqPath}`);
@@ -51,12 +51,17 @@ async function runIonTorrentPipeline(fastqPath, outputDir = null) {
 
     console.log(`📜 R Script: ${scriptPath}`);
 
+    const defaultBarcodes = process.env.IONTORRENT_BARCODES_PATH || "/app/pipeline-r/barcodes/barcodes_16S.fa";
+    const resolvedBarcodes = barcodesPath || defaultBarcodes;
+
+    console.log(`Barcodes: ${resolvedBarcodes}`);
+
     const result = await R.callMethod(
       scriptPath,
       "run_dada2_pipeline",
       {
         path1: fastq,
-        barcodes_path: "/app/pipeline-r/barcodes/barcodes_16S.fa",
+        barcodes_path: resolvedBarcodes,
         outdir: outputDir || "/app/results",
         type: "iontorrent"
       }

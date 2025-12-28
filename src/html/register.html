@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -49,9 +49,9 @@
                     <form action="/auth/register" method="POST" class="login-form was-validated" novalidate>
                         <label for="temail" class="text-input-label">EMAIL</label>
                         <input type="email" name="temail" id="temail" class="text-input register-text-input" placeholder="Enter email" autocomplete="email">
-                        <label for="tpassword" class="text-input-label">SENHA</label>
+                        <label for="tpassword" class="text-input-label">PASSWORD</label>
                         <input type="password" name="tpassword" id="tpassword" class="text-input register-text-input" placeholder="Enter password" autocomplete="new-password">
-                        <label for="tconfpassword" class="text-input-label">CONFIRMAR SENHA</label>
+                        <label for="tconfpassword" class="text-input-label">CONFIRM PASSWORD</label>
                         <input type="password" name="tconfpassword" id="tconfpassword" class="text-input register-text-input" placeholder="Confirm password" autocomplete="new-password">
                         <button type="submit" class="btn btn-primary btn-register">
 	                        <span class="material-symbols-rounded btn-icon">person_add</span>REGISTER
@@ -60,22 +60,24 @@
 
                 </div>
 
-                <div class="register-users-table table-responsive basic-frame ">
-                    <table class="table">
-                        <thead>
-                        <tr>
-                            <th scope="col">USER NAME</th>
-                            <th scope="col">PASSWORD</th>
-                            <th scope="col">REGISTER DATE</th>
-                            <th scope="col">ACTIONS</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr>
-                            <td colspan="4" class="text-center">Loading...</td>
-                        </tr>
-                        </tbody>
-                    </table>
+                <div class="register-users-table basic-frame">
+                    <div class="users-table-scroll table-responsive">
+                        <table class="table">
+                            <thead>
+                            <tr>
+                                <th scope="col">USER NAME</th>
+                                <th scope="col">PASSWORD</th>
+                                <th scope="col">REGISTER DATE</th>
+                                <th scope="col">ACTIONS</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr>
+                                <td colspan="4" class="text-center">Loading...</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </main>

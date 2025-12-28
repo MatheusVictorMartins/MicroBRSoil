@@ -9,20 +9,20 @@ const sampleFuntions = require('../db_functions/sample_funtion');
 const alphaFunctions = require('../db_functions/alpha_functions');
 const fileFunctions = require('../db_functions/file_paths_functions');
 
-//extrator de dados
-//passar o caminho da pasta e os nomes dos arquivos
-//assincrono, não esquecer do await peomises
+// Data extractor
+// Pass the folder path and file names
+// Async, do not forget to await promises
 const dataExtractor = async (folderPath, tableName) => {
     const results = [];
-    return new Promise((resolve, reject) => {//leitor de csv é assincrono então tem que ter promisse
+    return new Promise((resolve, reject) => {// CSV reader is async so it needs a promise
         fs.createReadStream((path.join(folderPath, tableName)))
             .on('error', (err) => {
-                writeLog(`\nErro ANTES DA leitura de CSV ${tableName} na pasta ${folderPath}\nerro: ` + err);
+                writeLog(`\nError BEFORE reading CSV ${tableName} in folder ${folderPath}\nerror: ` + err);
             })
             .pipe(csv({
-                mapValues: ({ header, index, value }) => (value === 'NA' || value === '' ?  null : value),//valores n/a viram nulo
-                mapHeaders: ({ header, index }) => (header === '' ? 'sequence' : header).toLowerCase(),//header em minusculo e headers '' viram 'sequence' pq em dois arquivos o sequence não tem header no nome 
-            })//a linha acima vai bugar a alpha table, atribuindo uma coluna vazia com a linha sequence, isso é tratado em dataFormater
+                mapValues: ({ header, index, value }) => (value === 'NA' || value === '' ?  null : value),// N/A values become null
+                mapHeaders: ({ header, index }) => (header === '' ? 'sequence' : header).toLowerCase(),// headers lowercase; empty headers become 'sequence' because two files have no sequence header
+            })// the line above breaks the alpha table by adding a blank column; handled in dataFormater
                 .on('data', (data) => {//redrum
                     Object.keys(data).forEach((key) => {//redrum
                         if (!Number.isNaN(Number(data[key])) && data[key] != null) {//redrum
@@ -35,7 +35,7 @@ const dataExtractor = async (folderPath, tableName) => {
                     resolve(results);
                 })
                 .on('error', (err) => {
-                    writeLog(`\nErro DURANTE a leitura de CSV: ${tableName} na pasta: ${folderPath}\nerro: ` + err);
+                    writeLog(`\nError DURING CSV read: ${tableName} in folder: ${folderPath}\nerror: ` + err);
                     reject(err);
                 })
             );
@@ -43,12 +43,12 @@ const dataExtractor = async (folderPath, tableName) => {
     });
 };
 
-//formatador
-//coloca o resultado nos respectivos arrays
+// Formatter
+// Places results into the respective arrays
 const dataFormater = async (tax, alpha, otu, metadata) => {
     try {
-        let resultObj = [];//armazena todos os dados de forma organizada em um vetor de objetos
-        let resultArray = [];//armazena um array todos os arrays(sem a key) no array de forma sequencial para que fique mais facil coloca-los no bd
+        let resultObj = [];// stores all data in an organized object array
+        let resultArray = [];// stores arrays (without keys) sequentially to ease DB insertion
         let taxArray = [];
         let alphaArray = [];
         let otuArray = [];
@@ -60,7 +60,7 @@ const dataFormater = async (tax, alpha, otu, metadata) => {
             taxArray.push(Object.values(element));
         });
 
-        alpha.forEach(element => {//trata o bug gerado em dataExtractor
+        alpha.forEach(element => {// handles the bug generated in dataExtractor
             delete element.sequence;
             resultObj.push(element);
             resultArray.push(Object.values(element));
@@ -92,13 +92,13 @@ const dataFormater = async (tax, alpha, otu, metadata) => {
 
         return [resultObj, resultArray, taxArray, alphaArray, otuArray, metaArray];
     } catch (err) {
-        writeLog("\n[ERRO]\nmensagem de erro: " + err);
+        writeLog("\n[ERROR]\nerror message: " + err);
         return false;
     }
 
 }
 
-// const workplace = async (folder) => {//PARA FINS DE TESTE
+// const workplace = async (folder) => {// FOR TESTING PURPOSES
 //     const [tax, otu, alpha, metadata] = await Promise.all([
 //         dataExtractor(folder, 'taxonomy_table.csv'),
 //         dataExtractor(folder, 'otu_table.csv'),

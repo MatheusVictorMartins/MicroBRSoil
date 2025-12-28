@@ -143,3 +143,9 @@ vite.config.ts.timestamp-*
 *.fastq.gz
 *.fastq.bz2
 *.fastq.xz
+
+# Pipeline data
+results/
+uploads/
+pipeline-r/references/
+!results/.gitkeep

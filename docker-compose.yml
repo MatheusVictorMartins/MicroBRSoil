@@ -77,6 +77,7 @@ services:
       REDIS_URL: redis://redis:6379
       UPLOADS_DIR: /app/uploads
       RESULTS_DIR: /app/results
+      CLEAR_PIPELINE_QUEUE_ON_STARTUP: "true"
     depends_on:
       postgres:
         condition: service_healthy

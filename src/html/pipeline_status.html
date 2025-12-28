@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,9 +13,65 @@
     <link rel="stylesheet" href="../static/css/left_menu.css">
     <link rel="stylesheet" href="../static/css/dynamic-content.css">
     <style>
+      .pipeline-panel {
+        display: block;
+        width: 100%;
+      }
+      .pipeline-panel .row,
+      .pipeline-panel .table-responsive,
+      .pipeline-panel .log-list {
+        width: 100%;
+      }
       .logs-panel {
-        border: 1px solid #e3e8e0;
-        border-radius: 8px;
+        border: 1px solid rgba(60, 105, 96, 0.18);
+        border-radius: 1rem;
+        padding: 1.25rem 1.5rem;
+        box-shadow: 0 10px 20px rgba(43, 55, 61, 0.08);
+      }
+      .log-item.step-item {
+        border-color: #dfe7dc;
+        background: #ffffff;
+      }
+      .log-item.step-item .log-text {
+        font-weight: 600;
+        color: #2b373d;
+      }
+      .log-item.step-item.is-current {
+        border-color: #8aa63e;
+        background: #f7ffe5;
+      }
+      .log-item.step-item.is-current .log-dot {
+        background: #d3c628;
+        box-shadow: 0 0 0 3px rgba(211, 198, 40, 0.25);
+      }
+      .log-item.step-item.is-done .log-dot {
+        background: #2a8a4c;
+        box-shadow: 0 0 0 3px rgba(42, 138, 76, 0.18);
+      }
+      .log-item.step-item.is-failed {
+        border-color: #d9534f;
+        background: #fff5f5;
+      }
+      .log-item.step-item.is-failed .log-dot {
+        background: #d9534f;
+        box-shadow: 0 0 0 3px rgba(217, 83, 79, 0.2);
+      }
+      .log-item.info-item {
+        border-color: #ecf1ea;
+        background: #ffffff;
+      }
+      .log-item.info-item .log-dot {
+        background: #94a3b8;
+        box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.18);
+      }
+      .log-count {
+        display: inline-block;
+        margin-left: 8px;
+        padding: 2px 8px;
+        font-size: 12px;
+        color: #6b7c76;
+        background: #eef3ef;
+        border-radius: 999px;
       }
       .log-list {
         display: flex;
@@ -45,6 +101,263 @@
         color: #1f2933;
         line-height: 1.4;
       }
+      .pipeline-filters {
+        border: 1px solid rgba(60, 105, 96, 0.2);
+        background: linear-gradient(135deg, #f8fffa 0%, #eef6f0 100%);
+        padding: 1.75rem 2rem;
+        box-shadow: 0 12px 26px rgba(43, 55, 61, 0.12);
+      }
+      .pipeline-surface {
+        border: 1px solid rgba(60, 105, 96, 0.18);
+        background: linear-gradient(135deg, #f8fffa 0%, #eef6f0 100%);
+        padding: 1.75rem 2rem;
+        box-shadow: 0 12px 26px rgba(43, 55, 61, 0.12);
+      }
+      .pipeline-filters-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 1.25rem;
+      }
+      .pipeline-filters-title {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+      .pipeline-filters-title .material-symbols-rounded {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 0.85rem;
+        background: rgba(60, 105, 96, 0.12);
+        color: var(--primary-color-green1);
+        font-size: 1.6rem;
+      }
+      .pipeline-filters-title-text {
+        font-family: var(--title-font);
+        font-weight: var(--semibold);
+        color: var(--primary-color-green0);
+        letter-spacing: 0.02em;
+      }
+      .pipeline-filters-subtitle {
+        font-size: 0.9rem;
+        color: rgba(43, 55, 61, 0.68);
+      }
+      .pipeline-filters .text-input-label {
+        font-size: 0.72rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(43, 55, 61, 0.65);
+      }
+      .pipeline-filters .form-label {
+        margin-bottom: 0.35rem;
+      }
+      .pipeline-filters .form-control,
+      .pipeline-filters .form-select {
+        border-radius: 0.9rem;
+        border-color: #d6e1da;
+        background: #ffffff;
+        box-shadow: 0 6px 14px rgba(43, 55, 61, 0.06);
+        height: 2.75rem;
+        font-size: 0.95rem;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      }
+      .pipeline-filters .form-control:focus,
+      .pipeline-filters .form-select:focus {
+        border-color: var(--primary-color-green1);
+        box-shadow: 0 0 0 3px rgba(60, 105, 96, 0.18);
+      }
+      .pipeline-filters .form-control::placeholder {
+        color: rgba(43, 55, 61, 0.4);
+      }
+      .pipeline-filters-actions {
+        flex-wrap: wrap;
+      }
+      .pipeline-filters .btn {
+        height: 3rem;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0 1.15rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        box-shadow: 0 8px 18px rgba(43, 55, 61, 0.12);
+      }
+      .pipeline-filters .btn .material-symbols-rounded {
+        font-size: 1.2rem;
+      }
+      .pipeline-health {
+        border: 1px solid rgba(60, 105, 96, 0.18);
+        background: linear-gradient(135deg, #f8fffa 0%, #eef6f0 100%);
+        padding: 1.75rem 2rem;
+        box-shadow: 0 12px 26px rgba(43, 55, 61, 0.12);
+      }
+      .pipeline-panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 1.25rem;
+      }
+      .pipeline-panel-title {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+      .pipeline-panel-title .material-symbols-rounded {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 0.85rem;
+        background: rgba(60, 105, 96, 0.12);
+        color: var(--primary-color-green1);
+        font-size: 1.6rem;
+      }
+      .pipeline-panel-title-text {
+        font-family: var(--title-font);
+        font-weight: var(--semibold);
+        color: var(--primary-color-green0);
+        letter-spacing: 0.02em;
+      }
+      .pipeline-panel-subtitle {
+        font-size: 0.9rem;
+        color: rgba(43, 55, 61, 0.65);
+      }
+      .pipeline-panel-meta {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        background: #ffffff;
+        border: 1px solid rgba(60, 105, 96, 0.2);
+        color: var(--primary-color-green1);
+        font-size: 0.85rem;
+        box-shadow: 0 8px 18px rgba(43, 55, 61, 0.08);
+      }
+      .pipeline-panel-meta .material-symbols-rounded {
+        font-size: 1rem;
+      }
+      .health-card {
+        position: relative;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 0.9rem 1rem;
+        border-radius: 1rem;
+        background: #ffffff;
+        border: 1px solid rgba(60, 105, 96, 0.12);
+        box-shadow: 0 10px 20px rgba(43, 55, 61, 0.08);
+      }
+      .health-card::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 4px;
+        border-radius: 1rem 0 0 1rem;
+        background: var(--primary-color-green1);
+      }
+      .health-card .material-symbols-rounded {
+        font-size: 1.35rem;
+        color: var(--primary-color-green1);
+      }
+      .health-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: rgba(43, 55, 61, 0.6);
+      }
+      .health-status {
+        font-weight: var(--semibold);
+        color: var(--primary-color-green0);
+      }
+      .health-detail {
+        font-size: 0.82rem;
+        color: rgba(43, 55, 61, 0.6);
+      }
+      .health-card[data-tone="worker"]::before {
+        background: var(--primary-color-green2);
+      }
+      .health-card[data-tone="queue"]::before {
+        background: var(--primary-color-yellow);
+      }
+      .health-card[data-tone="redis"]::before {
+        background: var(--decoration-color0);
+      }
+      .pipeline-list-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.75rem;
+      }
+      .pipeline-list-title {
+        font-family: var(--title-font);
+        font-weight: var(--semibold);
+        color: var(--primary-color-green0);
+      }
+      #runsCount {
+        padding: 0.3rem 0.7rem;
+        border-radius: 999px;
+        background: #ffffff;
+        border: 1px solid rgba(60, 105, 96, 0.2);
+        color: rgba(43, 55, 61, 0.7);
+        font-size: 0.85rem;
+      }
+      .pipeline-table {
+        border-collapse: separate;
+        border-spacing: 0;
+      }
+      .pipeline-table thead th {
+        background: #f2f7f4;
+        border-bottom: 1px solid #d7e3dc;
+        font-size: 0.75rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(43, 55, 61, 0.75);
+        padding: 0.85rem 0.75rem;
+      }
+      .pipeline-table tbody td {
+        padding: 0.85rem 0.75rem;
+        font-size: 0.92rem;
+      }
+      .pipeline-table tbody tr {
+        background: #ffffff;
+        transition: background 0.2s ease;
+      }
+      .pipeline-table tbody tr:nth-child(even) {
+        background: #f9fcfa;
+      }
+      .pipeline-table tbody tr:hover {
+        background: #eef6f0;
+      }
+      .pipeline-table tbody td[colspan] {
+        font-style: italic;
+        color: rgba(43, 55, 61, 0.6);
+        text-align: center;
+      }
+      @media (max-width: 768px) {
+        .pipeline-filters {
+          padding: 1.25rem 1.4rem;
+        }
+        .pipeline-filters-header {
+          margin-bottom: 1rem;
+        }
+        .pipeline-health {
+          padding: 1.25rem 1.4rem;
+        }
+      }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -59,27 +372,116 @@
         <main class="main-content">
             <h1 class="main-title">PIPELINE STATUS</h1>
 
-            <div class="basic-frame" style="margin-bottom: 16px;">
+            <div id="pipelineAlerts"></div>
+
+            <div class="basic-frame pipeline-panel pipeline-health" id="pipelineHealthPanel" style="margin-bottom: 16px;">
+                <div class="pipeline-panel-header">
+                    <div class="pipeline-panel-title">
+                        <span class="material-symbols-rounded">health_and_safety</span>
+                        <div>
+                            <div class="pipeline-panel-title-text">Pipeline health</div>
+                            <div class="pipeline-panel-subtitle">Worker, queue, and cache heartbeat</div>
+                        </div>
+                    </div>
+                    <div class="pipeline-panel-meta">
+                        <span class="material-symbols-rounded">schedule</span>
+                        <span id="healthUpdated">Loading...</span>
+                    </div>
+                </div>
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <div class="health-card" data-tone="worker">
+                            <span class="material-symbols-rounded">memory</span>
+                            <div>
+                                <div class="health-label">Worker</div>
+                                <div class="health-status" id="workerHealthStatus">Loading...</div>
+                                <div class="health-detail" id="workerHealthDetail"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="health-card" data-tone="queue">
+                            <span class="material-symbols-rounded">stacked_bar_chart</span>
+                            <div>
+                                <div class="health-label">Queue</div>
+                                <div class="health-status" id="queueHealthStatus">Loading...</div>
+                                <div class="health-detail" id="queueHealthDetail"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="health-card" data-tone="redis">
+                            <span class="material-symbols-rounded">storage</span>
+                            <div>
+                                <div class="health-label">Redis</div>
+                                <div class="health-status" id="redisHealthStatus">Loading...</div>
+                                <div class="health-detail" id="redisHealthDetail"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="basic-frame pipeline-panel pipeline-filters" style="margin-bottom: 16px;">
+                <div class="pipeline-filters-header">
+                    <div class="pipeline-filters-title">
+                        <span class="material-symbols-rounded">tune</span>
+                        <div>
+                            <div class="pipeline-filters-title-text">Filters & controls</div>
+                            <div class="pipeline-filters-subtitle">Refine runs and manage updates</div>
+                        </div>
+                    </div>
+                </div>
                 <div class="row g-3 align-items-end">
                     <div class="col-md-3 col-lg-2">
                         <label class="form-label text-input-label" for="pollInterval">REFRESH (s)</label>
                         <input type="number" min="3" max="60" step="1" id="pollInterval" class="form-control" value="5">
                     </div>
-                    <div class="col-md-4 col-lg-3">
-                        <label class="form-label text-input-label">FILTRO</label>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="showCompletedToggle">
-                            <label class="form-check-label" for="showCompletedToggle">Mostrar concluidos</label>
+                    <div class="col-md-3 col-lg-2">
+                        <label class="form-label text-input-label" for="statusFilter">STATUS</label>
+                        <select id="statusFilter" class="form-select">
+                            <option value="active">In progress</option>
+                            <option value="all">All</option>
+                            <option value="queued">Queued</option>
+                            <option value="running">Running</option>
+                            <option value="completed">Completed</option>
+                            <option value="failed">Failed</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <label class="form-label text-input-label">DATE (CREATED AT)</label>
+                        <div class="d-flex gap-2">
+                            <input type="date" id="dateFrom" class="form-control" placeholder="From">
+                            <input type="date" id="dateTo" class="form-control" placeholder="To">
                         </div>
                     </div>
-                    <div class="col-md-12 col-lg-7 d-flex justify-content-start justify-content-lg-end gap-2">
+                    <div class="col-md-6 col-lg-4 d-none" id="userFilterGroup">
+                        <label class="form-label text-input-label" for="userFilter">USER</label>
+                        <input type="text" id="userFilter" class="form-control" placeholder="email or part of email">
+                    </div>
+                    <div class="col-md-6 col-lg-3">
+                        <label class="form-label text-input-label">SORT BY</label>
+                        <div class="d-flex gap-2">
+                            <select id="sortBy" class="form-select">
+                                <option value="created_at">Date</option>
+                                <option value="status">Status</option>
+                                <option value="user">User</option>
+                                <option value="pipeline">Pipeline</option>
+                            </select>
+                            <select id="sortOrder" class="form-select">
+                                <option value="desc">Desc</option>
+                                <option value="asc">Asc</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-12 col-lg-7 d-flex justify-content-start justify-content-lg-end gap-2 pipeline-filters-actions">
                         <button class="btn btn-primary px-3" id="refreshRunsBtn">
                             <span class="material-symbols-rounded align-middle">refresh</span>
-                            <span class="align-middle">Atualizar agora</span>
+                            <span class="align-middle">Refresh now</span>
                         </button>
                         <button class="btn btn-outline-secondary px-3" id="toggleAutoRefreshBtn">
                             <span class="material-symbols-rounded align-middle" id="autoRefreshIcon">pause_circle</span>
-                            <span class="align-middle" id="autoRefreshLabel">Pausar atualizacao</span>
+                            <span class="align-middle" id="autoRefreshLabel">Pause refresh</span>
                         </button>
                         <button class="btn btn-outline-primary px-3" onclick="ButtonGoTo('/upload')">
                             <span class="material-symbols-rounded align-middle">cloud_upload</span>
@@ -87,29 +489,29 @@
                         </button>
                         <button class="btn btn-outline-danger px-3 d-none" id="clearUploadsBtn">
                             <span class="material-symbols-rounded align-middle">delete</span>
-                            <span class="align-middle">Limpar uploads</span>
+                            <span class="align-middle">Clear uploads</span>
                         </button>
                     </div>
                 </div>
             </div>
 
-            <div class="basic-frame" id="pipelineListPanel" style="margin-bottom: 16px;">
-                <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="basic-frame pipeline-panel pipeline-surface" id="pipelineListPanel" style="margin-bottom: 16px;">
+                <div class="pipeline-list-header">
                     <div>
-                        <div class="fw-bold">Pipelines em acompanhamento</div>
-                        <div class="small text-muted" id="runsSubtitle">Clique em um pipeline para ver detalhes.</div>
+                        <div class="pipeline-list-title">Pipelines being tracked</div>
+                        <div class="small text-muted" id="runsSubtitle">Click a pipeline to view details.</div>
                     </div>
                     <div class="small text-muted" id="runsCount"></div>
                 </div>
                 <div class="table-responsive">
-                    <table class="table table-sm align-middle">
+                    <table class="table table-sm align-middle pipeline-table">
                         <thead>
                             <tr>
                                 <th>PIPELINE</th>
                                 <th id="runsUserHeader" class="d-none">USER</th>
                                 <th>STATUS</th>
-                                <th>CRIADO EM</th>
-                                <th>ACOES</th>
+                                <th>CREATED AT</th>
+                                <th>ACTIONS</th>
                             </tr>
                         </thead>
                         <tbody id="runsTableBody">
@@ -119,9 +521,10 @@
                         </tbody>
                     </table>
                 </div>
+                <div class="d-flex justify-content-between align-items-center mt-2" id="runsPagination"></div>
             </div>
 
-            <div class="basic-frame" id="pipelineTracker" style="display: none;">
+            <div class="basic-frame pipeline-panel pipeline-surface" id="pipelineTracker" style="display: none;">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
                         <div class="fw-bold">Pipeline tracking</div>
@@ -131,16 +534,17 @@
                         <div class="small text-muted" id="trackerQueue"></div>
                     </div>
                     <div class="text-end">
-                        <div>Status: <span id="trackerStatus" class="text-primary">—</span></div>
+                        <div>Status: <span id="trackerStatus" class="text-primary">-</span></div>
                         <div class="small text-muted" id="trackerUpdated"></div>
                     </div>
                 </div>
                 <div class="mt-2 small" id="trackerMessage"></div>
-                <div class="mt-3 logs-panel basic-frame" style="background: #f8fbf7;">
+                <div class="small text-muted" id="trackerStep"></div>
+                <div class="mt-3 logs-panel basic-frame pipeline-panel" style="background: #f8fbf7;">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <div>
-                        <div class="fw-bold text-uppercase small" style="letter-spacing: 0.08em;">Etapas do pipeline</div>
-                        <div class="small text-muted">Ultimos eventos registrados</div>
+                        <div class="fw-bold text-uppercase small" style="letter-spacing: 0.08em;">Pipeline steps</div>
+                        <div class="small text-muted">Latest events</div>
                         </div>
                         <div class="small text-muted" id="logsCount"></div>
                     </div>
@@ -150,396 +554,11 @@
         </main>
     </div>
 
+    <script src="../static/js/constants.js"></script>
     <script src="../static/js/include_elements.js"></script>
     <script src="../static/js/button.js"></script>
     <script src="../static/js/bootstrap.bundle.min.js"></script>
 
-    <script>
-      const tracker = {
-        intervalId: null,
-        runId: null,
-        autoRefresh: true,
-        manualSelection: false
-      };
-      let isAdminUser = false;
-
-      const statusEl = () => document.getElementById('trackerStatus');
-      const updatedEl = () => document.getElementById('trackerUpdated');
-      const messageEl = () => document.getElementById('trackerMessage');
-      const runEl = () => document.getElementById('trackerRunId');
-      const jobEl = () => document.getElementById('trackerJobId');
-      const typeEl = () => document.getElementById('trackerPipelineType');
-      const queueEl = () => document.getElementById('trackerQueue');
-      const trackerBox = () => document.getElementById('pipelineTracker');
-      const logsEl = () => document.getElementById('trackerLogs');
-      const logsCountEl = () => document.getElementById('logsCount');
-      const runsBodyEl = () => document.getElementById('runsTableBody');
-      const runsCountEl = () => document.getElementById('runsCount');
-      const runsSubtitleEl = () => document.getElementById('runsSubtitle');
-      const runsUserHeaderEl = () => document.getElementById('runsUserHeader');
-      const lastRunKey = 'lastPipelineRun';
-
-      function getPollSeconds() {
-        const value = parseInt(document.getElementById('pollInterval')?.value, 10);
-        return Math.max(3, Math.min(60, value || 5));
-      }
-
-      function formatDate(value) {
-        if (!value) return "-";
-        const date = new Date(value);
-        if (Number.isNaN(date.getTime())) return "-";
-        return date.toLocaleString();
-      }
-
-      function normalizeStatus(status) {
-        return String(status || "unknown").toLowerCase();
-      }
-
-      function statusBadge(status) {
-        const map = {
-          queued: 'warning',
-          running: 'primary',
-          completed: 'success',
-          failed: 'danger'
-        };
-        const normalized = normalizeStatus(status);
-        const cls = map[normalized] || "secondary";
-        return `<span class="badge bg-${cls}">${normalized}</span>`;
-      }
-
-      async function resolveAuth() {
-        if (typeof getAuthStatus !== 'function') return;
-        try {
-          const status = await getAuthStatus();
-          isAdminUser = Boolean(status?.isAdmin);
-        } catch (e) {
-          isAdminUser = false;
-        }
-
-        const header = runsUserHeaderEl();
-        if (header) {
-          header.classList.toggle('d-none', !isAdminUser);
-        }
-        const clearUploadsBtn = document.getElementById('clearUploadsBtn');
-        if (clearUploadsBtn) {
-          clearUploadsBtn.classList.toggle('d-none', !isAdminUser);
-        }
-      }
-
-      function getSavedRunId() {
-        try {
-          const saved = localStorage.getItem(lastRunKey);
-          if (!saved) return null;
-          const data = JSON.parse(saved);
-          return data?.runId || null;
-        } catch (e) {
-          return null;
-        }
-      }
-
-      function stopAutoRefresh() {
-        if (tracker.intervalId) {
-          clearInterval(tracker.intervalId);
-          tracker.intervalId = null;
-        }
-      }
-
-      function startAutoRefresh() {
-        stopAutoRefresh();
-        if (!tracker.autoRefresh) return;
-        const pollSeconds = getPollSeconds();
-        tracker.intervalId = setInterval(() => {
-          loadRuns();
-          if (tracker.runId) fetchStatus();
-        }, pollSeconds * 1000);
-      }
-
-      function setAutoRefresh(enabled) {
-        tracker.autoRefresh = enabled;
-        const label = document.getElementById('autoRefreshLabel');
-        const icon = document.getElementById('autoRefreshIcon');
-        if (label) label.textContent = enabled ? 'Pausar atualizacao' : 'Retomar atualizacao';
-        if (icon) icon.textContent = enabled ? 'pause_circle' : 'play_circle';
-        if (enabled) {
-          startAutoRefresh();
-        } else {
-          stopAutoRefresh();
-        }
-      }
-
-      function highlightSelectedRun() {
-        const body = runsBodyEl();
-        if (!body) return;
-        body.querySelectorAll('tr[data-run-id]').forEach((row) => {
-          row.classList.toggle("table-active", row.dataset.runId === tracker.runId);
-        });
-      }
-
-      function renderRuns(runs, emptyMessage) {
-        const body = runsBodyEl();
-        if (!body) return;
-        const columnCount = isAdminUser ? 5 : 4;
-
-        if (!Array.isArray(runs) || runs.length === 0) {
-          const message = emptyMessage || "Nenhum pipeline encontrado.";
-          body.innerHTML = `<tr><td colspan="${columnCount}" class="text-center">${message}</td></tr>`;
-          if (runsCountEl()) runsCountEl().textContent = '0 pipelines';
-          highlightSelectedRun();
-          return;
-        }
-
-        body.innerHTML = runs.map((run) => {
-          const type = String(run.pipeline_type || run.pipelineType || "default").toUpperCase();
-          const status = normalizeStatus(run.status);
-          const createdAt = formatDate(run.created_at || run.createdAt);
-          const userLabel = run.user_email || run.userEmail || '-';
-          const userCell = isAdminUser ? `<td>${userLabel}</td>` : '';
-          return `
-            <tr data-run-id="${run.run_id}">
-              <td>${type}</td>
-              ${userCell}
-              <td>${statusBadge(status)}</td>
-              <td>${createdAt}</td>
-              <td>
-                <button class="btn btn-sm btn-outline-primary" data-action="details" data-run-id="${run.run_id}">
-                  Detalhes
-                </button>
-              </td>
-            </tr>
-          `;
-        }).join("");
-
-        if (runsCountEl()) runsCountEl().textContent = `${runs.length} pipeline(s)`;
-        highlightSelectedRun();
-      }
-
-      function maybeAutoSelect(runs) {
-        if (tracker.runId) return;
-        if (!Array.isArray(runs) || runs.length === 0) return;
-
-        const savedRunId = getSavedRunId();
-        const savedMatch = savedRunId ? runs.find(r => r.run_id === savedRunId) : null;
-        if (savedMatch) {
-          selectRun(savedRunId, false);
-          return;
-        }
-
-        if (!tracker.manualSelection) {
-          selectRun(runs[0].run_id, false);
-        }
-      }
-
-      async function loadRuns() {
-        const body = runsBodyEl();
-        if (body) {
-          const columnCount = isAdminUser ? 5 : 4;
-          body.innerHTML = `<tr><td colspan="${columnCount}" class="text-center">Loading...</td></tr>`;
-        }
-
-        const showCompleted = Boolean(document.getElementById("showCompletedToggle")?.checked);
-        if (runsSubtitleEl()) {
-          runsSubtitleEl().textContent = showCompleted ? 'Mostrando todos' : 'Mostrando em andamento';
-        }
-
-        try {
-          const response = await fetch('/pipeline/runs?limit=50');
-          if (response.status === 401 || response.status === 403) {
-            renderRuns([], 'Sem acesso. Faca login para ver os pipelines.');
-            return;
-          }
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-          const data = await response.json();
-          let runs = Array.isArray(data.runs) ? data.runs : [];
-          if (!showCompleted) {
-            runs = runs.filter((run) => {
-              const status = normalizeStatus(run.status);
-              return status !== "completed" && status !== "failed";
-            });
-          }
-
-          if (tracker.runId && !runs.some(run => run.run_id === tracker.runId)) {
-            tracker.runId = null;
-            tracker.manualSelection = false;
-            resetTrackerUI('Selecione um pipeline para ver detalhes.');
-          }
-
-          if (runs.length === 0 && !showCompleted) {
-            renderRuns([], 'Sem pipelines em andamento.');
-          } else {
-            renderRuns(runs);
-          }
-          maybeAutoSelect(runs);
-        } catch (err) {
-          renderRuns([], 'Erro ao carregar pipelines.');
-          if (runsSubtitleEl()) runsSubtitleEl().textContent = 'Status indisponivel';
-        }
-      }
-
-      function selectRun(runId, manual = true) {
-        if (!runId) return;
-        tracker.runId = runId;
-        if (manual) tracker.manualSelection = true;
-
-        if (trackerBox()) trackerBox().style.display = "block";
-        if (statusEl()) statusEl().textContent = "Loading...";
-        if (updatedEl()) updatedEl().textContent = "Aguardando status...";
-        if (messageEl()) messageEl().textContent = "";
-        if (runEl()) runEl().textContent = "";
-        if (jobEl()) jobEl().textContent = "";
-        if (typeEl()) typeEl().textContent = "";
-        if (queueEl()) queueEl().textContent = "";
-        if (logsEl()) logsEl().innerHTML = "";
-        if (logsCountEl()) logsCountEl().textContent = "";
-        highlightSelectedRun();
-        fetchStatus();
-      }
-
-      async function fetchStatus() {
-        if (!tracker.runId) return;
-        try {
-          const response = await fetch(`/pipeline/status/${tracker.runId}`);
-          if (response.status === 404) {
-            resetTrackerUI('Pipeline nao encontrado.');
-            tracker.runId = null;
-            return;
-          }
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          const data = await response.json();
-          if (!data.success || !data.run) throw new Error(data.error || "Status indisponivel");
-
-          const run = data.run;
-          const status = normalizeStatus(run.status);
-          const started = run.started_at || run.startedAt;
-          const finished = run.finished_at || run.finishedAt;
-          const errorMessage = run.error_message || run.errorMessage;
-          const queueInfo = data.queue || null;
-
-          if (statusEl()) statusEl().textContent = status;
-          if (updatedEl()) updatedEl().textContent = `Atualizado: ${new Date().toLocaleTimeString()}`;
-          const pipelineType = run.pipeline_type || run.pipelineType;
-          const createdAt = run.created_at || run.createdAt;
-          if (typeEl()) typeEl().textContent = pipelineType ? String(pipelineType).toUpperCase() : "";
-          if (runEl()) runEl().textContent = createdAt ? `Criado em: ${formatDate(createdAt)}` : "";
-          if (jobEl()) jobEl().textContent = "";
-          if (queueEl()) {
-            if (queueInfo && queueInfo.state) {
-              const hasPosition = Number.isInteger(queueInfo.position) && queueInfo.position >= 0;
-              const positionText = hasPosition ? ` (posicao ${queueInfo.position + 1})` : "";
-              queueEl().textContent = `Fila: ${queueInfo.state}${positionText}`;
-            } else {
-              queueEl().textContent = "";
-            }
-          }
-          if (logsEl()) {
-            const logs = Array.isArray(run.logs) ? run.logs : [];
-            const count = logs.length;
-            if (logsCountEl()) logsCountEl().textContent = count ? `${count} eventos` : 'Sem eventos';
-
-            if (logs.length === 0) {
-              logsEl().innerHTML = "<div class=\"text-muted small py-2\">Sem logs registrados ainda.</div>";
-            } else {
-              const recent = logs.slice(-20).reverse();
-              logsEl().innerHTML = recent.map(log => `
-                <div class="log-item">
-                  <div class="log-dot"></div>
-                  <div class="log-text">${log}</div>
-                </div>
-              `).join("");
-            }
-          }
-
-          if (messageEl()) {
-            if (status === "failed" && errorMessage) {
-              messageEl().textContent = `Erro: ${errorMessage}`;
-            } else if (status === "running" && started) {
-              messageEl().textContent = `Iniciado em: ${formatDate(started)}`;
-            } else if (status === "completed" && finished) {
-              messageEl().textContent = `Finalizado em: ${formatDate(finished)}`;
-            } else {
-              messageEl().textContent = "";
-            }
-          }
-        } catch (err) {
-          if (updatedEl()) updatedEl().textContent = "Status indisponivel";
-          if (messageEl()) messageEl().textContent = `Erro ao consultar status: ${err.message}`;
-        }
-      }
-
-      function resetTrackerUI(message) {
-        if (trackerBox()) trackerBox().style.display = "none";
-        if (statusEl()) statusEl().textContent = "-";
-        if (updatedEl()) updatedEl().textContent = "";
-        if (messageEl()) messageEl().textContent = message || "";
-        if (queueEl()) queueEl().textContent = "";
-        if (logsEl()) logsEl().innerHTML = "";
-        if (logsCountEl()) logsCountEl().textContent = "";
-      }
-
-      document.addEventListener("DOMContentLoaded", async () => {
-        const body = runsBodyEl();
-        if (body) {
-          body.addEventListener("click", (event) => {
-            const button = event.target.closest("[data-action=\"details\"]");
-            if (!button) return;
-            selectRun(button.dataset.runId, true);
-          });
-        }
-
-        const showCompletedToggle = document.getElementById('showCompletedToggle');
-        if (showCompletedToggle) {
-          showCompletedToggle.addEventListener("change", () => loadRuns());
-        }
-
-        const refreshBtn = document.getElementById('refreshRunsBtn');
-        if (refreshBtn) {
-          refreshBtn.addEventListener("click", () => {
-            loadRuns();
-            if (tracker.runId) fetchStatus();
-          });
-        }
-
-        const toggleBtn = document.getElementById('toggleAutoRefreshBtn');
-        if (toggleBtn) {
-          toggleBtn.addEventListener("click", () => setAutoRefresh(!tracker.autoRefresh));
-        }
-
-        const pollInput = document.getElementById('pollInterval');
-        if (pollInput) {
-          pollInput.addEventListener("change", () => {
-            if (tracker.autoRefresh) startAutoRefresh();
-          });
-        }
-
-        const clearUploadsBtn = document.getElementById('clearUploadsBtn');
-        if (clearUploadsBtn) {
-          clearUploadsBtn.addEventListener('click', async () => {
-            if (!isAdminUser) return;
-            const confirmed = window.confirm('Deseja remover todos os uploads armazenados no servidor?');
-            if (!confirmed) return;
-            clearUploadsBtn.disabled = true;
-            try {
-              const response = await fetch('/upload/admin/cleanup', { method: 'DELETE' });
-              if (!response.ok) {
-                const payload = await response.json().catch(() => null);
-                const message = payload?.error || 'Falha ao limpar uploads.';
-                alert(message);
-                return;
-              }
-              const payload = await response.json().catch(() => ({}));
-              alert(`Uploads removidos: ${payload.removed || 0}`);
-            } catch (err) {
-              alert('Erro ao limpar uploads.');
-            } finally {
-              clearUploadsBtn.disabled = false;
-            }
-          });
-        }
-
-        await resolveAuth();
-        loadRuns();
-        startAutoRefresh();
-      });
-    </script>
+    <script src="../static/js/pipeline_status.js"></script>
 </body>
 </html>

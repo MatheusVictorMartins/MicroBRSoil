@@ -4,7 +4,21 @@ const fs = require('fs');
 const router = express.Router();
 const { paths } = require('../utils/moduleResolver');
 const { requireAuth, isAdminRole } = require('../middleware/authenticate');
+const { createRateLimiter } = require('../middleware/rateLimit');
+const { createResponseCache } = require('../middleware/responseCache');
 const isProduction = process.env.NODE_ENV === 'production';
+
+const resultsReadLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 120,
+  message: 'Too many results requests. Please slow down.'
+});
+
+const resultsListCache = createResponseCache({
+  ttlMs: 30 * 1000,
+  maxEntries: 200,
+  keyPrefix: 'results:files'
+});
 
 // Use dynamic paths that work in both local development and Docker
 const { getPipelineRun, getPipelineResults } = require(paths.pipelineFunctions());
@@ -12,7 +26,7 @@ const { getPipelineRun, getPipelineResults } = require(paths.pipelineFunctions()
 const RESULTS_DIR = process.env.RESULTS_DIR || path.join(__dirname, '../../results');
 
 // Serve result files
-router.get('/download/:runId/:filename', requireAuth, async (req, res) => {
+router.get('/download/:runId/:filename', requireAuth, resultsReadLimiter, async (req, res) => {
   try {
     const { runId, filename } = req.params;
     
@@ -69,7 +83,7 @@ router.get('/download/:runId/:filename', requireAuth, async (req, res) => {
 });
 
 // List result files for a run
-router.get('/files/:runId', requireAuth, async (req, res) => {
+router.get('/files/:runId', requireAuth, resultsReadLimiter, resultsListCache, async (req, res) => {
   try {
     const { runId } = req.params;
     

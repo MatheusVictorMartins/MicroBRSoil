@@ -2,10 +2,80 @@ const express = require('express');
 const router = express.Router();
 const { paths } = require('../utils/moduleResolver');
 const pool = require(paths.db());
+const { ensurePipelineMetricsColumns } = require(paths.pipelineFunctions());
 const { requireAuth, requireAdmin, isAdminRole } = require('../middleware/authenticate');
+const { RATE_LIMIT_MESSAGES, PIPELINE_STATUS } = require('../constants');
+const { createRateLimiter } = require('../middleware/rateLimit');
+const { createResponseCache } = require('../middleware/responseCache');
 const { decryptPassword, encryptPassword } = require('../utils/passwordView');
 const bcrypt = require('bcrypt');
 const isProduction = process.env.NODE_ENV === 'production';
+
+const tableReadLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 120,
+  message: RATE_LIMIT_MESSAGES.TABLE_READ
+});
+
+const tableWriteLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: RATE_LIMIT_MESSAGES.TABLE_WRITE
+});
+
+const soilListCache = createResponseCache({
+  ttlMs: 30 * 1000,
+  maxEntries: 200,
+  keyPrefix: 'soil:list'
+});
+
+const soilFiltersCache = createResponseCache({
+  ttlMs: 2 * 60 * 1000,
+  maxEntries: 100,
+  keyPrefix: 'soil:filters'
+});
+
+const soilDetailCache = createResponseCache({
+  ttlMs: 60 * 1000,
+  maxEntries: 200,
+  keyPrefix: 'soil:detail'
+});
+
+const usersListCache = createResponseCache({
+  ttlMs: 30 * 1000,
+  maxEntries: 100,
+  keyPrefix: 'users:list'
+});
+
+const pipelineResultsCache = createResponseCache({
+  ttlMs: 30 * 1000,
+  maxEntries: 200,
+  keyPrefix: 'pipeline:results'
+});
+
+const statsCache = createResponseCache({
+  ttlMs: 60 * 1000,
+  maxEntries: 50,
+  keyPrefix: 'stats'
+});
+
+const alphaCache = createResponseCache({
+  ttlMs: 60 * 1000,
+  maxEntries: 200,
+  keyPrefix: 'alpha'
+});
+
+const samplesCache = createResponseCache({
+  ttlMs: 60 * 1000,
+  maxEntries: 200,
+  keyPrefix: 'samples'
+});
+
+const pipelineRunsCache = createResponseCache({
+  ttlMs: 30 * 1000,
+  maxEntries: 200,
+  keyPrefix: 'pipeline:runs'
+});
 
 const safeErrorBody = (error, fallbackMessage) => ({
   success: false,
@@ -51,7 +121,7 @@ async function hasPasswordViewColumn() {
 }
 
 // Get soil data for index.html and upload.html
-router.get('/soil', requireAuth, async (req, res) => {
+router.get('/soil', requireAuth, tableReadLimiter, soilListCache, async (req, res) => {
   try {
     const { page = 1, limit = 20, search = '', material = '', location = '' } = req.query;
     const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
@@ -119,16 +189,6 @@ router.get('/soil', requireAuth, async (req, res) => {
         s.sample_name as project_name,
         s.geo_loc_name as location,
         s.created_at::date as creation_date,
-        s.collection_date::date as collection_date,
-        s.soil_depth,
-        s.elev,
-        s.env_broad_scale,
-        s.env_local_scale,
-        s.lat_lon,
-        s.ph,
-        s.soil_type,
-        s.tot_org_carb,
-        s.tot_nitro,
         u.user_email as owner
       FROM microbrsoil_db.soil s
       LEFT JOIN microbrsoil_db.users u ON s.owner_id = u.user_id
@@ -160,7 +220,7 @@ router.get('/soil', requireAuth, async (req, res) => {
 });
 
 // Get unique values for filters
-router.get('/soil/filters', requireAuth, async (req, res) => {
+router.get('/soil/filters', requireAuth, tableReadLimiter, soilFiltersCache, async (req, res) => {
   try {
     const isAdmin = isAdminRole(req.user?.role);
     const queryParams = [];
@@ -199,7 +259,7 @@ router.get('/soil/filters', requireAuth, async (req, res) => {
 });
 
 // Get detailed soil data by ID
-router.get('/soil/:id', requireAuth, async (req, res) => {
+router.get('/soil/:id', requireAuth, tableReadLimiter, soilDetailCache, async (req, res) => {
   try {
     const { id } = req.params;
     const isAdmin = isAdminRole(req.user?.role);
@@ -282,7 +342,7 @@ router.get('/soil/:id', requireAuth, async (req, res) => {
 });
 
 // Delete soil data by ID (admin only)
-router.delete('/soil/:id', requireAdmin, async (req, res) => {
+router.delete('/soil/:id', requireAdmin, tableWriteLimiter, async (req, res) => {
   try {
     const { id } = req.params;
     const soilId = parseInt(id, 10);
@@ -315,7 +375,7 @@ router.delete('/soil/:id', requireAdmin, async (req, res) => {
 });
 
 // Get user data for register.html
-router.get('/users', requireAdmin, async (req, res) => {
+router.get('/users', requireAdmin, tableReadLimiter, usersListCache, async (req, res) => {
   try {
     const { page = 1, limit = 20, search = '' } = req.query;
     const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
@@ -360,8 +420,6 @@ router.get('/users', requireAdmin, async (req, res) => {
         u.user_email as username,
         ${passwordSelect},
         u.created_at::date as register_date,
-        u.last_login_at::date as last_login,
-        u.is_active,
         r.role_name
       FROM microbrsoil_db.users u
       LEFT JOIN microbrsoil_db.roles r ON u.role_id = r.role_id
@@ -400,7 +458,7 @@ router.get('/users', requireAdmin, async (req, res) => {
 });
 
 // Update user password (admin only, non-admin users)
-router.put('/users/:id/password', requireAdmin, async (req, res) => {
+router.put('/users/:id/password', requireAdmin, tableWriteLimiter, async (req, res) => {
   try {
     const { id } = req.params;
     const userId = parseInt(id, 10);
@@ -458,7 +516,7 @@ router.put('/users/:id/password', requireAdmin, async (req, res) => {
 });
 
 // Delete user (admin only, non-admin users)
-router.delete('/users/:id', requireAdmin, async (req, res) => {
+router.delete('/users/:id', requireAdmin, tableWriteLimiter, async (req, res) => {
   try {
     const { id } = req.params;
     const userId = parseInt(id, 10);
@@ -507,9 +565,9 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
 });
 
 // Get pipeline results data
-router.get('/pipeline-results', requireAuth, async (req, res) => {
+router.get('/pipeline-results', requireAuth, tableReadLimiter, pipelineResultsCache, async (req, res) => {
   try {
-    const { page = 1, limit = 20, status = '', user_id = '' } = req.query;
+    const { page = 1, limit = 20, status = '', user_id = '', user = '', from = '', to = '', sort = '', order = '' } = req.query;
     const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
     const limitNumber = Math.max(1, Math.min(parseInt(limit, 10) || 20, 100));
     const offset = (pageNumber - 1) * limitNumber;
@@ -519,27 +577,70 @@ router.get('/pipeline-results', requireAuth, async (req, res) => {
     let queryParams = [];
     let paramCount = 0;
 
-    // Add status filter
-    if (status) {
-      paramCount++;
-      whereConditions.push(`pr.status = $${paramCount}`);
-      queryParams.push(status);
+    const rawStatus = typeof status === 'string' ? status.trim() : '';
+    const statusFilter = rawStatus === 'all' ? '' : rawStatus;
+    const userIdFilter = isAdmin ? String(user_id || '').trim() : String(req.user?.id || '').trim();
+    const userEmailFilter = isAdmin ? String(user || '').trim() : '';
+    const fromDate = typeof from === 'string' ? from.trim() : '';
+    const toDate = typeof to === 'string' ? to.trim() : '';
+    const sortBy = typeof sort === 'string' ? sort.toLowerCase().trim() : '';
+    const sortOrder = typeof order === 'string' ? order.toLowerCase().trim() : '';
+
+    if (statusFilter) {
+      if (statusFilter === 'active') {
+        whereConditions.push(`pr.status NOT IN ('completed', 'failed')`);
+      } else {
+        paramCount++;
+        whereConditions.push(`pr.status = $${paramCount}`);
+        queryParams.push(statusFilter);
+      }
     }
 
-    // Add user filter (enforced for non-admins)
-    const effectiveUserId = isAdmin ? user_id : req.user?.id;
-    if (effectiveUserId) {
+    if (userIdFilter) {
+      const parsedUserId = parseInt(userIdFilter, 10);
+      if (Number.isNaN(parsedUserId)) {
+        return res.status(400).json({ success: false, error: 'Invalid user id' });
+      }
       paramCount++;
       whereConditions.push(`pr.user_id = $${paramCount}`);
-      queryParams.push(effectiveUserId);
+      queryParams.push(parsedUserId);
+    }
+
+    if (userEmailFilter) {
+      paramCount++;
+      whereConditions.push(`u.user_email ILIKE $${paramCount}`);
+      queryParams.push(`%${userEmailFilter}%`);
+    }
+
+    if (fromDate) {
+      paramCount++;
+      whereConditions.push(`pr.created_at >= $${paramCount}::date`);
+      queryParams.push(fromDate);
+    }
+
+    if (toDate) {
+      paramCount++;
+      whereConditions.push(`pr.created_at < ($${paramCount}::date + interval '1 day')`);
+      queryParams.push(toDate);
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+    const userJoin = 'LEFT JOIN microbrsoil_db.users u ON pr.user_id = u.user_id';
+    const sortMap = {
+      created_at: 'pr.created_at',
+      status: 'pr.status',
+      user: 'u.user_email',
+      pipeline: 'pr.pipeline_type'
+    };
+    const sortColumn = sortMap[sortBy] || 'pr.created_at';
+    const sortDirection = sortOrder === 'asc' ? 'ASC' : 'DESC';
+    const nullsClause = sortColumn === 'u.user_email' ? 'NULLS LAST' : '';
 
     // Get total count for pagination
     const countQuery = `
       SELECT COUNT(*) as total
       FROM microbrsoil_db.pipeline_runs pr
+      ${userJoin}
       ${whereClause}
     `;
 
@@ -565,11 +666,11 @@ router.get('/pipeline-results', requireAuth, async (req, res) => {
         pres.soil_id,
         s.sample_name as soil_sample_name
       FROM microbrsoil_db.pipeline_runs pr
-      LEFT JOIN microbrsoil_db.users u ON pr.user_id = u.user_id
+      ${userJoin}
       LEFT JOIN microbrsoil_db.pipeline_results pres ON pr.run_id = pres.run_id
       LEFT JOIN microbrsoil_db.soil s ON pres.soil_id = s.soil_id
       ${whereClause}
-      ORDER BY pr.created_at DESC
+      ORDER BY ${sortColumn} ${sortDirection} ${nullsClause}
       LIMIT $${paramCount - 1} OFFSET $${paramCount}
     `;
 
@@ -596,14 +697,23 @@ router.get('/pipeline-results', requireAuth, async (req, res) => {
 });
 
 // Get statistics for dashboard
-router.get('/stats', requireAuth, async (req, res) => {
+router.get('/stats', requireAuth, tableReadLimiter, statsCache, async (req, res) => {
   try {
+    const ensured = await ensurePipelineMetricsColumns();
+    if (!ensured) {
+      return res.status(500).json(safeErrorBody(new Error('pipeline_runs metrics columns missing'), 'Failed to fetch statistics'));
+    }
     const statsQuery = `
       SELECT 
         (SELECT COUNT(*) FROM microbrsoil_db.soil) as total_soil_samples,
         (SELECT COUNT(*) FROM microbrsoil_db.users WHERE is_active = true) as total_active_users,
-        (SELECT COUNT(*) FROM microbrsoil_db.pipeline_runs WHERE status = 'completed') as completed_pipelines,
-        (SELECT COUNT(*) FROM microbrsoil_db.pipeline_runs WHERE status = 'running') as running_pipelines,
+        (SELECT COUNT(*) FROM microbrsoil_db.pipeline_runs WHERE status = '${PIPELINE_STATUS.COMPLETED}') as completed_pipelines,
+        (SELECT COUNT(*) FROM microbrsoil_db.pipeline_runs WHERE status = '${PIPELINE_STATUS.RUNNING}') as running_pipelines,
+        (SELECT COUNT(*) FROM microbrsoil_db.pipeline_runs WHERE status = '${PIPELINE_STATUS.QUEUED}') as queued_pipelines,
+        (SELECT COUNT(*) FROM microbrsoil_db.pipeline_runs WHERE status = '${PIPELINE_STATUS.FAILED}') as failed_pipelines,
+        (SELECT COALESCE(AVG(duration_ms), 0)::BIGINT FROM microbrsoil_db.pipeline_runs WHERE duration_ms IS NOT NULL) as avg_pipeline_duration_ms,
+        (SELECT COALESCE(MAX(duration_ms), 0)::BIGINT FROM microbrsoil_db.pipeline_runs WHERE duration_ms IS NOT NULL) as max_pipeline_duration_ms,
+        (SELECT COALESCE(SUM(upload_size_bytes), 0)::BIGINT FROM microbrsoil_db.pipeline_runs WHERE upload_size_bytes IS NOT NULL) as total_upload_bytes,
         (SELECT COUNT(DISTINCT geo_loc_name) FROM microbrsoil_db.soil) as unique_locations
     `;
 
@@ -624,7 +734,7 @@ router.get('/stats', requireAuth, async (req, res) => {
 });
 
 // Get alpha diversity tests by soil ID
-router.get('/alpha/soil/:soilId', requireAuth, async (req, res) => {
+router.get('/alpha/soil/:soilId', requireAuth, tableReadLimiter, alphaCache, async (req, res) => {
   try {
     const { soilId } = req.params;
     const isAdmin = isAdminRole(req.user?.role);
@@ -674,7 +784,7 @@ router.get('/alpha/soil/:soilId', requireAuth, async (req, res) => {
 });
 
 // Get all alpha diversity tests (with optional pagination)
-router.get('/alpha', requireAuth, async (req, res) => {
+router.get('/alpha', requireAuth, tableReadLimiter, alphaCache, async (req, res) => {
   try {
     const { page = 1, limit = 100 } = req.query;
     const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
@@ -717,7 +827,7 @@ router.get('/alpha', requireAuth, async (req, res) => {
 });
 
 // Get samples by soil ID
-router.get('/samples/soil/:soilId', requireAuth, async (req, res) => {
+router.get('/samples/soil/:soilId', requireAuth, tableReadLimiter, samplesCache, async (req, res) => {
   try {
     const { soilId } = req.params;
     const isAdmin = isAdminRole(req.user?.role);
@@ -773,7 +883,7 @@ router.get('/samples/soil/:soilId', requireAuth, async (req, res) => {
 });
 
 // Get pipeline runs by soil ID
-router.get('/pipeline-runs/soil/:soilId', requireAuth, async (req, res) => {
+router.get('/pipeline-runs/soil/:soilId', requireAuth, tableReadLimiter, pipelineRunsCache, async (req, res) => {
   try {
     const { soilId } = req.params;
     const isAdmin = isAdminRole(req.user?.role);
@@ -797,12 +907,7 @@ router.get('/pipeline-runs/soil/:soilId', requireAuth, async (req, res) => {
         pr.started_at,
         pr.finished_at,
         pr.error_message,
-        pr.logs,
         u.user_email as user_email,
-        pres.alpha_diversity_file,
-        pres.otu_table_file,
-        pres.taxonomy_file,
-        pres.metadata_file,
         pres.processed_at
       FROM microbrsoil_db.pipeline_runs pr
       LEFT JOIN microbrsoil_db.users u ON pr.user_id = u.user_id

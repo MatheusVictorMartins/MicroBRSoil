@@ -1,8 +1,8 @@
 const pool = require('../db');
 const writeLog = require('../log_files/log_handler');
 
-//!passe multiplos parâmetros como obejtos
-//!parametros unicos podem ser passados como variavel unica
+//! pass multiple parameters as objects
+//! single parameters can be passed as a single variable
 
 const createAlpha = async ({ id, alphaArray }) => {
     const values = [id, alphaArray[0], alphaArray[1], alphaArray[2], alphaArray[3], alphaArray[4]];
@@ -14,12 +14,12 @@ const createAlpha = async ({ id, alphaArray }) => {
             RETURNING *`;
         const response = await pool.query(query, values);
         if (response.rowCount == 0) {
-            throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
+            throw `Bad response, likely did not find what you were looking for\nResponse:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
         }
-        writeLog("\n[SUCESSO]" + "\nEntrada: " + values + "\nLinha criada: \n" + JSON.stringify(response.rows[0]));
+        writeLog("\n[SUCCESS]" + "\nInput: " + values + "\nRow created: \n" + JSON.stringify(response.rows[0]));
         return response;
     } catch (err) {
-        writeLog("\n[ERRO]\nmensagem de erro: " + err + "\nvalues: " + values);
+        writeLog("\n[ERROR]\nerror message: " + err + "\nvalues: " + values);
         return false;
     }
 }
@@ -27,25 +27,25 @@ const createAlpha = async ({ id, alphaArray }) => {
 const getAlpha = async (id = 0) => {
     const values = [id];
     try {
-        if (id === undefined || typeof (id) != "number") {//validador de entrada, devem respeitar o tipo e não pode ser undefined
-            throw `Entrada incorreta\nid: ${id} typeOf: ${typeof (id)}`;
+        if (id === undefined || typeof (id) != "number") {// input validator, must match type and cannot be undefined
+            throw `Invalid input\nid: ${id} typeOf: ${typeof (id)}`;
         } else if (id === 0) {
             const query = `select * from microbrsoil_db.alpha_tests`;
             const response = await pool.query(query);
-            let regex = /\{/ig;//regex para o replace ser ativado multiplas vezes, permite que o retorno seja apresentado em linhas diferentes
-            writeLog("\n[SUCESSO]" + "\nEntrada: " + values + "\nLinhas obtidas: \n" + JSON.stringify(response.rows).replace(regex, "\n"));
+            let regex = /\{/ig;// regex so replace runs multiple times, allowing output across lines
+            writeLog("\n[SUCCESS]" + "\nInput: " + values + "\nRows fetched: \n" + JSON.stringify(response.rows).replace(regex, "\n"));
             return response;
         } else {
             const query = `select * from microbrsoil_db.alpha_tests where role_id = $1`;
             const response = await pool.query(query, values);
             if (response.rowCount == 0) {
-                throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
+                throw `Bad response, likely did not find what you were looking for\nResponse:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
             }
-            writeLog("\n[SUCESSO]" + "\nEntrada: " + values + "\nLinha obtida:\n" + JSON.stringify(response.rows[0]));
+            writeLog("\n[SUCCESS]" + "\nInput: " + values + "\nRow fetched:\n" + JSON.stringify(response.rows[0]));
             return response;
         }
     } catch (err) {
-        writeLog("\n[ERRO]\nmensagem de erro: " + err + "\nvalues: " + values);
+        writeLog("\n[ERROR]\nerror message: " + err + "\nvalues: " + values);
         return false;
     }
 }

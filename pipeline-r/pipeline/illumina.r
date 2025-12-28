@@ -65,7 +65,7 @@ run_dada2_pipeline <- function(path1, path2 = default_silva_path, outdir = NULL,
   cat("Samples:", paste(sample.names, collapse = ", "), "\n\n")
   
   # Prepare output dirs
-  result_path <- if (!is.null(outdir)) outdir else file.path(getwd(), "resultados")
+  result_path <- if (!is.null(outdir)) outdir else file.path(getwd(), "results")
   dir.create(result_path, recursive = TRUE, showWarnings = FALSE)
   
   filt_path <- file.path(result_path, "filtered")
@@ -207,7 +207,7 @@ run_dada2_pipeline <- function(path1, path2 = default_silva_path, outdir = NULL,
   
   status <- list(
     status = "success",
-    message = "Pipeline finalizado com sucesso",
+    message = "Pipeline completed successfully",
     pipeline_type = type,
     timestamp = Sys.time(),
     files_created = c(
@@ -226,5 +226,5 @@ run_dada2_pipeline <- function(path1, path2 = default_silva_path, outdir = NULL,
   cat("Output directory:", result_path, "\n")
   cat("========================================\n\n")
   
-  return("Pipeline finalizado com sucesso.")
+  return("Pipeline completed successfully.")
 }

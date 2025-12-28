@@ -1,15 +1,35 @@
 const jwt = require('jsonwebtoken');
+const { ROLES } = require('../constants');
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const rawSecret = process.env.JWT_SECRET;
+const secretList = (process.env.JWT_SECRETS || '')
+  .split(',')
+  .map((value) => value.trim())
+  .filter(Boolean);
+const previousSecrets = (process.env.JWT_SECRET_PREVIOUS || '')
+  .split(',')
+  .map((value) => value.trim())
+  .filter(Boolean);
 
-if (!JWT_SECRET) {
+const jwtSecrets = secretList.length ? secretList : (rawSecret ? [rawSecret, ...previousSecrets] : []);
+
+if (!jwtSecrets.length) {
   throw new Error('JWT_SECRET env var must be set to verify authentication tokens');
 }
 
-if (JWT_SECRET.length < 16) {
-  throw new Error('JWT_SECRET must be at least 16 characters long');
-}
-const ADMIN_ROLE_VALUES = ['admin', 'ADMIN', 1, '1'];
+const activeJwtSecret = jwtSecrets[0];
+
+const assertSecretStrength = (secret, label) => {
+  if (!secret || secret.length < 16) {
+    throw new Error(`${label} must be at least 16 characters long`);
+  }
+};
+
+jwtSecrets.forEach((secret, index) => {
+  const label = index === 0 ? 'JWT secret' : `JWT secret #${index + 1}`;
+  assertSecretStrength(secret, label);
+});
+const ADMIN_ROLE_VALUES = ROLES.ADMIN_VALUES;
 
 function wantsJson(req) {
   const accept = req.headers.accept || '';
@@ -47,7 +67,23 @@ function getTokenFromRequest(req) {
 }
 
 function decodeToken(token) {
-  return jwt.verify(token, JWT_SECRET);
+  let lastError;
+  for (const secret of jwtSecrets) {
+    try {
+      return jwt.verify(token, secret);
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError || new Error('Invalid token');
+}
+
+function getJwtSecrets() {
+  return [...jwtSecrets];
+}
+
+function getActiveJwtSecret() {
+  return activeJwtSecret;
 }
 
 function isAdminRole(role) {
@@ -68,7 +104,7 @@ function unauthorizedResponse(req, res) {
 
   if (wantsApiResponse(req)) {
     return res.status(401).json({
-      error: 'Autenticação necessária.',
+      error: 'Authentication required.',
       redirect
     });
   }
@@ -87,7 +123,7 @@ function requireAuth(req, res, next) {
     req.user = decoded;
     return next();
   } catch (err) {
-    const message = 'Token inválido ou expirado.';
+    const message = 'Token is invalid or expired.';
     if (wantsApiResponse(req)) {
       return res.status(403).json({ error: message });
     }
@@ -119,14 +155,14 @@ function requireAdmin(req, res, next) {
     const decoded = decodeToken(token);
     if (!isAdminRole(decoded.role)) {
       if (wantsApiResponse(req)) {
-        return res.status(403).json({ error: 'Apenas administradores podem acessar este recurso.' });
+        return res.status(403).json({ error: 'Only administrators can access this resource.' });
       }
-      return res.status(403).send('Acesso restrito a administradores.');
+      return res.status(403).send('Access restricted to administrators.');
     }
     req.user = decoded;
     return next();
   } catch (err) {
-    const message = 'Token inválido ou expirado.';
+    const message = 'Token is invalid or expired.';
     if (wantsApiResponse(req)) {
       return res.status(403).json({ error: message });
     }
@@ -141,4 +177,6 @@ module.exports = {
   getTokenFromRequest,
   decodeToken,
   isAdminRole,
+  getJwtSecrets,
+  getActiveJwtSecret,
 };

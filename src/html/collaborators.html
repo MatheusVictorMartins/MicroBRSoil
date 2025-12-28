@@ -1,23 +1,23 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>microBRsoil</title>
     <!--
-    Fala pessoal, o motivo de eu estar utilizando o bootstrap minimal é que eu não vejo muito motivo para utilizar
-    a versão mais "robusta" que o bootstrap possui, muito menos toda a pasta de módulos dele, entã optei pelo minimal que
-    tira alguns whitespaces, deixa uns comandos mais simples e diminui alguns MBs do projeto, deixando ele mais leve.
+    Hey everyone, the reason I'm using bootstrap minimal is that I don't see much reason to use
+    the more "robust" bootstrap version, much less the entire modules folder. So I chose the minimal build,
+    which removes some whitespace, makes some commands simpler, and trims a few MBs from the project, making it lighter.
 
-    *Um adendo é sobre as versões CDN(CSS e JS) e Locais, onde optei por deixar a local pois caso tenha algum problema de conexão enquanto
-    eu ou alguém do grupo estiver mexendo com o front-end no geral, o bootstrap continue funcionando sem problemas. Caso alguém ache melhor
-    e tenha algum motivo que seja realmente benéfico utilizar o CDN ao invés do local(que particularmente eu não consigo ver nenhum)
-    por favor me avisa que a gente discute e muda isso. Mas creio eu que o local está de bom tamanho e não vejo algum malefício
-    em utilizar ele a não ser facilidade de instalação(que é 100% porque não precisa instalar nada :P), mas posso estar errado.
-    Mas caso queira utilizar a versão CDN(Tanto CSS quanto JS), ela já está pronta no projeto, basta comentar a versão local e 
-    descomentar a versão CDN, mas se for fazer isso por favor avise o grupo antes de fazer isso.
+    *Note about CDN (CSS and JS) vs local: I kept the local version so if there is a connection problem while
+    anyone is working on the frontend in general, bootstrap continues to work without issues. If someone thinks
+    there is a real benefit to using the CDN instead of local (which I personally do not see), please let me know
+    so we can discuss and change it. I believe the local build is fine and I don't see any downside other than
+    installation convenience (which is 100% because you don't need to install anything :P), but I could be wrong.
+    If you want to use the CDN version (both CSS and JS), it is already set up in the project. Just comment out
+    the local version and uncomment the CDN version, but please let the group know before doing that.
 
-    Ass.: Matheus(non-regular-bootstrapuser-sorry)
+    Signed: Matheus (non-regular-bootstrapuser-sorry)
     -->
 
     <!--#region BOOTSTRAP CSS IMPORT-->
@@ -35,7 +35,7 @@
     <link rel="stylesheet" href="../static/css/style.css">
     <link rel="stylesheet" href="../static/css/header.css">
     <link rel="stylesheet" href="../static/css/footer.css">
-    <link rel="stylesheet" href="../static/css/help.css">
+    <link rel="stylesheet" href="../static/css/help.css?v=20251227">
     <link rel="stylesheet" href="../static/css/left_menu.css">
     <!--FONT IMPORT-->
     <!--INTER-->
@@ -60,61 +60,128 @@
     <div id="leftmenu-placeholder"></div>
     <!--#region MAIN -->
     <main class="main-content">
-        <h1 class="main-title">COLLABORATORS</h1>
+      <div class="help-page">
+        <section class="page-hero">
+          <div class="hero-kicker">microBRsoil network</div>
+          <h1 class="main-title hero-title">COLLABORATORS</h1>
+          <p class="hero-subtitle">
+            MicroBRSoils is built with researchers, institutions, and sponsors committed to soil health and microbiome science.
+          </p>
+          <div class="hero-badges">
+            <span class="hero-badge"><span class="material-symbols-rounded">groups</span>Core team</span>
+            <span class="hero-badge"><span class="material-symbols-rounded">school</span>Institutions</span>
+            <span class="hero-badge"><span class="material-symbols-rounded">handshake</span>Sponsors</span>
+            <span class="hero-badge"><span class="material-symbols-rounded">hub</span>Partners</span>
+          </div>
+        </section>
 
-        <h2 class="topic-title">👥 Creators &amp; Core Development Team</h2>
-        <p class="basic-text">
-          MicroBRSoils is developed collaboratively by experts in soil microbiology, bioinformatics, and artificial intelligence:
-        </p>
-        <ul class="basic-text">
-          <li><strong>Dr. Victor Pylro</strong> — Federal University of Lavras (UFLA), Brazil</li>
-          <li><strong>Dr. Daniel Morais</strong> — UiT The Arctic University of Norway, Norway</li>
-          <li><strong>Dr. Fernando Dini Andreote</strong> — ESALQ/USP, Brazil</li>
-          <li><strong>Dr. Vanessa Nessner Kavamura</strong> — Rothamsted Research, UK</li>
-          <li><strong>Dr. Robson Parmezan Bonidia</strong> — UTFPR, Brazil</li>
-          <li><strong>Dr. Luiz Roesch</strong> — UF, United States</li>
-	  <li><strong>Dr. Alessandro Varani</strong> — UNESP - Jabotical, Brazil</li>
-	</ul>
-        <p class="basic-text">
-          These researchers also contribute to the broader <em>microBRsoil</em> initiative, which includes additional international 
-          partners and lab infrastructure.
-        </p>
+        <section class="section-grid">
+          <div class="section-card">
+            <div class="section-kicker">Collaboration focus</div>
+            <h2 class="section-title">What this network enables</h2>
+            <ul class="section-list">
+              <li>Shared protocols for microbiome and metadata standardization.</li>
+              <li>Cross-biome sampling aligned with Brazilian biodiversity regulations.</li>
+              <li>Accelerated translation of research into agricultural practice.</li>
+              <li>Open access to quality-controlled reference datasets.</li>
+            </ul>
+          </div>
+          <aside class="section-card toc-card">
+            <div class="section-kicker">On this page</div>
+            <h2 class="section-title">Contents</h2>
+            <ul class="toc-list">
+              <li><a class="toc-link" href="#collab-team">Core development team</a></li>
+              <li><a class="toc-link" href="#collab-support">Sponsors and support</a></li>
+              <li><a class="toc-link" href="#collab-contact">Contact</a></li>
+            </ul>
+          </aside>
+        </section>
 
-        <hr>
+        <section id="collab-team" class="section-card">
+          <div class="section-kicker">Core team</div>
+          <h2 class="section-title">Creators and Core Development Team</h2>
+          <p class="basic-text">
+            MicroBRSoils is developed collaboratively by experts in soil microbiology, bioinformatics, and artificial intelligence:
+          </p>
+          <div class="people-grid">
+            <div class="person-card">
+              <div class="person-name">Dr. Victor Pylro</div>
+              <div class="person-role">Federal University of Lavras (UFLA), Brazil</div>
+            </div>
+            <div class="person-card">
+              <div class="person-name">Dr. Daniel Morais</div>
+              <div class="person-role">UiT The Arctic University of Norway, Norway</div>
+            </div>
+            <div class="person-card">
+              <div class="person-name">Dr. Fernando Dini Andreote</div>
+              <div class="person-role">ESALQ/USP, Brazil</div>
+            </div>
+            <div class="person-card">
+              <div class="person-name">Dr. Vanessa Nessner Kavamura</div>
+              <div class="person-role">Rothamsted Research, UK</div>
+            </div>
+            <div class="person-card">
+              <div class="person-name">Dr. Robson Parmezan Bonidia</div>
+              <div class="person-role">UTFPR, Brazil</div>
+            </div>
+            <div class="person-card">
+              <div class="person-name">Dr. Luiz Roesch</div>
+              <div class="person-role">UF, United States</div>
+            </div>
+            <div class="person-card">
+              <div class="person-name">Dr. Alessandro Varani</div>
+              <div class="person-role">UNESP - Jabotical, Brazil</div>
+            </div>
+          </div>
+          <p class="basic-text">
+            These researchers also contribute to the broader <em>microBRsoil</em> initiative, which includes additional international
+            partners and lab infrastructure.
+          </p>
+        </section>
 
-        <h2 class="topic-title">💰 Sponsors &amp; Institutional Support</h2>
-        <p class="basic-text">
-          MicroBRSoils is possible thanks to a combination of <strong>public funding</strong>, 
-          <strong>scientific collaboration</strong>, and <strong>private-sector innovation</strong>:
-        </p>
+        <section id="collab-support" class="section-card">
+          <div class="section-kicker">Support</div>
+          <h2 class="section-title">Sponsors and Institutional Support</h2>
+          <p class="basic-text">
+            MicroBRSoils is possible thanks to a combination of <strong>public funding</strong>,
+            <strong>scientific collaboration</strong>, and <strong>private-sector innovation</strong>:
+          </p>
+          <div class="support-grid">
+            <div class="support-card">
+              <div class="support-title">Public funding</div>
+              <ul class="section-list">
+                <li><strong>CNPq - National Council for Scientific and Technological Development (Brazil)</strong></li>
+                <li><strong>INCT - Soil Biodiversity (CNPq/CAPES/FAPEMIG)</strong></li>
+              </ul>
+            </div>
+            <div class="support-card">
+              <div class="support-title">Private sector</div>
+              <ul class="section-list">
+                <li><strong>Andrios Soil Microbiology Consulting</strong></li>
+                <li><strong>Biome Solutions - Microbial Analytics and Biocontrol</strong></li>
+              </ul>
+            </div>
+          </div>
+          <p class="basic-text">
+            Their support ensures an affordable and scalable platform, without the need for costly user fees during the initial rollout.
+          </p>
+        </section>
 
-        <p class="basic-text"><strong>Public Funding</strong></p>
-        <ul class="basic-text">
-          <li><strong>CNPq – Conselho Nacional de Desenvolvimento Científico e Tecnológico (Brazil)</strong></li>
-          <li><strong>INCT – Soil Biodiversity (CNPq/CAPES/FAPEMIG)</strong></li>
-        </ul>
-
-        <p class="basic-text"><strong>Private Sector</strong></p>
-        <ul class="basic-text">
-          <li><strong>Andrios Assessoria em Microbiologia do Solo</strong></li>
-          <li><strong>Biome Solutions – Microbial Analytics &amp; Biocontrol</strong></li>
-        </ul>
-        <p class="basic-text">
-          Their support ensures an affordable and scalable platform, without the need for costly user fees during the initial rollout.
-        </p>
-
-        <hr>
-
-        <h2 class="topic-title">📫 Contact &amp; Collaboration</h2>
-        <p class="basic-text">
-          Researchers, companies, and producers interested in collaboration or early access are welcome to get in touch.
-        </p>
-        <ul class="basic-text">
-          <li>
-            Dr. Victor Pylro - MicroBRSoil Coordinator<br>
-            Email: <a href="mailto:victor.pylro@ufla.br" target="_blank" rel="noopener">victor.pylro@ufla.br</a>
-          </li>
-        </ul>
+        <section id="collab-contact" class="section-card">
+          <div class="section-kicker">Contact</div>
+          <h2 class="section-title">Contact and Collaboration</h2>
+          <p class="basic-text">
+            Researchers, companies, and producers interested in collaboration or early access are welcome to get in touch.
+          </p>
+          <div class="contact-card">
+            <div class="person-name">Dr. Victor Pylro</div>
+            <div class="person-role">MicroBRSoil Coordinator</div>
+            <div class="basic-text">
+              Email: <a href="mailto:victor.pylro@ufla.br" target="_blank" rel="noopener">victor.pylro@ufla.br</a>
+            </div>
+          </div>
+        </section>
+      </div>
     </main>
     <!--#endregion-->
   </div>

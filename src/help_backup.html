@@ -1,23 +1,23 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>microBRsoil</title>
     <!--
-    Fala pessoal, o motivo de eu estar utilizando o bootstrap minimal é que eu não vejo muito motivo para utilizar
-    a versão mais "robusta" que o bootstrap possui, muito menos toda a pasta de módulos dele, entã optei pelo minimal que
-    tira alguns whitespaces, deixa uns comandos mais simples e diminui alguns MBs do projeto, deixando ele mais leve.
+    Hey everyone, the reason I'm using bootstrap minimal is that I don't see much reason to use
+    the more "robust" bootstrap version, much less the entire modules folder. So I chose the minimal build,
+    which removes some whitespace, makes some commands simpler, and trims a few MBs from the project, making it lighter.
 
-    *Um adendo é sobre as versões CDN(CSS e JS) e Locais, onde optei por deixar a local pois caso tenha algum problema de conexão enquanto
-    eu ou alguém do grupo estiver mexendo com o front-end no geral, o bootstrap continue funcionando sem problemas. Caso alguém ache melhor
-    e tenha algum motivo que seja realmente benéfico utilizar o CDN ao invés do local(que particularmente eu não consigo ver nenhum)
-    por favor me avisa que a gente discute e muda isso. Mas creio eu que o local está de bom tamanho e não vejo algum malefício
-    em utilizar ele a não ser facilidade de instalação(que é 100% porque não precisa instalar nada :P), mas posso estar errado.
-    Mas caso queira utilizar a versão CDN(Tanto CSS quanto JS), ela já está pronta no projeto, basta comentar a versão local e 
-    descomentar a versão CDN, mas se for fazer isso por favor avise o grupo antes de fazer isso.
+    *Note about CDN (CSS and JS) vs local: I kept the local version so if there is a connection problem while
+    anyone is working on the frontend in general, bootstrap continues to work without issues. If someone thinks
+    there is a real benefit to using the CDN instead of local (which I personally do not see), please let me know
+    so we can discuss and change it. I believe the local build is fine and I don't see any downside other than
+    installation convenience (which is 100% because you don't need to install anything :P), but I could be wrong.
+    If you want to use the CDN version (both CSS and JS), it is already set up in the project. Just comment out
+    the local version and uncomment the CDN version, but please let the group know before doing that.
 
-    Ass.: Matheus(non-regular-bootstrapuser-sorry)
+    Signed: Matheus (non-regular-bootstrapuser-sorry)
     -->
 
     <!--#region BOOTSTRAP CSS IMPORT-->
@@ -82,13 +82,13 @@
           In the uppermost part of the web page, you can find the full taxonomy based on UNITE and a button to download all 
           sequence variants belonging to the corresponding taxon in the FASTA format. Note that, in this FASTA file, each sequence 
           variant is presented with the same structure, i.e.,
-           a sequence identifier specific to each variant (e.g., “38f412f89f7ed93a08e5f0ffd84ae2c7”),
-            an identifier of the sample in which the sequence variant is found (e.g., “SampleID_1311”, similar to the one that you can 
+           a sequence identifier specific to each variant (e.g., "38f412f89f7ed93a08e5f0ffd84ae2c7"),
+            an identifier of the sample in which the sequence variant is found (e.g., "SampleID_1311", similar to the one that you can 
             find in the metadata table in the bottom window of the web page), the taxonomic level and name of the taxon
-             corresponding to this sequence variant (e.g., “genus_Penicillium”), the molecular marker used to obtain this
-              sequence variant from the sample (e.g., “marker_ITS1”), and the abundance of this sequence variant within the
+             corresponding to this sequence variant (e.g., "genus_Penicillium"), the molecular marker used to obtain this
+              sequence variant from the sample (e.g., "marker_ITS1"), and the abundance of this sequence variant within the
                sample together with the total number of full ITS sequences extracted from the sample (including both ITS1 and ITS2 markers)
-                (e.g., “abund_1_total_197270”). Besides that you can use various filters (e.g. biome, source type, sampling year) to display
+                (e.g., "abund_1_total_197270"). Besides that you can use various filters (e.g. biome, source type, sampling year) to display
                  only subset of samples with appearance of the searched taxon. Environmental characteristics together with geographical 
                  distribution of the selected samples are then displayed in a bottom window. In this section you can find distribution 
                  of the searched taxon in samples based on environmental characteristics (biome, climate and soil pH) and geography
@@ -103,16 +103,16 @@
 
         <h2 class="topic-title">Sequence search</h2>
 
-        <p class="basic-text">Our sequence search tool enables to submit user’s own sequences and:
+        <p class="basic-text">Our sequence search tool enables to submit user's own sequences and:
             <span class="topic-index">i)</span> search for exact hits in the database for up to 100 sequences, 
             <span class="topic-index">ii)</span> run a BLAST search for the best hit for up to 100 sequences or
             <span class="topic-index">iii)</span> run a BLAST search for a single sequence with the option to display results for one, 
             10, 50, 100 or 500 best hits. In case of the best hit search, resulting page provides the best 
             hit sequence with possibility to display characteristics of the samples with appearance of the
-            sequence variant similar to results of “Taxon search”. BLAST group results provide standard BLAST 
+            sequence variant similar to results of "Taxon search". BLAST group results provide standard BLAST 
             results with a possibility to filter them according to similarity threshold. Samples harbouring the
             closest BLAST hits can be subsequently displayed together with environmental and geographical characteristics
-            similar to results of “Taxon search” in section “Results”.</p>
+            similar to results of "Taxon search" in section "Results".</p>
     </main>
     <!--#endregion-->
   </div>

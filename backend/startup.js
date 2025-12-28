@@ -49,7 +49,7 @@ async function checkDependencies() {
 
     // Mark stale queued/running pipelines as failed after queue reset
     try {
-      const message = 'Pipeline interrompido apos reinicio da fila.';
+      const message = 'Pipeline interrupted after queue restart.';
       const result = await pool.query(
         `UPDATE microbrsoil_db.pipeline_runs
          SET status = 'failed',

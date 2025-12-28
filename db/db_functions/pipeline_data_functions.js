@@ -37,6 +37,95 @@ const resolveOwnerId = async (userId) => {
     return 1;
 };
 
+const fetchRunOwnerInfo = async (runId) => {
+    if (!runId) return { runExists: false, ownerId: null };
+    try {
+        const res = await pool.query(
+            'SELECT user_id FROM microbrsoil_db.pipeline_runs WHERE run_id = $1',
+            [runId]
+        );
+        if (res.rows.length === 0) {
+            return { runExists: false, ownerId: null };
+        }
+        return { runExists: true, ownerId: res.rows[0].user_id };
+    } catch (err) {
+        writeLog(`\n[WARNING] Could not fetch pipeline_runs owner for run ${runId}: ${err.message}`);
+        return { runExists: false, ownerId: null };
+    }
+};
+
+const fetchSoilOwnerId = async (soilId) => {
+    if (!soilId) return null;
+    try {
+        const res = await pool.query(
+            'SELECT owner_id FROM microbrsoil_db.soil WHERE soil_id = $1',
+            [soilId]
+        );
+        if (res.rows.length > 0) {
+            return res.rows[0].owner_id;
+        }
+    } catch (err) {
+        writeLog(`\n[WARNING] Could not fetch soil owner for soil_id ${soilId}: ${err.message}`);
+    }
+    return null;
+};
+
+const ensureRunOwnerId = async (runId, ownerId) => {
+    if (!runId || !ownerId) return;
+    try {
+        const res = await pool.query(
+            'UPDATE microbrsoil_db.pipeline_runs SET user_id = $1 WHERE run_id = $2 AND user_id IS NULL',
+            [ownerId, runId]
+        );
+        if (res.rowCount > 0) {
+            writeLog(`\n[INFO] Updated pipeline_runs user_id for run ${runId} to ${ownerId}`);
+        }
+    } catch (err) {
+        writeLog(`\n[WARNING] Could not update pipeline_runs user_id for run ${runId}: ${err.message}`);
+    }
+};
+
+const ensureSoilOwnerId = async (soilId, ownerId) => {
+    if (!soilId || !ownerId) return;
+    try {
+        const res = await pool.query(
+            'UPDATE microbrsoil_db.soil SET owner_id = $1 WHERE soil_id = $2 AND owner_id <> $1',
+            [ownerId, soilId]
+        );
+        if (res.rowCount > 0) {
+            writeLog(`\n[INFO] Updated soil owner for soil_id ${soilId} to ${ownerId}`);
+        }
+    } catch (err) {
+        writeLog(`\n[WARNING] Could not update soil owner for soil_id ${soilId}: ${err.message}`);
+    }
+};
+
+const resolveRunOwnerId = async (runId, fallbackUserId, existingSoilId = null) => {
+    const runInfo = await fetchRunOwnerInfo(runId);
+    let ownerId = runInfo.ownerId;
+
+    if (!ownerId && existingSoilId) {
+        ownerId = await fetchSoilOwnerId(existingSoilId);
+    }
+
+    if (!ownerId && fallbackUserId) {
+        const parsed = Number(fallbackUserId);
+        if (!Number.isNaN(parsed)) {
+            ownerId = parsed;
+        }
+    }
+
+    if (!ownerId) {
+        ownerId = await resolveOwnerId(null);
+    }
+
+    if (runInfo.runExists && !runInfo.ownerId && ownerId) {
+        await ensureRunOwnerId(runId, ownerId);
+    }
+
+    return ownerId;
+};
+
 /**
  * Process and save pipeline results to database after successful completion
  * @param {string} runId - Pipeline run ID
@@ -47,7 +136,7 @@ const resolveOwnerId = async (userId) => {
  */
 const processPipelineResults = async (runId, outputDirectory, pipelineType, userId = null) => {
     try {
-        writeLog(`\n[INFO] Iniciando processamento de resultados do pipeline ${pipelineType} para run ${runId}`);
+        writeLog(`\n[INFO] Starting pipeline results processing for ${pipelineType} run ${runId}`);
         
         // Check if pipeline completed successfully by reading status file
         const statusFilePath = path.join(outputDirectory, 'pipeline_status.json');
@@ -125,7 +214,7 @@ const processPipelineResults = async (runId, outputDirectory, pipelineType, user
                     writeLog(`\n[SUCCESS] Updated pipeline result with soil_id: ${soilId}`);
                 }
             } catch (error) {
-                writeLog(`\n[ERROR] Erro ao processar dados para o banco: ${error.message}`);
+                writeLog(`\n[ERROR] Failed to process data for the database: ${error.message}`);
                 // Don't throw error here - we still want to record that files were created
             }
         } else {
@@ -147,7 +236,7 @@ const processPipelineResults = async (runId, outputDirectory, pipelineType, user
         return result;
 
     } catch (error) {
-        writeLog(`\n[ERROR] Erro ao processar resultados do pipeline: ${error.message}`);
+        writeLog(`\n[ERROR] Failed to process pipeline results: ${error.message}`);
         throw error;
     }
 };
@@ -379,6 +468,8 @@ const processAndStoreData = async (resultFiles, userId, runId, pipelineType) => 
             writeLog(`\n[WARNING] Could not check for existing soil record: ${checkError.message}`);
         }
 
+        const ownerId = await resolveRunOwnerId(runId, userId, existingSoilId);
+
         // Create a soil record for the pipeline results (only if one doesn't exist)
         let soilRecord;
         let soilId;
@@ -388,8 +479,6 @@ const processAndStoreData = async (resultFiles, userId, runId, pipelineType) => 
             writeLog(`\n[INFO] Using existing soil record: ${soilId}`);
         } else {
             try {
-                const ownerId = await resolveOwnerId(userId);
-                
                 // Use parsed metadata if available, otherwise use defaults
                 const soilData = parsedMetadata || {
                     sample_name: `Pipeline_${pipelineType}_${runId}`,
@@ -415,7 +504,7 @@ const processAndStoreData = async (resultFiles, userId, runId, pipelineType) => 
                 soilId = soilRecord.rows[0].soil_id;
                 writeLog(`\n[SUCCESS] Soil record created with ID: ${soilId}`);
             } catch (soilError) {
-                writeLog(`\n[ERROR] Erro ao criar registro de solo: ${soilError.message}`);
+                writeLog(`\n[ERROR] Failed to create soil record: ${soilError.message}`);
                 throw new Error(`Failed to create soil record: ${soilError.message}`);
             }
         }
@@ -430,6 +519,8 @@ const processAndStoreData = async (resultFiles, userId, runId, pipelineType) => 
                 writeLog(`\n[WARNING] Could not delete old records: ${deleteError.message}`);
             }
         }
+
+        await ensureSoilOwnerId(soilId, ownerId);
         
         let alphaRecords = 0;
         let sampleRecords = 0;
@@ -461,7 +552,7 @@ const processAndStoreData = async (resultFiles, userId, runId, pipelineType) => 
                         alphaRecords++;
                     }
                 } catch (alphaError) {
-                    writeLog(`\n[WARNING] Erro ao processar linha de diversidade alfa: ${alphaError.message}`);
+                    writeLog(`\n[WARNING] Failed to process alpha diversity row: ${alphaError.message}`);
                 }
             }
             writeLog(`\n[SUCCESS] Alpha diversity records processed: ${alphaRecords}`);
@@ -495,7 +586,7 @@ const processAndStoreData = async (resultFiles, userId, runId, pipelineType) => 
                         });
                     }
                 } catch (taxError) {
-                    writeLog(`\n[WARNING] Erro ao processar linha de taxonomia ${index}: ${taxError.message}`);
+                    writeLog(`\n[WARNING] Failed to process taxonomy row ${index}: ${taxError.message}`);
                 }
             });
 
@@ -519,7 +610,7 @@ const processAndStoreData = async (resultFiles, userId, runId, pipelineType) => 
                         ];
                     }
                 } catch (otuError) {
-                    writeLog(`\n[WARNING] Erro ao processar linha de OTU ${index}: ${otuError.message}`);
+                    writeLog(`\n[WARNING] Failed to process OTU row ${index}: ${otuError.message}`);
                 }
             });
 
@@ -535,7 +626,7 @@ const processAndStoreData = async (resultFiles, userId, runId, pipelineType) => 
                         sampleRecords++;
                     }
                 } catch (sampleError) {
-                    writeLog(`\n[WARNING] Erro ao criar amostra para sequência ${sequence}: ${sampleError.message}`);
+                    writeLog(`\n[WARNING] Failed to create sample for sequence ${sequence}: ${sampleError.message}`);
                 }
             }
             
@@ -554,7 +645,7 @@ const processAndStoreData = async (resultFiles, userId, runId, pipelineType) => 
         return result;
 
     } catch (error) {
-        writeLog(`\n[ERROR] Erro ao processar e armazenar dados: ${error.message}`);
+        writeLog(`\n[ERROR] Failed to process and store data: ${error.message}`);
         throw error;
     }
 };

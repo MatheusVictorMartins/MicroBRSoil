@@ -49,7 +49,7 @@ require_or_stop <- function(pkg) {
   if (!requireNamespace(pkg, quietly = TRUE)) {
     stop(
       "Pacote R ausente no container: '", pkg,
-      "'. Instale no Dockerfile/ambiente (não instale em runtime)."
+      "'. Install in the Dockerfile/environment (do not install at runtime)."
     )
   }
 }
@@ -361,7 +361,7 @@ run_pipeline_its <- function(path1, path2 = default_its_ref, outdir = NULL, type
 
     status <- list(
       status = "success",
-      message = "Pipeline ITS executado com sucesso",
+      message = "ITS pipeline completed successfully",
       pipeline_type = type,
       timestamp = as.character(Sys.time()),
       files_created = c(
@@ -383,7 +383,7 @@ run_pipeline_its <- function(path1, path2 = default_its_ref, outdir = NULL, type
     cat("Output directory:", result_path, "\n")
     cat("========================================\n\n")
 
-    return("Pipeline ITS executado com sucesso.")
+    return("ITS pipeline completed successfully.")
 
   }, error = function(e) {
 
@@ -395,7 +395,7 @@ run_pipeline_its <- function(path1, path2 = default_its_ref, outdir = NULL, type
       message = msg,
       pipeline_type = type,
       timestamp = as.character(Sys.time()),
-      hint = "Verifique pipeline_progress.log para detalhes."
+      hint = "Check pipeline_progress.log for details."
     ))
 
     stop(e)

@@ -2,21 +2,21 @@ const pool = require('../db');
 const writeLog = require('../log_files/log_handler');
 const crypto = require('crypto');
 
-//!passe multiplos parâmetros como obejtos
-//!parametros unicos podem ser passados como variavel
+//! pass multiple parameters as objects
+//! single parameters can be passed as a variable
 
 /*
-fluxo das functions:
-    recebe input
-    valida input
-    gera query
-    manda query para bd
-    recebe resposta
-    valida resposta
-    retorna resposta
-    escreve no log
-    em caso de erro
-        escreve mensagem de erro no log e encerra a funtion
+flow for the functions:
+    receive input
+    validate input
+    build query
+    send query to DB
+    receive response
+    validate response
+    return response
+    write to log
+    on error
+        write error message to log and exit the function
  */
 
 const hashIdentifier = (value) => {
@@ -25,6 +25,7 @@ const hashIdentifier = (value) => {
 };
 
 let passwordViewColumnCached = null;
+let refreshTokenColumnCached = null;
 
 const ensurePasswordViewColumn = async () => {
     if (passwordViewColumnCached === true) return true;
@@ -36,7 +37,7 @@ const ensurePasswordViewColumn = async () => {
         passwordViewColumnCached = true;
         return true;
     } catch (err) {
-        writeLog("\n[ERRO] ensurePasswordViewColumn: " + err);
+        writeLog("\n[ERROR] ensurePasswordViewColumn: " + err);
         passwordViewColumnCached = false;
         return false;
     }
@@ -62,29 +63,51 @@ const hasPasswordViewColumn = async () => {
     return passwordViewColumnCached;
 };
 
-//cria user e retorna a linha criada
+const ensureRefreshTokenColumns = async () => {
+    if (refreshTokenColumnCached === true) return true;
+    try {
+        await pool.query(
+            `ALTER TABLE microbrsoil_db.users
+             ADD COLUMN IF NOT EXISTS refresh_token_hash TEXT,
+             ADD COLUMN IF NOT EXISTS refresh_token_expires_at TIMESTAMPTZ`
+        );
+        refreshTokenColumnCached = true;
+        return true;
+    } catch (err) {
+        writeLog("\n[ERROR] ensureRefreshTokenColumns: " + err);
+        refreshTokenColumnCached = false;
+        return false;
+    }
+};
+
+const hashRefreshToken = (token) => {
+    if (!token) return '';
+    return crypto.createHash('sha256').update(String(token)).digest('hex');
+};
+
+// creates user and returns the created row
 const createUser = async ({ email, password, role = null, passwordView = null }) => {
     const values = [email, password];
     try {
-        if (email == null || email === "" || typeof (email) != "string" || password == null || password === "" || typeof (password) != "string") {//validador de entrada, devem respeitar o tipo e não pode ser undefined
-            throw `Entrada incorreta\n:email:${email} typeof: ${typeof (email)}\npassword:${password} typeof: ${typeof (password)}\nrole: ${role} typeof: ${typeof (role)}`;
+        if (email == null || email === "" || typeof (email) != "string" || password == null || password === "" || typeof (password) != "string") {// input validator, must match type and cannot be undefined
+            throw `Invalid input\n:email:${email} typeof: ${typeof (email)}\npassword:${password} typeof: ${typeof (password)}\nrole: ${role} typeof: ${typeof (role)}`;
         }
 
-        // Resolve role_id dinamicamente para evitar FK quebrada
+        // Resolve role_id dynamically to avoid broken FK
         let roleIdToUse = role;
         if (roleIdToUse == null) {
-            // padrão = role "user"
+            // default = role "user"
             let roleLookup = await pool.query(
                 `select role_id from microbrsoil_db.roles where role_name = $1 limit 1`,
                 ['user']
             );
             if (roleLookup.rowCount === 0) {
-                // tenta recriar roles padrão caso a seed não tenha rodado
+                // try to recreate default roles if the seed did not run
                 await pool.query(`
                     insert into microbrsoil_db.roles (role_name, description) values
-                    ('admin', 'Administrador do sistema com acesso total'),
-                    ('user', 'Usuário padrão com acesso limitado'),
-                    ('researcher', 'Pesquisador com acesso a análises e resultados')
+                    ('admin', 'System administrator with full access'),
+                    ('user', 'Default user with limited access'),
+                    ('researcher', 'Researcher with access to analyses and results')
                     on conflict (role_name) do nothing
                 `);
                 roleLookup = await pool.query(
@@ -92,7 +115,7 @@ const createUser = async ({ email, password, role = null, passwordView = null })
                     ['user']
                 );
                 if (roleLookup.rowCount === 0) {
-                    throw `Role padrão 'user' não encontrada na tabela roles (mesmo após tentar recriar)`;
+                    throw `Default role 'user' not found in roles table (even after attempting to recreate)`;
                 }
             }
             roleIdToUse = roleLookup.rows[0].role_id;
@@ -102,11 +125,11 @@ const createUser = async ({ email, password, role = null, passwordView = null })
                 [roleIdToUse]
             );
             if (roleLookup.rowCount === 0) {
-                throw `Role '${roleIdToUse}' não encontrada na tabela roles`;
+                throw `Role '${roleIdToUse}' not found in roles table`;
             }
             roleIdToUse = roleLookup.rows[0].role_id;
         } else if (typeof roleIdToUse !== "number") {
-            throw `Role inválida: ${roleIdToUse} typeof: ${typeof roleIdToUse}`;
+            throw `Invalid role: ${roleIdToUse} typeof: ${typeof roleIdToUse}`;
         }
 
         const columns = ['user_email', 'password_hash', 'role_id'];
@@ -121,29 +144,29 @@ const createUser = async ({ email, password, role = null, passwordView = null })
         const query = `insert into microbrsoil_db.users (${columns.join(', ')}) values (${placeholders}) returning *`;
         const response = await pool.query(query, params);
         if (response.rowCount === 0) {
-            throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
+            throw `Bad response, likely did not find what you were looking for\nResponse:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
         }
-        writeLog("\n[SUCESSO] createUser email_hash:" + hashIdentifier(email) + " role:" + roleIdToUse);
+        writeLog("\n[SUCCESS] createUser email_hash:" + hashIdentifier(email) + " role:" + roleIdToUse);
         return response;
     } catch (err) {
-        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas mascaradas: " + [hashIdentifier(email), "***", role]);
+        writeLog("\n[ERROR]\nError message: " + err + "\nRedacted inputs: " + [hashIdentifier(email), "***", role]);
         return false;
     }
 }
 
-//deleta user e retorna a linha deletada
+// deletes a user and returns the deleted row
 const deleteUser = async (id) => {
     const values = [id];
     try {
-        if (id == null || typeof (id) != "number") {//validador de entrada, devem respeitar o tipo e não pode ser undefined
-            throw `Entrada incorreta\nID: ${id} typeof: ${typeof (id)}`;
+        if (id == null || typeof (id) != "number") {// input validator, must match type and cannot be undefined
+            throw `Invalid input\nID: ${id} typeof: ${typeof (id)}`;
         } else {
             const query = `delete from microbrsoil_db.users where user_id = $1 returning *`;
             const response = await pool.query(query, values);
             if (response.rowCount == 0) {
-                throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
+                throw `Bad response, likely did not find what you were looking for\nResponse:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
             }
-            writeLog("\n[SUCESSO] deleteUser id: " + id);
+            writeLog("\n[SUCCESS] deleteUser id: " + id);
             return response;
         }
     } catch (err) {
@@ -153,32 +176,32 @@ const deleteUser = async (id) => {
             if (col && col.includes('user_email')) return hashIdentifier(val);
             return val;
         });
-        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas mascaradas: " + redactedValues);
+        writeLog("\n[ERROR]\nError message: " + err + "\nRedacted inputs: " + redactedValues);
         return false;
     }
 }
 
-//retorna user com base no id ou retorna todos
+// returns user by id or returns all
 const getUser = async (id = 0) => {
     const values = [id];
     try {
-        if (id === undefined || typeof (id) != "number") {//validador de entrada, devem respeitar o tipo e não pode ser undefined
-            throw `Entrada incorreta\nid: ${id} typeOf: ${typeof (id)}`;
+        if (id === undefined || typeof (id) != "number") {// input validator, must match type and cannot be undefined
+            throw `Invalid input\nid: ${id} typeOf: ${typeof (id)}`;
         } else if (id === 0) {
             const query = `select * from microbrsoil_db.users`;
             const response = await pool.query(query);
             let regex = /\{/ig;
             if (response.rowCount == 0) {
-                throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
+                throw `Bad response, likely did not find what you were looking for\nResponse:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
             }
-            writeLog("\n[SUCESSO] getUser all users count: " + response.rowCount);
+            writeLog("\n[SUCCESS] getUser all users count: " + response.rowCount);
             return response;
         } else {
             const query = `select * from microbrsoil_db.users where user_id = $1`;
             const response = await pool.query(query, values);
-            writeLog("\n[SUCESSO] getUser id: " + id);
+            writeLog("\n[SUCCESS] getUser id: " + id);
             if (response.rowCount == 0) {
-                throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
+                throw `Bad response, likely did not find what you were looking for\nResponse:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
             }
             return response;
         }
@@ -189,47 +212,47 @@ const getUser = async (id = 0) => {
             if (col && col.includes('user_email')) return hashIdentifier(val);
             return val;
         });
-        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas mascaradas: " + redactedValues);
+        writeLog("\n[ERROR]\nError message: " + err + "\nRedacted inputs: " + redactedValues);
         return false;
     }
 }
 
-//faz login do usuario comparando email e senha
-//retorna linha do usuario 
+// logs in a user by comparing email and password
+// returns the user row
 const logUser = async (email) => {
     const values = [email];
     try {
-        if (email == undefined || typeof (email) != "string") {//validador de entrada, devem respeitar o tipo e não pode ser undefined
-            throw `Erro de entrada em logUser\nemail: ${email} typeof: ${typeof (email)}}`
+        if (email == undefined || typeof (email) != "string") {// input validator, must match type and cannot be undefined
+            throw `Input error in logUser\nemail: ${email} typeof: ${typeof (email)}}`
         } else {
             const query = `select * from microbrsoil_db.users where user_email = $1`;
             const response = await pool.query(query, values);
             if (response.rowCount == 0) {
-                writeLog("\n[INFO] logUser: nenhum usuario encontrado para hash:" + hashIdentifier(email));
+                writeLog("\n[INFO] logUser: no user found for hash:" + hashIdentifier(email));
                 return null;
             }
-            writeLog("\n[SUCESSO] logUser lookup para hash:" + hashIdentifier(email));
+            writeLog("\n[SUCCESS] logUser lookup for hash:" + hashIdentifier(email));
             return response;
         }
     } catch (err) {
-        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas mascaradas: " + hashIdentifier(email));
+        writeLog("\n[ERROR]\nError message: " + err + "\nRedacted inputs: " + hashIdentifier(email));
         return false;
     }
 }
 
-//altera usuario com base no id
-//retorna linha alterada
+// updates user by id
+// returns the updated row
 const updateUser = async ({ email, password, name, id }) => {
-    //query gerada dinâmicamente com base nas entradas
-    //quanto mais entradas mais valores são colocados nos arrays columns e values
-    const columns = [];//coluna a ser modifica
-    const values = [];//novo valor
-    let index = 1;//indice atual do array para a query
+    // query generated dynamically based on inputs
+    // the more inputs, the more values are added to the columns and values arrays
+    const columns = [];// column to update
+    const values = [];// new value
+    let index = 1;// current array index for the query
     try {
-        if (id == null || typeof id !== "number") {//validador de entrada, devem respeitar o tipo e não pode ser undefined
-            throw `Formatação incorreta\nid: ${id} typeOf: ${typeof (id)}`;
+        if (id == null || typeof id !== "number") {// input validator, must match type and cannot be undefined
+            throw `Invalid formatting\nid: ${id} typeOf: ${typeof (id)}`;
         }
-        if (email != null && email !== "" && typeof email === "string") {//valores vão para os arrays se são validos
+        if (email != null && email !== "" && typeof email === "string") {// values go to arrays if valid
             columns.push(`user_email = $${index}`);
             values.push(email);
             index++;
@@ -244,17 +267,17 @@ const updateUser = async ({ email, password, name, id }) => {
             values.push(name);
             index++;
         }
-        if (columns.length === 0) {//caso não tenhão valores validos nas colunas
-            throw `Formatação incorreta\nid: ${id} typeOf: ${typeof id}\nemail: ${email}\npassword: ${password}\nname: ${name}`;
+        if (columns.length === 0) {// when no valid values exist in columns
+            throw `Invalid formatting\nid: ${id} typeOf: ${typeof id}\nemail: ${email}\npassword: ${password}\nname: ${name}`;
         }
 
         values.push(id);
-        const query = `UPDATE microbrsoil_db.users SET ${columns.join(', ')} WHERE user_id = $${index} RETURNING *`;//query dinamica
+        const query = `UPDATE microbrsoil_db.users SET ${columns.join(', ')} WHERE user_id = $${index} RETURNING *`;// dynamic query
         const response = await pool.query(query, values);
         if (response.rowCount == 0) {
-            throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
+            throw `Bad response, likely did not find what you were looking for\nResponse:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
         }
-        writeLog("\n[SUCESSO] updateUser id: " + id + " campos: " + columns.join(', '));
+        writeLog("\n[SUCCESS] updateUser id: " + id + " fields: " + columns.join(', '));
         return response;
     } catch (err) {
         const redactedValues = values.map((val, idx) => {
@@ -263,7 +286,7 @@ const updateUser = async ({ email, password, name, id }) => {
             if (col && col.includes('user_email')) return hashIdentifier(val);
             return val;
         });
-        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas mascaradas: " + redactedValues);
+        writeLog("\n[ERROR]\nError message: " + err + "\nRedacted inputs: " + redactedValues);
         return false;
     }
 }
@@ -283,22 +306,75 @@ const updatePasswordView = async ({ userId, passwordView }) => {
         );
         return response.rowCount > 0;
     } catch (err) {
-        writeLog("\n[ERRO] updatePasswordView userId: " + userId + " err: " + err);
+        writeLog("\n[ERROR] updatePasswordView userId: " + userId + " err: " + err);
         return false;
     }
 };
+
+const updateRefreshToken = async ({ userId, refreshToken, expiresAt }) => {
+    try {
+        if (!userId) return false;
+        if (!await ensureRefreshTokenColumns()) return false;
+
+        if (!refreshToken || !expiresAt) {
+            const response = await pool.query(
+                `UPDATE microbrsoil_db.users
+                 SET refresh_token_hash = NULL,
+                     refresh_token_expires_at = NULL
+                 WHERE user_id = $1
+                 RETURNING user_id`,
+                [userId]
+            );
+            return response.rowCount > 0;
+        }
+
+        const tokenHash = hashRefreshToken(refreshToken);
+        const response = await pool.query(
+            `UPDATE microbrsoil_db.users
+             SET refresh_token_hash = $1,
+                 refresh_token_expires_at = $2
+             WHERE user_id = $3
+             RETURNING user_id`,
+            [tokenHash, expiresAt, userId]
+        );
+        return response.rowCount > 0;
+    } catch (err) {
+        writeLog("\n[ERROR] updateRefreshToken userId: " + userId + " err: " + err);
+        return false;
+    }
+};
+
+const getUserByRefreshTokenHash = async (tokenHash) => {
+    try {
+        if (!tokenHash) return null;
+        if (!await ensureRefreshTokenColumns()) return null;
+        const response = await pool.query(
+            `SELECT user_id, user_email, role_id, refresh_token_expires_at
+             FROM microbrsoil_db.users
+             WHERE refresh_token_hash = $1
+             LIMIT 1`,
+            [tokenHash]
+        );
+        return response.rowCount > 0 ? response.rows[0] : null;
+    } catch (err) {
+        writeLog("\n[ERROR] getUserByRefreshTokenHash: " + err);
+        return null;
+    }
+};
+
+const clearRefreshToken = async ({ userId }) => updateRefreshToken({ userId, refreshToken: null, expiresAt: null });
 
 const listUsers = async () => {
     try {
         const query = `select * from microbrsoil_db.users`;
         const response = await pool.query(query);
         if (response.rowCount == 0) {
-            throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
+            throw `Bad response, likely did not find what you were looking for\nResponse:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
         }
-        writeLog("\n[SUCESSO]"+  "\nLinhas: " + JSON.stringify(response.rowCount));
+        writeLog("\n[SUCCESS]"+  "\nRows: " + JSON.stringify(response.rowCount));
         return response;
     } catch (err) {
-        writeLog("\n[ERRO]\nMensagem de erro: " + err);
+        writeLog("\n[ERROR]\nError message: " + err);
         return false;
     }
 }
@@ -312,5 +388,9 @@ module.exports = {
     updateUser,
     updatePasswordView,
     ensurePasswordViewColumn,
+    ensureRefreshTokenColumns,
+    updateRefreshToken,
+    getUserByRefreshTokenHash,
+    clearRefreshToken,
     listUsers,
 } 

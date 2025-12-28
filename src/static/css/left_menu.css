@@ -134,9 +134,45 @@
     }
 }
 
+@media (max-height: 900px) and (min-width: 972px){
+    #left-menu{
+        padding: 2rem 0;
+    }
+    .btn-left-menu{
+        padding: 1.1rem 1.25rem;
+        height: 3.3rem;
+        font-size: 1.05rem;
+    }
+    .btn_left_menu_icon{
+        font-size: 1.4rem !important;
+    }
+}
+
+@media (max-height: 780px) and (min-width: 972px){
+    #left-menu{
+        padding: 1.5rem 0;
+    }
+    .btn-left-menu{
+        padding: 0.85rem 1.1rem;
+        height: 3rem;
+        font-size: 0.95rem;
+    }
+    .btn_left_menu_icon{
+        font-size: 1.3rem !important;
+    }
+}
+
 /*DETAILS*/
 #left-menu{
     box-shadow: 9px 0px 25px rgba(60,105,96,0.6), 0px 0px 3px rgba(60,105,96,1);
+    overflow: hidden;
+}
+
+.left-menu-btns{
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    padding-bottom: 1rem;
 }
 
 /*DIVIDER*/

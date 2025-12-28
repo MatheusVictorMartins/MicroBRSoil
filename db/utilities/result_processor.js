@@ -19,6 +19,71 @@ const sampleFunctions = requireDbModule('../db_functions/sample_funtion');
 const alphaFunctions = requireDbModule('../db_functions/alpha_functions');
 const soilFunctions = requireDbModule('../db_functions/soil_funtions');
 
+const fetchRunOwnerInfo = async (runId) => {
+    if (!runId) return { runExists: false, ownerId: null };
+    try {
+        const res = await pool.query(
+            'SELECT user_id FROM microbrsoil_db.pipeline_runs WHERE run_id = $1',
+            [runId]
+        );
+        if (res.rows.length === 0) {
+            return { runExists: false, ownerId: null };
+        }
+        return { runExists: true, ownerId: res.rows[0].user_id };
+    } catch (err) {
+        writeLog(`\n[WARNING] Could not fetch pipeline_runs owner for run ${runId}: ${err.message}`);
+        return { runExists: false, ownerId: null };
+    }
+};
+
+const ensureRunOwnerId = async (runId, ownerId) => {
+    if (!runId || !ownerId) return;
+    try {
+        const res = await pool.query(
+            'UPDATE microbrsoil_db.pipeline_runs SET user_id = $1 WHERE run_id = $2 AND user_id IS NULL',
+            [ownerId, runId]
+        );
+        if (res.rowCount > 0) {
+            writeLog(`\n[INFO] Updated pipeline_runs user_id for run ${runId} to ${ownerId}`);
+        }
+    } catch (err) {
+        writeLog(`\n[WARNING] Could not update pipeline_runs user_id for run ${runId}: ${err.message}`);
+    }
+};
+
+const ensureSoilOwnerId = async (soilId, ownerId) => {
+    if (!soilId || !ownerId) return;
+    try {
+        const res = await pool.query(
+            'UPDATE microbrsoil_db.soil SET owner_id = $1 WHERE soil_id = $2 AND owner_id <> $1',
+            [ownerId, soilId]
+        );
+        if (res.rowCount > 0) {
+            writeLog(`\n[INFO] Updated soil owner for soil_id ${soilId} to ${ownerId}`);
+        }
+    } catch (err) {
+        writeLog(`\n[WARNING] Could not update soil owner for soil_id ${soilId}: ${err.message}`);
+    }
+};
+
+const resolveRunOwnerId = async (runId, fallbackUserId) => {
+    const runInfo = await fetchRunOwnerInfo(runId);
+    let ownerId = runInfo.ownerId;
+
+    if (!ownerId && fallbackUserId) {
+        const parsed = Number(fallbackUserId);
+        if (!Number.isNaN(parsed)) {
+            ownerId = parsed;
+        }
+    }
+
+    if (runInfo.runExists && !runInfo.ownerId && ownerId) {
+        await ensureRunOwnerId(runId, ownerId);
+    }
+
+    return ownerId;
+};
+
 // Process pipeline results and store in database
 const processPipelineResults = async (runId, outputDirectory, userId = null, pipelineType = 'default') => {
     try {
@@ -65,7 +130,7 @@ const processPipelineResultsLegacy = async (runId, outputDirectory, userId = nul
         }
 
         if (missingFiles.length > 0) {
-            writeLog(`\n[WARNING] Arquivos não encontrados: ${missingFiles.join(', ')}`);
+            writeLog(`\n[WARNING] Files not found: ${missingFiles.join(', ')}`);
         }
 
         // Create pipeline result record
@@ -80,10 +145,11 @@ const processPipelineResultsLegacy = async (runId, outputDirectory, userId = nul
 
         // Process and store data in database if files exist
         let soilId = null;
+        const ownerId = await resolveRunOwnerId(runId, userId);
         
         if (resultFiles.alpha && resultFiles.otu && resultFiles.taxonomy) {
             try {
-                soilId = await processAndStoreDataLegacy(resultFiles, userId, runId);
+                soilId = await processAndStoreDataLegacy(resultFiles, ownerId || userId, runId);
                 
                 // Update pipeline result with soil_id if created
                 if (soilId) {
@@ -91,9 +157,12 @@ const processPipelineResultsLegacy = async (runId, outputDirectory, userId = nul
                         'UPDATE microbrsoil_db.pipeline_results SET soil_id = $1 WHERE run_id = $2',
                         [soilId, runId]
                     );
+                    if (ownerId) {
+                        await ensureSoilOwnerId(soilId, ownerId);
+                    }
                 }
             } catch (error) {
-                writeLog(`\n[ERROR] Erro ao processar dados para o banco: ${error.message}`);
+                writeLog(`\n[ERROR] Failed to process data for the database: ${error.message}`);
                 // Don't throw error here - we still want to record the files were created
             }
         }
@@ -102,7 +171,7 @@ const processPipelineResultsLegacy = async (runId, outputDirectory, userId = nul
         return pipelineResult;
 
     } catch (error) {
-        writeLog(`\n[ERROR] Erro ao processar resultados do pipeline (legacy): ${error.message}`);
+        writeLog(`\n[ERROR] Failed to process pipeline results (legacy): ${error.message}`);
         throw error;
     }
 };
@@ -135,7 +204,7 @@ const processAndStoreDataLegacy = async (resultFiles, userId, runId) => {
                 owner_id: userId || 1
             });
         } catch (soilError) {
-            writeLog(`\n[ERROR] Erro ao criar registro de solo: ${soilError.message}`);
+            writeLog(`\n[ERROR] Failed to create soil record: ${soilError.message}`);
             throw new Error(`Failed to create soil record: ${soilError.message}`);
         }
 
@@ -204,11 +273,11 @@ const processAndStoreDataLegacy = async (resultFiles, userId, runId) => {
             }
         }
 
-        writeLog(`\n[SUCCESS] Dados processados e armazenados para soil_id: ${soilId}`);
+        writeLog(`\n[SUCCESS] Data processed and stored for soil_id: ${soilId}`);
         return soilId;
 
     } catch (error) {
-        writeLog(`\n[ERROR] Erro ao processar e armazenar dados: ${error.message}`);
+        writeLog(`\n[ERROR] Failed to process and store data: ${error.message}`);
         throw error;
     }
 };

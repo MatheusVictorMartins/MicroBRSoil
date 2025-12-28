@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -71,10 +71,11 @@
         </main>
     <!--#region TRANSLATE WRAPPER-->
         <!--<div class="gtranslate_wrapper"></div>
-        <script>window.gtranslateSettings = {"default_language":"en","languages":["en","fr","de", "pt", "it","es"],"wrapper_selector":".gtranslate_wrapper","switcher_horizontal_position":"left","switcher_vertical_position":"bottom","alt_flags":{"en":"usa","pt":"brazil"}}</script>
-        <script src="https://cdn.gtranslate.net/widgets/latest/float.js" defer></script>.-->
+        <script src="../static/js/gtranslate_settings.js"></script>
+        <script src="https://cdn.gtranslate.net/widgets/latest/float.js" defer></script>-->
     <!--#endregion-->
     <!--#region BOOTSTRAP JS LINK-->
+        <script src="../static/js/constants.js"></script>
         <script src="../static/js/button.js"></script>
     <!--===================================================================================================================================-->
     <!--BOOTSTRAP CDN JAVASCRIPT IMPORT *USE IF YOU NEED IT; **COMMENT THE "BOOTSTRAP LOCAL JAVASCRIPT IMPORT" BELOW BEFORE USE CDN-->
@@ -86,71 +87,6 @@
         <script src="../static/js/bootstrap.bundle.min.js"></script>
     <!--===================================================================================================================================-->
     <!--#endregion-->
-    <script>
-        const popoverTriggerList = document.querySelectorAll('[data-bs-toggle="popover"]');
-        const popoverList = [...popoverTriggerList].map(popoverTriggerEl => new bootstrap.Popover(popoverTriggerEl));
-
-        // Handle login submit via fetch so errors show only as a popup
-        const loginForm = document.querySelector(".login-form");
-        if (loginForm) {
-            const urlParams = new URLSearchParams(window.location.search);
-            const nextParam = urlParams.get("next") || "/";
-            let nextInput = loginForm.querySelector('input[name="next"]');
-            if (!nextInput) {
-                nextInput = document.createElement("input");
-                nextInput.type = "hidden";
-                nextInput.name = "next";
-                loginForm.appendChild(nextInput);
-            }
-            nextInput.value = nextParam;
-
-            loginForm.addEventListener("submit", async (event) => {
-                event.preventDefault();
-                if (!loginForm.checkValidity()) {
-                    loginForm.classList.add("was-validated");
-                    return;
-                }
-
-                const formData = new FormData(loginForm);
-                const body = new URLSearchParams(formData).toString();
-                const safeRedirect = (target) => (target && target.startsWith("/") ? target : "/");
-
-                try {
-                    const resp = await fetch(loginForm.action, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/x-www-form-urlencoded",
-                            "Accept": "application/json"
-                        },
-                        body
-                    });
-
-                    const contentType = resp.headers.get("content-type") || "";
-                    if (resp.ok) {
-                        if (contentType.includes("application/json")) {
-                            const payload = await resp.json();
-                            const target = safeRedirect(payload.redirect || nextParam);
-                            window.location.href = target;
-                            return;
-                        }
-                        window.location.href = safeRedirect(nextParam);
-                        return;
-                    }
-
-                    let message = "Falha no login. Tente novamente.";
-                    if (contentType.includes("application/json")) {
-                        const payload = await resp.json().catch(() => null);
-                        message = payload?.message || payload?.error || message;
-                    } else {
-                        const text = await resp.text();
-                        message = text?.trim() || message;
-                    }
-                    alert(message);
-                } catch (err) {
-                    alert("Erro ao conectar. Verifique sua rede e tente novamente.");
-                }
-            });
-        }
-    </script>    
+    <script src="../static/js/login_page.js"></script>    
 </body>
 </html>

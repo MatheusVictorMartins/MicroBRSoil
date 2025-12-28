@@ -1,19 +1,53 @@
-let cachedAuthStatus = null;
+var cachedAuthStatus = window.cachedAuthStatus || null;
+const CACHE_VERSION = "20251227";
+const HEADER_CACHE_KEY = `microbrsoil_header_${CACHE_VERSION}`;
+const LEFT_MENU_CACHE_KEY = `microbrsoil_leftmenu_${CACHE_VERSION}`;
+const APP_CONSTANTS = window.APP_CONSTANTS || {};
+const ROUTES = APP_CONSTANTS.ROUTES || {
+    AUTH_STATUS: "/auth/status",
+    AUTH_REFRESH: "/auth/refresh",
+    AUTH_LOGOUT: "/auth/logout",
+    AUTH_LOGIN: "/login",
+    PIPELINE_RUNS: "/pipeline/runs"
+};
+const ADMIN_ROLE_VALUES = (APP_CONSTANTS.ROLES && APP_CONSTANTS.ROLES.ADMIN_VALUES) || ["admin", "ADMIN", "1", 1];
 
-document.addEventListener("DOMContentLoaded", () => {
-    loadHeader();
-    loadLeftMenu();
+const SESSION_GUARD_CHECK_MS = 2 * 60 * 1000;
+const SESSION_GUARD_REFRESH_MS = 25 * 60 * 1000;
+let sessionGuardIntervalId = null;
+let lastSessionRefreshAt = 0;
+
+document.addEventListener("DOMContentLoaded", async () => {
+    await Promise.all([loadHeader(), loadLeftMenu()]);
+    startPipelineSessionGuard();
 });
+
+function readSessionCache(key) {
+    try {
+        return sessionStorage.getItem(key);
+    } catch (error) {
+        return null;
+    }
+}
+
+function writeSessionCache(key, value) {
+    try {
+        sessionStorage.setItem(key, value);
+    } catch (error) {
+        // ignore cache errors
+    }
+}
 
 function isAdminRole(role) {
     if (role === undefined || role === null) return false;
     if (typeof role === "string") {
         const normalized = role.toLowerCase();
-        if (normalized === "admin" || normalized === "1") return true;
+        if (ADMIN_ROLE_VALUES.includes(role) || ADMIN_ROLE_VALUES.includes(normalized)) return true;
     }
-    if (typeof role === "number" && role === 1) return true;
+    if (typeof role === "number" && ADMIN_ROLE_VALUES.includes(role)) return true;
     const asNumber = Number(role);
-    return asNumber === 1;
+    if (!Number.isNaN(asNumber) && ADMIN_ROLE_VALUES.includes(asNumber)) return true;
+    return ADMIN_ROLE_VALUES.includes(String(role));
 }
 
 async function loadHeader() {
@@ -21,12 +55,21 @@ async function loadHeader() {
     if (!headerPlaceholder) return;
 
     try {
-        const response = await fetch("header.html");
-        headerPlaceholder.innerHTML = await response.text();
+        const cached = readSessionCache(HEADER_CACHE_KEY);
+        if (cached) {
+            headerPlaceholder.innerHTML = cached;
+            const cachedStatus = await getAuthStatus();
+            await syncAuthButton(headerPlaceholder, cachedStatus);
+        }
+
+        const response = await fetch("header.html", { cache: "no-store" });
+        const html = await response.text();
+        headerPlaceholder.innerHTML = html;
+        writeSessionCache(HEADER_CACHE_KEY, html);
         const status = await getAuthStatus();
         await syncAuthButton(headerPlaceholder, status);
     } catch (error) {
-        console.error("Erro ao carregar o header:", error);
+        console.error("Failed to load header:", error);
     }
 }
 
@@ -68,38 +111,125 @@ async function syncAuthButton(headerPlaceholder, statusOverride = null) {
         if (loginButton) {
             if (authIcon) authIcon.textContent = "login";
             if (authLabel) authLabel.textContent = "LOG IN";
-            loginButton.onclick = () => ButtonGoTo("/login");
+            loginButton.onclick = () => ButtonGoTo(ROUTES.AUTH_LOGIN || "/login");
             loginButton.classList.remove("d-none");
         }
     }
 }
 
-async function getAuthStatus(forceRefresh = false) {
+async function getAuthStatus(forceRefresh = false, allowRefresh = true) {
     if (!forceRefresh && cachedAuthStatus) return cachedAuthStatus;
 
     try {
-        const response = await fetch("/auth/status", {
+        const response = await fetch(ROUTES.AUTH_STATUS || "/auth/status", {
             credentials: "include",
             cache: "no-store"
         });
         if (!response.ok) {
+            if (allowRefresh) {
+                const refreshed = await tryRefreshToken();
+                if (refreshed) {
+                    return await getAuthStatus(true, false);
+                }
+            }
             cachedAuthStatus = { authenticated: false };
+            window.cachedAuthStatus = cachedAuthStatus;
             return cachedAuthStatus;
         }
         const data = await response.json();
         data.isAdmin = data.isAdmin ?? isAdminRole(data.user?.role);
+        if (!data.authenticated && allowRefresh) {
+            const refreshed = await tryRefreshToken();
+            if (refreshed) {
+                return await getAuthStatus(true, false);
+            }
+        }
         cachedAuthStatus = data;
+        window.cachedAuthStatus = cachedAuthStatus;
         return data;
     } catch (error) {
-        console.error("Erro ao verificar autenticacao:", error);
+        console.error("Failed to check authentication:", error);
         cachedAuthStatus = { authenticated: false };
+        window.cachedAuthStatus = cachedAuthStatus;
         return cachedAuthStatus;
     }
 }
 
+async function tryRefreshToken() {
+    try {
+        const response = await fetch(ROUTES.AUTH_REFRESH || "/auth/refresh", {
+            method: "POST",
+            credentials: "include",
+            headers: {
+                Accept: "application/json"
+            }
+        });
+        return response.ok;
+    } catch (error) {
+        return false;
+    }
+}
+
+async function hasActivePipelines() {
+    const route = ROUTES.PIPELINE_RUNS || "/pipeline/runs";
+    const url = `${route}?status=active&limit=1`;
+    try {
+        let response = await fetch(url, {
+            credentials: "include",
+            cache: "no-store",
+            headers: {
+                Accept: "application/json"
+            }
+        });
+        if (response.status === 401 || response.status === 403) {
+            const refreshed = await tryRefreshToken();
+            if (!refreshed) return false;
+            lastSessionRefreshAt = Date.now();
+            cachedAuthStatus = null;
+            window.cachedAuthStatus = null;
+            response = await fetch(url, {
+                credentials: "include",
+                cache: "no-store",
+                headers: {
+                    Accept: "application/json"
+                }
+            });
+        }
+        if (!response.ok) return false;
+        const data = await response.json();
+        const runs = Array.isArray(data.runs) ? data.runs : [];
+        return runs.length > 0;
+    } catch (error) {
+        return false;
+    }
+}
+
+async function refreshSessionIfNeeded() {
+    const cookieAuth = document.cookie.includes("auth_status=1");
+    if (!cookieAuth) return;
+    const active = await hasActivePipelines();
+    if (!active) return;
+    const now = Date.now();
+    if (now - lastSessionRefreshAt < SESSION_GUARD_REFRESH_MS) return;
+    const refreshed = await tryRefreshToken();
+    if (refreshed) {
+        lastSessionRefreshAt = now;
+        cachedAuthStatus = null;
+        window.cachedAuthStatus = null;
+    }
+}
+
+function startPipelineSessionGuard() {
+    if (sessionGuardIntervalId) return;
+    sessionGuardIntervalId = setInterval(() => {
+        refreshSessionIfNeeded();
+    }, SESSION_GUARD_CHECK_MS);
+    refreshSessionIfNeeded();
+}
+
 async function logoutUser() {
     try {
-        const response = await fetch("/auth/logout", {
+        const response = await fetch(ROUTES.AUTH_LOGOUT || "/auth/logout", {
             method: "POST",
             credentials: "include",
             headers: {
@@ -108,15 +238,16 @@ async function logoutUser() {
         });
 
         if (!response.ok) {
-            console.error("Falha ao deslogar:", response.status);
+            console.error("Failed to log out:", response.status);
         }
     } catch (error) {
-        console.error("Erro durante logout:", error);
+        console.error("Logout error:", error);
     } finally {
         // Clean client-side flag proactively
         document.cookie = "auth_status=; Max-Age=0; path=/";
         cachedAuthStatus = null;
-        // Volta para a home padrao apos logout
+        window.cachedAuthStatus = cachedAuthStatus;
+        // Return to the default home after logout
         window.location.replace("/");
     }
 }
@@ -126,6 +257,11 @@ async function loadLeftMenu() {
     if (!leftMenuPlaceholder) return;
 
     try {
+        const cached = readSessionCache(LEFT_MENU_CACHE_KEY);
+        if (cached) {
+            leftMenuPlaceholder.innerHTML = cached;
+        }
+
         let response = await fetch("left_menu.html", { cache: "no-store" });
         if (!response.ok) {
             response = await fetch("/left_menu.html", { cache: "no-store" });
@@ -133,14 +269,16 @@ async function loadLeftMenu() {
         if (!response.ok) {
             throw new Error(`Left menu fetch failed: ${response.status}`);
         }
-        leftMenuPlaceholder.innerHTML = await response.text();
+        const html = await response.text();
+        leftMenuPlaceholder.innerHTML = html;
+        writeSessionCache(LEFT_MENU_CACHE_KEY, html);
         const status = await getAuthStatus();
         const cookieAuth = document.cookie.includes("auth_status=1");
         const isAuthenticated = Boolean(status.authenticated || cookieAuth);
-        const newUserButton = leftMenuPlaceholder.querySelector('button[onclick*="/register"]');
-        if (newUserButton && (!isAuthenticated || !status.isAdmin)) {
-            newUserButton.remove();
-        }
+        const adminButtons = leftMenuPlaceholder.querySelectorAll('[data-admin-only="true"]');
+        adminButtons.forEach((button) => {
+            button.classList.toggle('d-none', !status.isAdmin);
+        });
 
         if (!isAuthenticated) {
             const restrictedButtons = [
@@ -156,6 +294,6 @@ async function loadLeftMenu() {
             });
         }
     } catch (error) {
-        console.error("Erro ao carregar o menu lateral:", error);
+        console.error("Failed to load side menu:", error);
     }
 }

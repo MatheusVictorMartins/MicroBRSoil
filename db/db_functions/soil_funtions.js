@@ -1,8 +1,8 @@
 const pool = require('../db');
 const writeLog = require('../log_files/log_handler');
 
-//!passe multiplos parâmetros como obejtos
-//!parametros unicos podem ser passados como variavel unica
+//! pass multiple parameters as objects
+//! single parameters can be passed as a single variable
 
 /**
  * Create a soil record in the database
@@ -113,12 +113,12 @@ const createSoil = async (soilData) => {
         
         const response = await pool.query(query, values);
         if (response.rowCount === 0) {
-            throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
+            throw `Bad response, likely did not find what you were looking for\nResponse:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
         }
-        writeLog("\n[SUCESSO]" + "\nEntrada: " + values + "\nLinha: " + JSON.stringify(response.rows[0]));
+        writeLog("\n[SUCCESS]" + "\nInput: " + values + "\nRow: " + JSON.stringify(response.rows[0]));
         return response;
     } catch (err) {
-        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas: " + values);
+        writeLog("\n[ERROR]\nError message: " + err + "\nInputs: " + values);
         throw err; // Re-throw to allow proper error handling
     }
 }
@@ -129,12 +129,12 @@ const deleteSoil = async (idSoil) => {
         const query = `delete from microbrsoil_db.soil where soil_id = $1 returning *`;
         const response = await pool.query(query, values);
         if (response.rowCount == 0) {
-            throw `Resposta ruim, provavelmente não encontrou o que você estava procurando.\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
+            throw `Bad response, likely did not find what you were looking for.\nResponse:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
         }
-        writeLog("\n[SUCESSO]" + "\nEntrada: " + values + "\nLinha: " + JSON.stringify(response.rows[0]));
+        writeLog("\n[SUCCESS]" + "\nInput: " + values + "\nRow: " + JSON.stringify(response.rows[0]));
         return response;
     } catch (err) {
-        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas: " + values);
+        writeLog("\n[ERROR]\nError message: " + err + "\nInputs: " + values);
         return false;
     }
 }
@@ -143,24 +143,24 @@ const getSoil = async (idSoil = 0) => {
     const values = [idSoil];
     try {
         if (idSoil === undefined || typeof (idSoil) != "number") {
-            throw `Entrada incorreta.\nErro em:\nID: ${id} ou Tipo de dado: ${typeof (id)}`;
+            throw `Invalid input.\nError in:\nID: ${id} or data type: ${typeof (id)}`;
         } else if (idSoil === 0) {
             const query = `select * from microbrsoil_db.soil`;
             const response = await pool.query(query);
-            let regex = /\{/ig;//regex para o replace ser ativado multiplas vezes, permite que o retorno seja apresentado em linhas diferentes
-            writeLog("[SUCESSO]" + "\nEntrada: " + values + "Linhas:\n" + JSON.stringify(response.rows).replace(regex, "\n"));
+            let regex = /\{/ig;// regex so replace runs multiple times, allowing output across lines
+            writeLog("[SUCCESS]" + "\nInput: " + values + "Rows:\n" + JSON.stringify(response.rows).replace(regex, "\n"));
             return response;
         } else {
             const query = `select * from microbrsoil_db.soil where soil_id = $1`;
             const response = await pool.query(query, values);
             if (response.rowCount == 0) {
-                throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
+                throw `Bad response, likely did not find what you were looking for\nResponse:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
             }
-            writeLog("\n[SUCESSO]" + "\nEntrada: " + values + "\nLinha: " + JSON.stringify(response.rows[0]));
+            writeLog("\n[SUCCESS]" + "\nInput: " + values + "\nRow: " + JSON.stringify(response.rows[0]));
             return response;
         }
     } catch (err) {
-        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas: " + values);
+        writeLog("\n[ERROR]\nError message: " + err + "\nInputs: " + values);
         return false;
     }
 }

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -78,6 +78,7 @@
     </div>
 
     <!--#region HEADER INCLUDE-->
+    <script src="../static/js/constants.js"></script>
     <script src="../static/js/include_elements.js"></script>
     <!--#endregion-->
     <!--#region BOOTSTRAP JS LINK-->
@@ -93,32 +94,6 @@
     <!--===================================================================================================================================-->
     <!--#endregion-->
 
-    <script>
-        const radios = document.querySelectorAll('input[name="btnradio"]')
-        const text = document.getElementById("searchtype-text");
-
-        function changeTextByChecked(){
-            const selected = document.querySelector('input[name="btnradio"]:checked');
-            let html_text = "";
-
-            if(!selected){
-                return;
-            }
-            switch(selected.id){
-                case "btnradio1":
-                    html_text = `<p class="description-text searchtype-des-text">*input 1-100 sequences; only complete ITS1 or ITS2</p>`;
-                    break;
-                case "btnradio2":
-                    html_text = `<p class="description-text searchtype-des-text">*input 1-100 sequences; ITS1 or ITS2</p>`;
-                    break;
-                case "btnradio3":
-                    html_text = `<p class="description-text searchtype-des-text">*input 1 sequence; ITS1 or ITS2</p>`;
-                    break;
-            }
-            text.innerHTML = html_text;
-        }
-        radios.forEach(r => r.addEventListener("change", changeTextByChecked));
-        changeTextByChecked();
-    </script>
+    <script src="../static/js/sequence_search_page.js"></script>
 </body>
 </html>

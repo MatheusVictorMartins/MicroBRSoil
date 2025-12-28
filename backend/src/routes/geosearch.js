@@ -4,11 +4,31 @@ const { paths } = require('../utils/moduleResolver');
 const { getSoil } = require(paths.soilFunctions());
 const { apiLogger } = require('../utils/logger');
 const { requireAuth } = require('../middleware/authenticate');
+const { createRateLimiter } = require('../middleware/rateLimit');
+const { createResponseCache } = require('../middleware/responseCache');
 
 router.use(requireAuth);
+router.use(createRateLimiter({
+    windowMs: 60 * 1000,
+    max: 60,
+    message: 'Too many geosearch requests. Please slow down.'
+}));
+
+const geosearchListCache = createResponseCache({
+    ttlMs: 5 * 60 * 1000,
+    maxEntries: 10,
+    maxBodySize: 5 * 1024 * 1024,
+    keyPrefix: 'geosearch:list'
+});
+
+const geosearchDetailCache = createResponseCache({
+    ttlMs: 60 * 1000,
+    maxEntries: 100,
+    keyPrefix: 'geosearch:detail'
+});
 
 // Endpoint to get all soil samples for geosearch map
-router.get('/', async (req, res) => {
+router.get('/', geosearchListCache, async (req, res) => {
     try {
         console.log("GOOD MORNING");
         // Get all soil samples from the database
@@ -102,7 +122,7 @@ router.get('/', async (req, res) => {
 });
 
 // Endpoint to get a specific soil sample by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', geosearchDetailCache, async (req, res) => {
     try {
         const soilId = parseInt(req.params.id);
         

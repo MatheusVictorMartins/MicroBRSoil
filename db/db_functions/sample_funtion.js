@@ -1,8 +1,8 @@
 const pool = require('../db');
 const writeLog = require('../log_files/log_handler');
 
-//!passe multiplos parâmetros como obejtos
-//!parametros unicos podem ser passados como variavel unica
+//! pass multiple parameters as objects
+//! single parameters can be passed as a single variable
 
 const createSample = async ({ id, taxArray, otuArray }) => {
     const values = [id, taxArray[0], taxArray[1], taxArray[2], taxArray[3], taxArray[4], taxArray[5], taxArray[6], taxArray[7], otuArray[0], otuArray[1]];
@@ -12,12 +12,12 @@ const createSample = async ({ id, taxArray, otuArray }) => {
                         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning *`;
         const response = await pool.query(query, values);
         if (response.rowCount === 0) {
-            throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
+            throw `Bad response, likely did not find what you were looking for\nResponse:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
         }
-        writeLog("\n[SUCESSO]" + "\nEntrada: " + values + "\nLinha obtida:\n" + JSON.stringify(response.rows[0]));
+        writeLog("\n[SUCCESS]" + "\nInput: " + values + "\nRow fetched:\n" + JSON.stringify(response.rows[0]));
         return response;
     } catch (err) {
-        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas: " + values);
+        writeLog("\n[ERROR]\nError message: " + err + "\nInputs: " + values);
         return false;
     }
 }
@@ -26,25 +26,25 @@ const createSample = async ({ id, taxArray, otuArray }) => {
 const getSample = async (id = 0) => {
     const values = [id];
     try {
-        if (id === undefined || typeof (id) != "number") {//validador de entrada, devem respeitar o tipo e não pode ser undefined
-            throw `Entrada incorreta\nid: ${id} typeOf: ${typeof (id)}`;
+        if (id === undefined || typeof (id) != "number") {// input validator, must match type and cannot be undefined
+            throw `Invalid input\nid: ${id} typeOf: ${typeof (id)}`;
         } else if (id === 0) {
             const query = `select * from microbrsoil_db.sample`;
             const response = await pool.query(query);
-            let regex = /\{/ig;//regex para o replace ser ativado multiplas vezes, permite que o retorno seja apresentado em linhas diferentes
-            writeLog("\n[SUCESSO]" + "\nEntrada: " + values + "\nLinhas obtidas: \n" + JSON.stringify(response.rows).replace(regex, "\n"));
+            let regex = /\{/ig;// regex so replace runs multiple times, allowing output across lines
+            writeLog("\n[SUCCESS]" + "\nInput: " + values + "\nRows fetched: \n" + JSON.stringify(response.rows).replace(regex, "\n"));
             return response;
         } else {
             const query = `select * from microbrsoil_db.sample where role_id = $1`;
             const response = await pool.query(query, values);
             if (response.rowCount == 0) {
-                throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
+                throw `Bad response, likely did not find what you were looking for\nResponse:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
             }
-            writeLog("\n[SUCESSO]" + "\nEntrada: " + values + "\nLinha obtida:\n" + JSON.stringify(response.rows[0]));
+            writeLog("\n[SUCCESS]" + "\nInput: " + values + "\nRow fetched:\n" + JSON.stringify(response.rows[0]));
             return response;
         }
     } catch (err) {
-        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas: " + values);
+        writeLog("\n[ERROR]\nError message: " + err + "\nInputs: " + values);
         return false;
     }
 }
@@ -54,12 +54,12 @@ const getDistinctSpecies = async () => {
         const query = `select distinct tax_species from microbrsoil_db.sample`;
         const response = await pool.query(query);
         if (response.rowCount == 0) {
-            throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
+            throw `Bad response, likely did not find what you were looking for\nResponse:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
         }
-        writeLog("\n[SUCESSO]" + "\nEntrada: " + values + "\nQuantidade de especies obtidas: " + response.rowCount);
+        writeLog("\n[SUCCESS]" + "\nInput: " + values + "\nSpecies count: " + response.rowCount);
         return response;
     } catch (err) {
-        writeLog("\n[ERRO]\nMensagem de erro: " + err);
+        writeLog("\n[ERROR]\nError message: " + err);
         return false;
     }
 }
@@ -69,12 +69,12 @@ const getDistinctGenus = async () => {
         const query = `select distinct tax_genus from microbrsoil_db.sample`;
         const response = await pool.query(query);
         if (response.rowCount == 0) {
-            throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
+            throw `Bad response, likely did not find what you were looking for\nResponse:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
         }
-        writeLog("\n[SUCESSO]" + "\nEntrada: " + values + "\nQuantidade de genus obtidos: " + response.rowCount);
+        writeLog("\n[SUCCESS]" + "\nInput: " + values + "\nGenus count: " + response.rowCount);
         return response;
     } catch (err) {
-        writeLog("\n[ERRO]\nMensagem de erro: " + err);
+        writeLog("\n[ERROR]\nError message: " + err);
 
         return false;
     }
@@ -86,12 +86,12 @@ const getSampleByExactSequence = async (sequenceString) => {
         const query = `select * from microbrsoil_db.sample where plant_sequence = $1`;
         const response = await pool.query(query, values);
         if (response.rowCount == 0) {
-            throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
+            throw `Bad response, likely did not find what you were looking for\nResponse:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
         }
-        writeLog("\n[SUCESSO]" + "\nEntrada: " + values + "\nLinha: " + JSON.stringify(response.rows[0]));
+        writeLog("\n[SUCCESS]" + "\nInput: " + values + "\nRow: " + JSON.stringify(response.rows[0]));
         return response;
     } catch (err) {
-        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas: " + values);
+        writeLog("\n[ERROR]\nError message: " + err + "\nInputs: " + values);
         return false;
     }
 }
@@ -102,12 +102,12 @@ const getSampleBySimilarity = async (sequenceString) => {
         const query = `select * FROM microbrsoil_db.sample WHERE plant_sequence ILIKE $1`;
         const response = await pool.query(query, values);
         if (response.rowCount == 0){
-            throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
+            throw `Bad response, likely did not find what you were looking for\nResponse:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
         }
-        writeLog("\n[SUCESSO]" + "\nEntrada: " + values + "\nLinha: " + JSON.stringify(response.rowCount));
+        writeLog("\n[SUCCESS]" + "\nInput: " + values + "\nRow: " + JSON.stringify(response.rowCount));
         return response;
     } catch (err) {
-        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas: " + values);
+        writeLog("\n[ERROR]\nError message: " + err + "\nInputs: " + values);
 
         return false;
     }
@@ -119,12 +119,12 @@ const getSamplesByGenus = async (genus) => {
         const query = `select * from microbrsoil_db.sample where tax_genus = $1`;
         const response = await pool.query(query, values);
         if (response.rowCount == 0) {
-            throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
+            throw `Bad response, likely did not find what you were looking for\nResponse:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
         }
-        writeLog("\n[SUCESSO]" + "\nEntrada: " + values + "\nLinha: " + JSON.stringify(response.rows[0]));
+        writeLog("\n[SUCCESS]" + "\nInput: " + values + "\nRow: " + JSON.stringify(response.rows[0]));
         return response;
     } catch (err) {
-        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas: " + values);
+        writeLog("\n[ERROR]\nError message: " + err + "\nInputs: " + values);
         return false;
     }
 }
@@ -136,12 +136,12 @@ const getSamplesBySpecies = async (species) => {
         const query = `select * from microbrsoil_db.sample where tax_species = $1`;
         const response = await pool.query(query, values);
         if (response.rowCount == 0) {
-            throw `Resposta ruim, provavelmente não encontrou o que você estava procurando\nResposta:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
+            throw `Bad response, likely did not find what you were looking for\nResponse:\n${JSON.stringify(response)}\n` + JSON.stringify(response.rows[0]);
         }
-        writeLog("\n[SUCESSO]" + "\nEntrada: " + values + "\nLinha: " + JSON.stringify(response.rows[0]));
+        writeLog("\n[SUCCESS]" + "\nInput: " + values + "\nRow: " + JSON.stringify(response.rows[0]));
         return response;
     } catch (err) {
-        writeLog("\n[ERRO]\nMensagem de erro: " + err + "\nEntradas: " + values);
+        writeLog("\n[ERROR]\nError message: " + err + "\nInputs: " + values);
         return false;
     }
 }

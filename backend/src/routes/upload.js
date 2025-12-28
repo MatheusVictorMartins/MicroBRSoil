@@ -6,7 +6,9 @@ const { addPipelineJob } = require('../queues');
 const { pipelines } = require('../utils/fakeDB');
 const { v4: uuidv4 } = require('uuid');
 const { paths } = require('../utils/moduleResolver');
-const { requireAuth, isAdminRole } = require('../middleware/authenticate');
+const { requireAuth, requireAdmin, isAdminRole } = require('../middleware/authenticate');
+const { PIPELINE_STATUS, RATE_LIMIT_MESSAGES } = require('../constants');
+const { createRateLimiter } = require('../middleware/rateLimit');
 const isProduction = process.env.NODE_ENV === 'production';
 
 // Use dynamic paths that work in both local development and Docker
@@ -16,6 +18,18 @@ const DB_PATH = paths.db();
 const router = express.Router();
 router.use(requireAuth);
 
+const uploadWriteLimiter = createRateLimiter({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  message: RATE_LIMIT_MESSAGES.UPLOADS
+});
+
+const uploadReadLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 120,
+  message: 'Too many upload file requests. Please slow down.'
+});
+
 const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(__dirname, '../../uploads');
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
@@ -24,12 +38,13 @@ const allowedExtensions = [
   '.fastq.gz',
   '.fq',
   '.fq.gz',
+  '.fa',
+  '.fasta',
   '.zip',
   '.csv'
 ];
 
 const multerLimits = {
-  fileSize: 5 * 1024 * 1024 * 1024, // 5GB per file
   files: 50,
   fieldSize: 200 * 1024 * 1024,
   fieldNameSize: 100,
@@ -65,7 +80,7 @@ const handleUploadError = (error, res) => {
 
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
-      res.status(413).json({ error: 'File too large. Maximum file size is 5GB.' });
+      res.status(413).json({ error: 'File too large.' });
       return true;
     }
     if (error.code === 'LIMIT_FILE_COUNT') {
@@ -135,6 +150,15 @@ async function handleUpload(req, res, pipelineType) {
       path: file.path,
       size: file.size
     }));
+    const uploadSizeBytes = uploadedFiles.reduce((sum, file) => sum + (file.size || 0), 0);
+
+    req.logger?.info('Upload received', {
+      run_id: runId,
+      user_id: userId,
+      pipeline_type: pipelineType,
+      file_count: uploadedFiles.length,
+      upload_size_bytes: uploadSizeBytes
+    });
 
     // Determine input path based on pipeline type
     let mainFilePath;
@@ -155,6 +179,12 @@ async function handleUpload(req, res, pipelineType) {
         // Clean up uploaded files
         const uploadDir = path.dirname(files[0].path);
         fs.rmSync(uploadDir, { recursive: true, force: true });
+        req.logger?.warn('Upload validation failed', {
+          run_id: runId,
+          user_id: userId,
+          pipeline_type: pipelineType,
+          reason: 'No valid FASTQ or ZIP found'
+        });
         return res.status(400).json({ 
           error: 'No valid FASTQ or ZIP found. Illumina pipeline requires *_R1_001.fastq.gz/_L001_R1_001.fastq.gz, R1/R2 fastqs, or a ZIP containing them.',
           filesReceived: uploadedFiles.map(f => f.name)
@@ -170,12 +200,36 @@ async function handleUpload(req, res, pipelineType) {
       const fastqFiles = uploadedFiles
         .filter(f => f.name.match(/[.]fastq(\.gz)?$/i))
         .sort((a, b) => b.size - a.size); // pick the largest FASTQ
+      const barcodeFiles = uploadedFiles
+        .filter(f => f.name.match(/[.]fa(sta)?$/i))
+        .sort((a, b) => b.size - a.size);
 
       if (fastqFiles.length === 0) {
         const uploadDir = path.dirname(files[0].path);
         fs.rmSync(uploadDir, { recursive: true, force: true });
+        req.logger?.warn('Upload validation failed', {
+          run_id: runId,
+          user_id: userId,
+          pipeline_type: pipelineType,
+          reason: 'No FASTQ found for IonTorrent'
+        });
         return res.status(400).json({
           error: 'No FASTQ found for IonTorrent. Please upload the multiplexed FASTQ (.fastq or .fastq.gz).',
+          filesReceived: uploadedFiles.map(f => f.name)
+        });
+      }
+
+      if (barcodeFiles.length === 0) {
+        const uploadDir = path.dirname(files[0].path);
+        fs.rmSync(uploadDir, { recursive: true, force: true });
+        req.logger?.warn('Upload validation failed', {
+          run_id: runId,
+          user_id: userId,
+          pipeline_type: pipelineType,
+          reason: 'No barcode FASTA found'
+        });
+        return res.status(400).json({
+          error: 'IonTorrent requires a barcode FASTA (.fa or .fasta) file. Please upload it in the barcode area.',
           filesReceived: uploadedFiles.map(f => f.name)
         });
       }
@@ -184,6 +238,12 @@ async function handleUpload(req, res, pipelineType) {
       if (fastqFiles[0].size < 1024) {
         const uploadDir = path.dirname(files[0].path);
         fs.rmSync(uploadDir, { recursive: true, force: true });
+        req.logger?.warn('Upload validation failed', {
+          run_id: runId,
+          user_id: userId,
+          pipeline_type: pipelineType,
+          reason: 'FASTQ too small'
+        });
         return res.status(400).json({
           error: 'FASTQ is too small (<1KB). Please upload the real multiplexed FASTQ.',
           filesReceived: uploadedFiles.map(f => `${f.name} (${f.size} bytes)`)
@@ -191,6 +251,7 @@ async function handleUpload(req, res, pipelineType) {
       }
 
       mainFilePath = fastqFiles[0].path;
+      req.barcodesPath = barcodeFiles[0].path;
     } else if (pipelineType === 'its') {
       // ITS expects paired FASTQs; pick directory containing *_R1_001/_R2_001
       const fastqFiles = uploadedFiles.filter(f =>
@@ -202,6 +263,12 @@ async function handleUpload(req, res, pipelineType) {
       if (r1Files.length === 0 || r2Files.length === 0) {
         const uploadDir = path.dirname(files[0].path);
         fs.rmSync(uploadDir, { recursive: true, force: true });
+        req.logger?.warn('Upload validation failed', {
+          run_id: runId,
+          user_id: userId,
+          pipeline_type: pipelineType,
+          reason: 'Missing paired FASTQ files'
+        });
         return res.status(400).json({
           error: 'ITS pipeline requires paired FASTQs matching *_R1_001.fastq.gz and *_R2_001.fastq.gz.',
           filesReceived: uploadedFiles.map(f => f.name)
@@ -218,7 +285,7 @@ async function handleUpload(req, res, pipelineType) {
     // Store in fakeDB for compatibility
     pipelines[runId] = {
       id: runId,
-      status: 'queued',
+      status: PIPELINE_STATUS.QUEUED,
       createdAt: new Date().toISOString(),
       files: uploadedFiles,
       filePath: mainFilePath, // Keep for backward compatibility
@@ -231,7 +298,8 @@ async function handleUpload(req, res, pipelineType) {
       runId,
       userId,
       pipelineType,
-      inputFilePath: mainFilePath
+      inputFilePath: mainFilePath,
+      uploadSizeBytes
     });
 
     const job = await addPipelineJob({
@@ -240,7 +308,8 @@ async function handleUpload(req, res, pipelineType) {
       pipelineType,
       meta: { 
         uploadedBy: userId || 'anonymous',
-        allFiles: uploadedFiles
+        allFiles: uploadedFiles,
+        barcodesPath: req.barcodesPath || null
       },
     });
 
@@ -249,11 +318,19 @@ async function handleUpload(req, res, pipelineType) {
     // Update database with job ID
     const pool = require(DB_PATH);
     
-    await updatePipelineRunStatus(runId, 'queued');
+    await updatePipelineRunStatus(runId, PIPELINE_STATUS.QUEUED);
     await pool.query(
       'UPDATE microbrsoil_db.pipeline_runs SET job_id = $1 WHERE run_id = $2',
       [job.id, runId]
     );
+
+    req.logger?.info('Pipeline job queued', {
+      run_id: runId,
+      user_id: userId,
+      job_id: job.id,
+      pipeline_type: pipelineType,
+      upload_size_bytes: uploadSizeBytes
+    });
 
     return res.json({ 
       success: true,
@@ -262,11 +339,19 @@ async function handleUpload(req, res, pipelineType) {
       pipelineType,
       uploadPath: `uploads/${runId}`,
       filesUploaded: uploadedFiles.length,
+      uploadSizeBytes,
       files: uploadedFiles,
       message: `${uploadedFiles.length} file(s) uploaded and ${pipelineType} pipeline job queued successfully`
     });
   } catch (err) {
     console.error(`${pipelineType} upload error`, err);
+    req.logger?.error('Upload failed', {
+      run_id: req.uploadId,
+      user_id: req.user?.id || null,
+      pipeline_type: pipelineType,
+      error: err.message,
+      stack: err.stack
+    });
     res.status(500).json({ 
       error: `${pipelineType} upload failed`, 
       ...(isProduction ? {} : { details: err.message })
@@ -280,7 +365,7 @@ const illuminaUpload = multer({
   limits: multerLimits,
   fileFilter
 });
-router.post('/illumina', illuminaUpload.array('files'), (error, req, res, next) => {
+router.post('/illumina', uploadWriteLimiter, illuminaUpload.array('files'), (error, req, res, next) => {
   if (handleUploadError(error, res)) return;
   next();
 }, async (req, res) => {
@@ -293,7 +378,7 @@ const iontorrentUpload = multer({
   limits: multerLimits,
   fileFilter
 });
-router.post('/iontorrent', iontorrentUpload.array('files'), (error, req, res, next) => {
+router.post('/iontorrent', uploadWriteLimiter, iontorrentUpload.array('files'), (error, req, res, next) => {
   if (handleUploadError(error, res)) return;
   next();
 }, async (req, res) => {
@@ -306,7 +391,7 @@ const itsUpload = multer({
   limits: multerLimits,
   fileFilter
 });
-router.post('/its', itsUpload.array('files'), (error, req, res, next) => {
+router.post('/its', uploadWriteLimiter, itsUpload.array('files'), (error, req, res, next) => {
   if (handleUploadError(error, res)) return;
   next();
 }, async (req, res) => {
@@ -319,7 +404,7 @@ const legacyUpload = multer({
   limits: multerLimits,
   fileFilter
 });
-router.post('/file', legacyUpload.single('file'), (error, req, res, next) => {
+router.post('/file', uploadWriteLimiter, legacyUpload.single('file'), (error, req, res, next) => {
   if (handleUploadError(error, res)) return;
   next();
 }, async (req, res) => {
@@ -328,7 +413,7 @@ router.post('/file', legacyUpload.single('file'), (error, req, res, next) => {
 });
 
 // List uploaded files for a run
-router.get('/files/:runId', async (req, res) => {
+router.get('/files/:runId', uploadReadLimiter, async (req, res) => {
   try {
     const { runId } = req.params;
 
@@ -367,7 +452,7 @@ router.get('/files/:runId', async (req, res) => {
 });
 
 // Download uploaded files
-router.get('/download/:runId/:filename', async (req, res) => {
+router.get('/download/:runId/:filename', uploadReadLimiter, async (req, res) => {
   try {
     const { runId, filename } = req.params;
 
@@ -422,12 +507,8 @@ router.get('/download/:runId/:filename', async (req, res) => {
 });
 
 // Admin cleanup: delete all uploaded files from server storage
-router.delete('/admin/cleanup', async (req, res) => {
+router.delete('/admin/cleanup', requireAdmin, uploadWriteLimiter, async (req, res) => {
   try {
-    if (!isAdminRole(req.user?.role)) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
     if (!fs.existsSync(UPLOADS_DIR)) {
       return res.json({ success: true, removed: 0 });
     }

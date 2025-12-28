@@ -173,8 +173,9 @@ class Logger {
 
     const formattedMessage = this.formatMessage(level, message, meta);
     
-    // Always log to console in development
-    if (process.env.NODE_ENV !== 'production') {
+    const logToConsole = String(process.env.LOG_TO_CONSOLE || '').toLowerCase();
+    const shouldLogToConsole = logToConsole === 'true' || logToConsole === '1' || process.env.NODE_ENV !== 'production';
+    if (shouldLogToConsole) {
       const colors = {
         error: '\x1b[31m', // Red
         warn: '\x1b[33m',  // Yellow

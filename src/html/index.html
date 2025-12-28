@@ -1,23 +1,23 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>microBRsoil</title>
     <!--
-    Fala pessoal, o motivo de eu estar utilizando o bootstrap minimal é que eu não vejo muito motivo para utilizar
-    a versão mais "robusta" que o bootstrap possui, muito menos toda a pasta de módulos dele, entã optei pelo minimal que
-    tira alguns whitespaces, deixa uns comandos mais simples e diminui alguns MBs do projeto, deixando ele mais leve.
+    Hey everyone, the reason I'm using bootstrap minimal is that I don't see much reason to use
+    the more "robust" bootstrap version, much less the entire modules folder. So I chose the minimal build,
+    which removes some whitespace, makes some commands simpler, and trims a few MBs from the project, making it lighter.
 
-    *Um adendo é sobre as versões CDN(CSS e JS) e Locais, onde optei por deixar a local pois caso tenha algum problema de conexão enquanto
-    eu ou alguém do grupo estiver mexendo com o front-end no geral, o bootstrap continue funcionando sem problemas. Caso alguém ache melhor
-    e tenha algum motivo que seja realmente benéfico utilizar o CDN ao invés do local(que particularmente eu não consigo ver nenhum)
-    por favor me avisa que a gente discute e muda isso. Mas creio eu que o local está de bom tamanho e não vejo algum malefício
-    em utilizar ele a não ser facilidade de instalação(que é 100% porque não precisa instalar nada :P), mas posso estar errado.
-    Mas caso queira utilizar a versão CDN(Tanto CSS quanto JS), ela já está pronta no projeto, basta comentar a versão local e 
-    descomentar a versão CDN, mas se for fazer isso por favor avise o grupo antes de fazer isso.
+    *Note about CDN (CSS and JS) vs local: I kept the local version so if there is a connection problem while
+    anyone is working on the frontend in general, bootstrap continues to work without issues. If someone thinks
+    there is a real benefit to using the CDN instead of local (which I personally do not see), please let me know
+    so we can discuss and change it. I believe the local build is fine and I don't see any downside other than
+    installation convenience (which is 100% because you don't need to install anything :P), but I could be wrong.
+    If you want to use the CDN version (both CSS and JS), it is already set up in the project. Just comment out
+    the local version and uncomment the CDN version, but please let the group know before doing that.
 
-    Ass.: Matheus(non-regular-bootstrapuser-sorry)
+    Signed: Matheus (non-regular-bootstrapuser-sorry)
     -->
 
     <!--#region BOOTSTRAP CSS IMPORT-->
@@ -67,6 +67,58 @@
         <span class="home-title-row">
           <h1 class="main-title">HOME</h1>
         </span>
+        <div id="adminDashboard" class="basic-frame admin-dashboard d-none">
+          <div class="admin-dashboard-header">
+            <div class="admin-dashboard-title">
+              <span class="material-symbols-rounded">insights</span>
+              <div>
+                <div class="admin-dashboard-title-text">Admin pipeline overview</div>
+                <div class="admin-dashboard-subtitle">Live counters for the processing queue</div>
+              </div>
+            </div>
+            <div class="admin-dashboard-meta">
+              <span class="material-symbols-rounded">schedule</span>
+              <span id="adminStatsUpdated">Loading...</span>
+            </div>
+          </div>
+          <div class="admin-dashboard-grid">
+            <div class="admin-stat-card" data-tone="queued">
+              <span class="material-symbols-rounded admin-stat-icon">hourglass_empty</span>
+              <div>
+                <div class="admin-stat-label">Queued</div>
+                <div class="admin-stat-value" id="adminQueuedCount">0</div>
+              </div>
+            </div>
+            <div class="admin-stat-card" data-tone="running">
+              <span class="material-symbols-rounded admin-stat-icon">autorenew</span>
+              <div>
+                <div class="admin-stat-label">Running</div>
+                <div class="admin-stat-value" id="adminRunningCount">0</div>
+              </div>
+            </div>
+            <div class="admin-stat-card" data-tone="failed">
+              <span class="material-symbols-rounded admin-stat-icon">error</span>
+              <div>
+                <div class="admin-stat-label">Failed</div>
+                <div class="admin-stat-value" id="adminFailedCount">0</div>
+              </div>
+            </div>
+            <div class="admin-stat-card" data-tone="duration">
+              <span class="material-symbols-rounded admin-stat-icon">timelapse</span>
+              <div>
+                <div class="admin-stat-label">Avg duration</div>
+                <div class="admin-stat-value" id="adminAvgDuration">-</div>
+              </div>
+            </div>
+            <div class="admin-stat-card" data-tone="upload">
+              <span class="material-symbols-rounded admin-stat-icon">cloud_upload</span>
+              <div>
+                <div class="admin-stat-label">Total upload</div>
+                <div class="admin-stat-value" id="adminTotalUpload">-</div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="dashboard-actions">
           <div class="search-container me-3">
             <div class="input-group">
@@ -125,6 +177,7 @@
   <!--#region INCLUDE ELEMENTS-->
 
   <!--HEADER INCLUDE-->
+    <script src="../static/js/constants.js"></script>
     <script src="../static/js/include_elements.js"></script>
   
   <!--FILTER DROPDOWN INCLUDE-->

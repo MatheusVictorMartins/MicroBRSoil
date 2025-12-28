@@ -6,8 +6,28 @@ const { paths } = require('../utils/moduleResolver');
 const sampleFunctions = require(paths.sampleFunctions());
 const writeLog = require(paths.logHandler());
 const { requireAuth } = require('../middleware/authenticate');
+const { createRateLimiter } = require('../middleware/rateLimit');
+const { createResponseCache } = require('../middleware/responseCache');
 
 const htmlPath = path.join(path.dirname(__dirname), 'src', 'html');
+
+const taxonLimiter = createRateLimiter({
+    windowMs: 60 * 1000,
+    max: 120,
+    message: 'Too many taxon search requests. Please slow down.'
+});
+
+const taxonListCache = createResponseCache({
+    ttlMs: 5 * 60 * 1000,
+    maxEntries: 100,
+    keyPrefix: 'taxon:lists'
+});
+
+const taxonResultCache = createResponseCache({
+    ttlMs: 60 * 1000,
+    maxEntries: 300,
+    keyPrefix: 'taxon:results'
+});
 
 
 // <script>
@@ -15,8 +35,8 @@ const htmlPath = path.join(path.dirname(__dirname), 'src', 'html');
 // 		method: 'POST',
 // 		headers: { 'Content-Type': 'application/json' }
 // });
-//  console.log(startResponse); // todas as espécies diferentes.
-//  document.getElementById() //Edição caralhuda da lista
+//  console.log(startResponse); // all distinct species.
+//  document.getElementById() // list editing placeholder
 //
 // </script>
 
@@ -25,43 +45,43 @@ const htmlPath = path.join(path.dirname(__dirname), 'src', 'html');
 // 	    console.log(req.params.species)
 // 	} catch (err) {
 // 		logger.logError(err);
-// 		res.status(500).json({ message: 'Erro ao iniciar ou carregar chat' });
+// 		res.status(500).json({ message: 'Failed to start or load chat' });
 // 	}
 // });
 
 // router.post('/'); // -> taxon_search/submit
 
-router.get('/api/getLists', requireAuth, async (req, res) => {
+router.get('/api/getLists', requireAuth, taxonLimiter, taxonListCache, async (req, res) => {
     const speciesList = await sampleFunctions.getDistinctSpecies();
     const genusList = await sampleFunctions.getDistinctGenus();
     
     res.json({ speciesList: speciesList.rows, genusList: genusList.rows });
-}); //recupera listas do BD, será usado em um fetch no client-side
+}); // fetches lists from the DB, used by a client-side fetch
 
 router.get('/', async (req, res) => {
     res.sendFile(path.join(htmlPath, 'taxon_search.html'));
 }); // -> /taxon_search
 
 router.post('/submit', async (req, res) => {
-    writeLog("\n[REQUISIÇÃO.BODY]: " + JSON.stringify(req.body));
+    writeLog("\n[REQUEST.BODY]: " + JSON.stringify(req.body));
     const { parameterType, selectedParameter } = req.body;
     if (!parameterType && !selectedParameter) {
-        return res.status(400).send('Parâmetro de pesquisa obrigatório.');
+        return res.status(400).send('Search parameter is required.');
     }
     res.redirect(`/${parameterType}/${selectedParameter}/result`);
 }); // -> taxon_search/submit
 
-//vai retornar a pagina de resultados
+// returns the results page
 // router.get('taxon_search/:parameterType/:selectedParameter/result', (req,res)=>{});// -> taxon_search/:parameterType/:selectedParameter/result
 
 //fetch api
-router.get('/api/:parameterType/:selectedParameter/result', requireAuth, async (req, res) => {//a ideia é que podem ser 2 opções de pesquisa, genus e species
-    writeLog("\n[REQUISIÇÃO.PARAMS]: " + JSON.stringify(req.params));
+router.get('/api/:parameterType/:selectedParameter/result', requireAuth, taxonLimiter, taxonResultCache, async (req, res) => {// idea: two search options, genus and species
+    writeLog("\n[REQUEST.PARAMS]: " + JSON.stringify(req.params));
     const parameterType = req.params.parameterType;
     const selectedParameter = req.params.selectedParameter;
 
     if (!parameterType && selectedParameter) {
-        return res.status(400).send('Parâmetro de pesquisa obrigatório.');
+        return res.status(400).send('Search parameter is required.');
     }
 
    if(parameterType == 'genus'){
@@ -71,7 +91,7 @@ router.get('/api/:parameterType/:selectedParameter/result', requireAuth, async (
     }
     
     if(sampleList.rowCount === 0){
-        res.status(500).send("Nenhuma linha encontrada para o parâmetro selecionado");
+        res.status(500).send("No rows found for the selected parameter");
     }else{
         res.json({sampleList: sampleList.rows});
     }
@@ -80,3 +100,5 @@ router.get('/api/:parameterType/:selectedParameter/result', requireAuth, async (
 
 
 module.exports = router;
+
+

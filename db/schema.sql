@@ -1,10 +1,10 @@
--- Criação do schema
+-- Schema creation
 CREATE SCHEMA IF NOT EXISTS microbrsoil_db;
 
--- Definição do search_path
+-- search_path definition
 SET search_path TO microbrsoil_db;
 
--- Tabela de cargos (roles)
+-- Roles table
 CREATE TABLE IF NOT EXISTS roles (
     role_id SERIAL PRIMARY KEY,
     role_name VARCHAR(50) NOT NULL UNIQUE,
@@ -12,14 +12,14 @@ CREATE TABLE IF NOT EXISTS roles (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Inserir roles default
+-- Insert default roles
 INSERT INTO roles (role_name, description) VALUES 
-    ('admin', 'Administrador do sistema com acesso total'),
-    ('user', 'Usuário padrão com acesso limitado'),
-    ('researcher', 'Pesquisador com acesso a análises e resultados')
+    ('admin', 'System administrator with full access'),
+    ('user', 'Default user with limited access'),
+    ('researcher', 'Researcher with access to analyses and results')
 ON CONFLICT (role_name) DO NOTHING;
 
--- Tabela de usuários
+-- Users table
 CREATE TABLE IF NOT EXISTS users (
     user_id SERIAL PRIMARY KEY,
     user_email VARCHAR(255) NOT NULL UNIQUE,
@@ -32,13 +32,13 @@ CREATE TABLE IF NOT EXISTS users (
     CONSTRAINT fk_users_role FOREIGN KEY (role_id) REFERENCES roles(role_id) ON DELETE CASCADE
 );
 
--- Inserir usuário de sistema default (necessário para pipelines anônimas)
--- Senha hash de 'system_password' - deve ser alterada em produção
+-- Insert default system user (required for anonymous pipelines)
+-- Password hash for 'system_password' - must be changed in production
 INSERT INTO users (user_email, password_hash, role_id) VALUES 
     ('system@microbrsoil.local', '$2b$10$defaultsystemhashdonotuse', 1)
 ON CONFLICT (user_email) DO NOTHING;
 
--- Tabela de solo (soil)
+-- Soil table
 CREATE TABLE IF NOT EXISTS soil (
     soil_id SERIAL PRIMARY KEY,
     sample_name VARCHAR(255) NOT NULL,
@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS soil (
     CONSTRAINT fk_soil_owner FOREIGN KEY (owner_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
--- Tabela de amostras (sample)
+-- Samples table
 CREATE TABLE IF NOT EXISTS sample (
     sample_id SERIAL PRIMARY KEY,
     soil_id INTEGER NOT NULL,
@@ -119,7 +119,7 @@ CREATE TABLE IF NOT EXISTS file_paths (
     CONSTRAINT fk_file_soil FOREIGN KEY (soil_id) REFERENCES soil(soil_id) ON DELETE CASCADE
 );
 
--- Tabela de execuções de pipeline
+-- Pipeline runs table
 CREATE TABLE IF NOT EXISTS pipeline_runs (
     run_id UUID PRIMARY KEY,
     job_id VARCHAR(255),
@@ -127,16 +127,18 @@ CREATE TABLE IF NOT EXISTS pipeline_runs (
     status VARCHAR(50) NOT NULL DEFAULT 'queued',
     pipeline_type VARCHAR(100) NOT NULL DEFAULT 'default',
     input_file_path TEXT NOT NULL,
+    upload_size_bytes BIGINT,
     output_directory TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     started_at TIMESTAMP,
     finished_at TIMESTAMP,
+    duration_ms BIGINT,
     error_message TEXT,
     logs TEXT[],
     CONSTRAINT fk_pipeline_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE SET NULL
 );
 
--- Tabela de resultados de pipeline
+-- Pipeline results table
 CREATE TABLE IF NOT EXISTS pipeline_results (
     result_id SERIAL PRIMARY KEY,
     run_id UUID NOT NULL UNIQUE,

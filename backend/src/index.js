@@ -3,7 +3,7 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
 const { paths } = require('./utils/moduleResolver');
-const { requireAdmin } = require('./middleware/authenticate');
+const { requireAdmin, requireAuth } = require('./middleware/authenticate');
 
 // Import logging system
 const { apiLogger } = require('./utils/logger');
@@ -152,16 +152,20 @@ app.get('/register', requireAdmin, (req, res) => res.sendFile(path.join(htmlPath
 app.get('/taxon', (req, res) => res.sendFile(path.join(htmlPath, 'taxon_search.html')));
 app.get('/sequence', (req, res) => res.sendFile(path.join(htmlPath, 'sequence_search.html')));
 app.get('/geosearch', (req, res) => res.sendFile(path.join(htmlPath, 'geosearch.html')));
-app.get('/pipeline-status', (req, res) => res.sendFile(path.join(htmlPath, 'pipeline_status.html')));
+app.get('/pipeline-status', requireAuth, (req, res) => res.sendFile(path.join(htmlPath, 'pipeline_status.html')));
 
-app.get('/upload', (req, res) => res.sendFile(path.join(htmlPath, 'upload.html')));
+app.get('/upload', requireAuth, (req, res) => res.sendFile(path.join(htmlPath, 'upload.html')));
 
 app.get('/help', (req, res) => res.sendFile(path.join(htmlPath, 'help.html')));
 app.get('/about', (req, res) => res.sendFile(path.join(htmlPath, 'about.html')));
 app.get('/collaborators', (req, res) => res.sendFile(path.join(htmlPath, 'collaborators.html')));
 
 // STATIC - Fix the path to static files
-app.use('/static', express.static(path.join(__dirname, '..', '..', 'src', 'static')));
+app.use('/static', express.static(path.join(__dirname, '..', '..', 'src', 'static'), {
+  etag: true,
+  lastModified: true,
+  maxAge: '1h'
+}));
 
 // 404 handler for API routes - Removed the /upload/* handler to allow download endpoints
 app.use('/api/*', (req, res) => {

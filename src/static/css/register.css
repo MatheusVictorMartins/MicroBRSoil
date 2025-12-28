@@ -1,5 +1,8 @@
 .register-frames{
     display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+    flex-wrap: wrap;
 }
 
 .main-title{
@@ -8,10 +11,11 @@
 
 .register-frame{
     display: flex;
-
     flex-direction: column;
     padding: 3.125rem;
-    width: 50vw;
+    flex: 0 0 38%;
+    max-width: 520px;
+    min-width: 300px;
 }
 
 .register-form{
@@ -61,16 +65,21 @@
     box-shadow: 0 1rem 1.5rem rgba(100,205,68,0.6);
 }
 .register-users-table{
-    margin-left: auto;
+    margin-left: 0;
     padding-top: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
     max-height: 70vh;
+    overflow: hidden;
+    flex: 1 1 0;
+    min-width: 0;
+}
 
-    justify-content: center;
-
-    overflow-x: auto;
-    overflow-y: auto;
-
-    position: relative;
+.users-table-scroll{
+    overflow: auto;
+    flex: 1 1 auto;
+    min-height: 240px;
 }
 .name-inputs{
     display: flex;
@@ -90,6 +99,8 @@
 .register-users-table table {
   border-collapse: separate;
   border-spacing: 0;
+  width: 100%;
+  min-width: 560px;
 }
 
 .register-users-table thead th{
@@ -101,6 +112,7 @@
 
 .register-users-table td{
     align-items: center;
+    vertical-align: middle;
 }
 
 .txt-icon{
@@ -109,4 +121,30 @@
 
 .register-text-input{
     margin-bottom: 1.5rem;
+}
+
+.user-pagination-controls{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.user-pagination-controls .pagination-buttons{
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 1200px){
+    .register-frame{
+        flex: 1 1 100%;
+        max-width: none;
+    }
+    .register-users-table{
+        flex: 1 1 100%;
+        max-width: none;
+    }
 }

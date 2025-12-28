@@ -1,23 +1,23 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>microBRsoil</title>
     <!--
-    Fala pessoal, o motivo de eu estar utilizando o bootstrap minimal é que eu não vejo muito motivo para utilizar
-    a versão mais "robusta" que o bootstrap possui, muito menos toda a pasta de módulos dele, entã optei pelo minimal que
-    tira alguns whitespaces, deixa uns comandos mais simples e diminui alguns MBs do projeto, deixando ele mais leve.
+    Hey everyone, the reason I'm using bootstrap minimal is that I don't see much reason to use
+    the more "robust" bootstrap version, much less the entire modules folder. So I chose the minimal build,
+    which removes some whitespace, makes some commands simpler, and trims a few MBs from the project, making it lighter.
 
-    *Um adendo é sobre as versões CDN(CSS e JS) e Locais, onde optei por deixar a local pois caso tenha algum problema de conexão enquanto
-    eu ou alguém do grupo estiver mexendo com o front-end no geral, o bootstrap continue funcionando sem problemas. Caso alguém ache melhor
-    e tenha algum motivo que seja realmente benéfico utilizar o CDN ao invés do local(que particularmente eu não consigo ver nenhum)
-    por favor me avisa que a gente discute e muda isso. Mas creio eu que o local está de bom tamanho e não vejo algum malefício
-    em utilizar ele a não ser facilidade de instalação(que é 100% porque não precisa instalar nada :P), mas posso estar errado.
-    Mas caso queira utilizar a versão CDN(Tanto CSS quanto JS), ela já está pronta no projeto, basta comentar a versão local e 
-    descomentar a versão CDN, mas se for fazer isso por favor avise o grupo antes de fazer isso.
+    *Note about CDN (CSS and JS) vs local: I kept the local version so if there is a connection problem while
+    anyone is working on the frontend in general, bootstrap continues to work without issues. If someone thinks
+    there is a real benefit to using the CDN instead of local (which I personally do not see), please let me know
+    so we can discuss and change it. I believe the local build is fine and I don't see any downside other than
+    installation convenience (which is 100% because you don't need to install anything :P), but I could be wrong.
+    If you want to use the CDN version (both CSS and JS), it is already set up in the project. Just comment out
+    the local version and uncomment the CDN version, but please let the group know before doing that.
 
-    Ass.: Matheus(non-regular-bootstrapuser-sorry)
+    Signed: Matheus (non-regular-bootstrapuser-sorry)
     -->
 
     <!--#region BOOTSTRAP CSS IMPORT-->
@@ -35,7 +35,7 @@
     <link rel="stylesheet" href="../static/css/style.css">
     <link rel="stylesheet" href="../static/css/header.css">
     <link rel="stylesheet" href="../static/css/footer.css">
-    <link rel="stylesheet" href="../static/css/help.css">
+    <link rel="stylesheet" href="../static/css/help.css?v=20251227">
     <link rel="stylesheet" href="../static/css/left_menu.css">
     <!--FONT IMPORT-->
     <!--INTER-->
@@ -60,114 +60,176 @@
     <div id="leftmenu-placeholder"></div>
     <!--#region MAIN -->
     <main class="main-content">
-        <h1 class="main-title">HELP</h1> 
-        
+      <div class="help-page">
+        <section class="page-hero">
+          <div class="hero-kicker">microBRsoil help center</div>
+          <h1 class="main-title hero-title">HELP</h1>
+          <p class="hero-subtitle">
+            Guided walkthrough for exploring, uploading, and interpreting soil microbiome data across Brazil.
+          </p>
+          <div class="hero-badges">
+            <span class="hero-badge"><span class="material-symbols-rounded">search</span>Taxon search</span>
+            <span class="hero-badge"><span class="material-symbols-rounded">public</span>GeoSearch</span>
+            <span class="hero-badge"><span class="material-symbols-rounded">cloud_upload</span>Uploads</span>
+            <span class="hero-badge"><span class="material-symbols-rounded">insights</span>Results</span>
+          </div>
+        </section>
 
-        <h2 class="topic-title">🚀 How to Use MicroBRSoils</h2>
-        <p class="basic-text">
-          MicroBRSoils was designed to be intuitive and scientifically rigorous, enabling users to explore and contextualize the microbial 
-          composition of Brazilian soils.
-        </p>
-        <p class="basic-text">
-          Brazil hosts some of the most diverse agroecosystems on Earth. Here you can explore microbial communities across crops, regions, 
-          and management systems — from <strong>coffee plantations in Cerrado and Mata Atlântica</strong> to adjacent native vegetation 
-          reference sites, as described in the project design.
-        </p>
+        <section class="section-grid">
+          <div class="section-card">
+            <div class="section-kicker">Start here</div>
+            <h2 class="section-title">Quick start</h2>
+            <p class="basic-text">A fast path to the data and tools you need.</p>
+            <ol class="section-list">
+              <li>Use Taxon Search to explore microbial groups across regions and crops.</li>
+              <li>Open GeoSearch to filter metadata and download files.</li>
+              <li>Upload your own samples (when enabled) to compare against reference soils.</li>
+              <li>Review diversity metrics and plots to interpret ecological patterns.</li>
+            </ol>
+          </div>
+          <aside class="section-card toc-card">
+            <div class="section-kicker">On this page</div>
+            <h2 class="section-title">Contents</h2>
+            <ul class="toc-list">
+              <li><a class="toc-link" href="#help-overview">How it works</a></li>
+              <li><a class="toc-link" href="#help-taxon">Taxonomic search</a></li>
+              <li><a class="toc-link" href="#help-geo">GeoSearch and metadata</a></li>
+              <li><a class="toc-link" href="#help-upload">Sample upload</a></li>
+              <li><a class="toc-link" href="#help-insights">Interpretation and insights</a></li>
+              <li><a class="toc-link" href="#help-contact">Contact and collaboration</a></li>
+            </ul>
+          </aside>
+        </section>
 
-        <hr>
+        <section id="help-overview" class="section-card">
+          <div class="section-kicker">Overview</div>
+          <h2 class="section-title">How to Use MicroBRSoils</h2>
+          <p class="basic-text">
+            MicroBRSoils was designed to be intuitive and scientifically rigorous, enabling users to explore and contextualize the microbial
+            composition of Brazilian soils.
+          </p>
+          <p class="basic-text">
+            Brazil hosts some of the most diverse agroecosystems on Earth. Here you can explore microbial communities across crops, regions,
+            and management systems - from <strong>coffee plantations in Cerrado and Atlantic Forest</strong> to adjacent native vegetation
+            reference sites, as described in the project design.
+          </p>
+        </section>
 
-        <h2 class="topic-title">🔍 1. Taxonomic Search</h2>
-        <p class="basic-text">
-          Filter samples by <strong>phylum, class, family, genus, or species</strong>. Use this tool to answer questions such as:
-        </p>
-        <ul class="basic-text">
-          <li><em>Where is a given taxon abundant?</em></li>
-          <li><em>Does it respond to fertilization, pH, or management practices?</em></li>
-          <li><em>How does it differ between agricultural and native soils?</em></li>
-        </ul>
-        <p class="basic-text">
-          You may also run <strong>sequence similarity searches</strong> (≥98% identity) to find samples containing sequences similar 
-          to your own.
-        </p>
+        <section id="help-taxon" class="section-card">
+          <div class="section-kicker">1. Explore taxa</div>
+          <h2 class="section-title">Taxonomic Search</h2>
+          <p class="basic-text">
+            Filter samples by <strong>phylum, class, family, genus, or species</strong>. Use this tool to answer questions such as:
+          </p>
+          <ul class="section-list">
+            <li><em>Where is a given taxon abundant?</em></li>
+            <li><em>Does it respond to fertilization, pH, or management practices?</em></li>
+            <li><em>How does it differ between agricultural and native soils?</em></li>
+          </ul>
+          <p class="basic-text">
+            You may also run <strong>sequence similarity searches</strong> (>=98% identity) to find samples containing sequences similar
+            to your own.
+          </p>
+        </section>
 
-        <hr>
+        <section id="help-geo" class="section-card">
+          <div class="section-kicker">2. Explore metadata</div>
+          <h2 class="section-title">GeoSearch and Metadata Exploration</h2>
+          <p class="basic-text">
+            Visualize sampling locations on an interactive map. You can:
+          </p>
+          <div class="section-columns">
+            <div>
+              <ul class="section-list">
+                <li>Select samples by biome, crop, soil type, or productivity class.</li>
+                <li>Download <strong>raw FASTQ</strong>, metadata, and processed taxonomic profiles.</li>
+                <li>Compare community patterns between managed and conserved areas.</li>
+              </ul>
+            </div>
+            <div>
+              <p class="basic-text">
+                This feature draws directly on the project's standardized sampling design across biomes and productivity gradients.
+              </p>
+            </div>
+          </div>
+        </section>
 
-        <h2 class="topic-title">🌎 2. Geo-Search &amp; Metadata Exploration</h2>
-        <p class="basic-text">
-          Visualize sampling locations on an interactive map. You can:
-        </p>
-        <ul class="basic-text">
-          <li>Select samples by biome, crop, soil type, or productivity class.</li>
-          <li>Download <strong>raw FASTQ</strong>, metadata, and processed taxonomic profiles.</li>
-          <li>Compare community patterns between managed and conserved areas.</li>
-        </ul>
-        <p class="basic-text">
-          This feature draws directly on the project’s standardized sampling design across biomes and productivity gradients.
-        </p>
+        <section id="help-upload" class="section-card">
+          <div class="section-kicker">3. Run pipelines</div>
+          <h2 class="section-title">Sample Upload (Coming Soon)</h2>
+          <p class="basic-text">
+            External sample submission will be enabled after the platform's first stable release.
+          </p>
+          <div class="section-columns">
+            <div>
+              <p class="basic-text"><strong>What you receive</strong></p>
+              <ul class="section-list">
+                <li>Automated quality filtering and taxonomic profiling</li>
+                <li>Alpha diversity metrics</li>
+                <li>Beta diversity comparison against reference soils</li>
+                <li>Soil Quality Index estimation (beta version)</li>
+                <li>Access to a harmonized metadata template (TXT format)</li>
+              </ul>
+            </div>
+            <div>
+              <p class="basic-text"><strong>Upload requirements</strong></p>
+              <ul class="section-list">
+                <li><strong>Demultiplexed FASTQ files</strong> (single or paired-end)</li>
+                <li><strong>Metadata file (.txt)</strong> following MicroBRSoils guidelines</li>
+                <li>Target genes: <strong>16S rRNA</strong>, <strong>ITS</strong>, and (future releases) <strong>shotgun metagenomics</strong></li>
+              </ul>
+              <p class="basic-text">
+                This ensures compatibility with the analytical workflows described in the project (e.g., 515F/806R and ITS1F/ITS2 markers).
+              </p>
+            </div>
+          </div>
+        </section>
 
-        <hr>
+        <section id="help-insights" class="section-card">
+          <div class="section-kicker">4. Interpret results</div>
+          <h2 class="section-title">Interpretation and Insights</h2>
+          <div class="section-columns">
+            <div>
+              <p class="basic-text">
+                Once processed, users can navigate:
+              </p>
+              <ul class="section-list">
+                <li><strong>Community composition plots</strong></li>
+                <li><strong>Diversity indices</strong></li>
+                <li><strong>Relative abundance heatmaps</strong></li>
+                <li><strong>Environmental correlations</strong> (pH, nutrients, texture, enzymatic activity)</li>
+                <li><strong>Comparisons with native soils</strong> as ecological baselines</li>
+              </ul>
+            </div>
+            <div>
+              <p class="basic-text">
+                In future iterations, AI models trained on the <em>microBRsoil</em> dataset will provide:
+              </p>
+              <ul class="section-list">
+                <li><strong>Predictive soil quality scores</strong></li>
+                <li><strong>Management sensitivity alerts</strong></li>
+                <li><strong>Interpretability dashboards</strong></li>
+                <li><strong>Prescriptive recommendations based on microbiome patterns</strong></li>
+              </ul>
+            </div>
+          </div>
+        </section>
 
-        <h2 class="topic-title">📤 3. Sample Upload (Coming Soon)</h2>
-        <p class="basic-text">
-          External sample submission will be enabled after the platform’s first stable release.
-        </p>
-        <p class="basic-text">
-          Registered users will be able to upload their own <strong>Illumina</strong> or <strong>IonTorrent</strong> metabarcoding 
-          datasets and receive:
-        </p>
-        <ul class="basic-text">
-          <li>✔ Automated quality filtering and taxonomic profiling</li>
-          <li>✔ Alpha diversity metrics</li>
-          <li>✔ Beta diversity comparison against reference soils</li>
-          <li>✔ Soil Quality Index estimation (beta version)</li>
-          <li>✔ Access to a harmonized metadata template (TXT format)</li>
-        </ul>
-
-        <p class="basic-text"><strong>Upload Requirements</strong></p>
-        <ul class="basic-text">
-          <li><strong>Demultiplexed FASTQ files</strong> (single or paired-end)</li>
-          <li><strong>Metadata file (.txt)</strong> following MicroBRSoils guidelines</li>
-          <li>Target genes: <strong>16S rRNA</strong>, <strong>ITS</strong>, and (future releases) <strong>shotgun metagenomics</strong></li>
-        </ul>
-        <p class="basic-text">
-          This ensures compatibility with the analytical workflows described in the project (e.g., 515F/806R and ITS1F/ITS2 markers).
-        </p>
-
-        <hr>
-
-        <h2 class="topic-title">📊 4. Interpretation &amp; Insights</h2>
-        <p class="basic-text">
-          Once processed, users can navigate:
-        </p>
-        <ul class="basic-text">
-          <li><strong>Community composition plots</strong></li>
-          <li><strong>Diversity indices</strong></li>
-          <li><strong>Relative abundance heatmaps</strong></li>
-          <li><strong>Environmental correlations</strong> (pH, nutrients, texture, enzymatic activity)</li>
-          <li><strong>Comparisons with native soils</strong> as ecological baselines</li>
-        </ul>
-        <p class="basic-text">
-          In future iterations, AI models trained on the <em>microBRsoil</em> dataset will provide:
-        </p>
-        <ul class="basic-text">
-          <li><strong>Predictive soil quality scores</strong></li>
-          <li><strong>Management sensitivity alerts</strong></li>
-          <li><strong>Interpretability dashboards</strong></li>
-          <li><strong>Prescriptive recommendations based on microbiome patterns</strong></li>
-        </ul>
-        
-        <hr>
-        
-        <h2 class="topic-title">📫 Contact &amp; Collaboration</h2>
-        <p class="basic-text">
-          Researchers, companies, and producers interested in collaboration or early access are welcome to get in touch.
-        </p>
-        <ul class="basic-text">
-          <li>
-            Dr. Victor Pylro - MicroBRSoil Coordinator<br>
-            Email: <a href="mailto:victor.pylro@ufla.br" target="_blank" rel="noopener">victor.pylro@ufla.br</a>
-          </li>
-        </ul>
+        <section id="help-contact" class="section-card">
+          <div class="section-kicker">Contact</div>
+          <h2 class="section-title">Contact and Collaboration</h2>
+          <p class="basic-text">
+            Researchers, companies, and producers interested in collaboration or early access are welcome to get in touch.
+          </p>
+          <div class="contact-card">
+            <div class="person-name">Dr. Victor Pylro</div>
+            <div class="person-role">MicroBRSoil Coordinator</div>
+            <div class="basic-text">
+              Email: <a href="mailto:victor.pylro@ufla.br" target="_blank" rel="noopener">victor.pylro@ufla.br</a>
+            </div>
+          </div>
+        </section>
+      </div>
     </main>
     <!--#endregion-->
   </div>
