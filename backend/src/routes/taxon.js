@@ -54,8 +54,11 @@ const taxonResultCache = createResponseCache({
 router.get('/api/getLists', requireAuth, taxonLimiter, taxonListCache, async (req, res) => {
     const speciesList = await sampleFunctions.getDistinctSpecies();
     const genusList = await sampleFunctions.getDistinctGenus();
-    
-    res.json({ speciesList: speciesList.rows, genusList: genusList.rows });
+
+    const safeSpecies = speciesList && speciesList.rows ? speciesList.rows : [];
+    const safeGenus = genusList && genusList.rows ? genusList.rows : [];
+
+    res.json({ success: true, speciesList: safeSpecies, genusList: safeGenus });
 }); // fetches lists from the DB, used by a client-side fetch
 
 router.get('/', async (req, res) => {
@@ -77,24 +80,35 @@ router.post('/submit', async (req, res) => {
 //fetch api
 router.get('/api/:parameterType/:selectedParameter/result', requireAuth, taxonLimiter, taxonResultCache, async (req, res) => {// idea: two search options, genus and species
     writeLog("\n[REQUEST.PARAMS]: " + JSON.stringify(req.params));
-    const parameterType = req.params.parameterType;
-    const selectedParameter = req.params.selectedParameter;
+    const parameterType = String(req.params.parameterType || '').toLowerCase();
+    const selectedParameter = decodeURIComponent(req.params.selectedParameter || '').trim();
 
-    if (!parameterType && selectedParameter) {
-        return res.status(400).send('Search parameter is required.');
+    if (!parameterType || !selectedParameter) {
+        return res.status(400).json({ success: false, error: 'Search parameter is required.' });
     }
 
-   if(parameterType == 'genus'){
-        const sampleList = await sampleFunctions.getSamplesByGenus(selectedParameter);
-    }else{
-        const sampleList = await sampleFunctions.getSamplesBySpecies(selectedParameter);
+    let sampleList = null;
+
+    if (parameterType === 'genus') {
+        sampleList = await sampleFunctions.getSamplesByGenus(selectedParameter);
+    } else if (parameterType === 'species') {
+        sampleList = await sampleFunctions.getSamplesBySpecies(selectedParameter);
+    } else if (parameterType === 'sh') {
+        // SH is treated as an exact sequence match in the local database
+        sampleList = await sampleFunctions.getSampleByExactSequence(selectedParameter);
+    } else {
+        return res.status(400).json({ success: false, error: 'Invalid parameter type.' });
     }
-    
-    if(sampleList.rowCount === 0){
-        res.status(500).send("No rows found for the selected parameter");
-    }else{
-        res.json({sampleList: sampleList.rows});
+
+    if (!sampleList || !Array.isArray(sampleList.rows)) {
+        return res.status(500).json({ success: false, error: 'Search failed.' });
     }
+
+    res.json({
+        success: true,
+        count: sampleList.rowCount || 0,
+        sampleList: sampleList.rows
+    });
 }); // -> api/taxon_search/:id/result
 
 
