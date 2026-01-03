@@ -12,6 +12,9 @@ const { encryptPassword } = require('../utils/passwordView');
 const router = express.Router();
 
 const isProduction = process.env.NODE_ENV === 'production';
+const cookieSecure = process.env.COOKIE_SECURE !== undefined
+  ? String(process.env.COOKIE_SECURE).toLowerCase() === 'true'
+  : isProduction;
 const jwtSecret = getActiveJwtSecret();
 
 const ACCESS_TOKEN_TTL = process.env.ACCESS_TOKEN_TTL || '15m';
@@ -51,7 +54,7 @@ const REFRESH_COOKIE_MAX_AGE = parseDurationMs(
 const accessCookieOptions = {
   httpOnly: true,
   sameSite: 'Lax',
-  secure: isProduction,
+  secure: cookieSecure,
   maxAge: ACCESS_COOKIE_MAX_AGE,
   path: '/'
 };
@@ -59,7 +62,7 @@ const accessCookieOptions = {
 const publicCookieOptions = {
   httpOnly: false,
   sameSite: 'Lax',
-  secure: isProduction,
+  secure: cookieSecure,
   maxAge: ACCESS_COOKIE_MAX_AGE,
   path: '/'
 };
@@ -67,7 +70,7 @@ const publicCookieOptions = {
 const refreshCookieOptions = {
   httpOnly: true,
   sameSite: 'Lax',
-  secure: isProduction,
+  secure: cookieSecure,
   maxAge: REFRESH_COOKIE_MAX_AGE,
   path: '/'
 };
