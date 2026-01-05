@@ -12,18 +12,22 @@ const UPLOAD_STATE_KEY = "uploadDraftState";
     const uploadArea = document.getElementById("unified-upload-area");
     const fileInput = document.getElementById("fileInput");
     const fileInput2 = document.getElementById("fileInput2");
+    const fileInput3 = document.getElementById("fileInput3");
     const fileDropZone = document.getElementById("fileDropZone");
     const fileDropZone2 = document.getElementById("file_drop_zone_2");
+    const fileDropZone3 = document.getElementById("file_drop_zone_3");
     const uploadForm = document.getElementById("unifiedUploadForm");
     const uploadBtn = document.getElementById("uploadBtn");
     const acceptedFileTypes = document.getElementById("acceptedFileTypes");
     const acceptedFileTypes2 = document.getElementById("acceptedFileTypes2");
+    const acceptedFileTypes3 = document.getElementById("acceptedFileTypes3");
     const uploadHelpText = document.getElementById("uploadHelpText");
     let authState = { authenticated: false, isAdmin: false, user: null };
 
     // Store files separately for each drop zone
     let zone1Files = [];
     let zone2Files = [];
+    let zone3Files = [];
 
     // Upload state management
     let currentUpload = {
@@ -143,34 +147,46 @@ const UPLOAD_STATE_KEY = "uploadDraftState";
     // Pipeline configurations
     const pipelineConfigs = {
       illumina: {
-        accept1: ".fastq,.fq,.fastq.gz,.fa,.csv",
+        accept1: ".fastq,.fq,.fastq.gz,.fq.gz,.fa,.csv",
         accept2: "",
+        accept3: "",
         helpText: "Select FASTQ files and metadata CSV for Illumina sequencing analysis",
-        fileTypes: "FASTQ (.fastq, .fq, .fastq.gz), FASTA (.fa), CSV (.csv)",
+        fileTypes: "FASTQ (.fastq, .fq, .fastq.gz, .fq.gz), FASTA (.fa), CSV (.csv)",
         fileTypes2: "",
+        fileTypes3: "",
         endpoint: ROUTES.UPLOAD_ILLUMINA || "/upload/illumina",
-        hasTwoZones: false,
-        metadataRequired: true
+        zones: 1,
+        metadataRequired: true,
+        metadataZone: 1,
+        barcodeZone: null
       },
       iontorrent: {
-        accept1: ".fastq,.fq,.fastq.gz,.csv",
+        accept1: ".fastq,.fq,.fastq.gz,.fq.gz",
         accept2: ".fa,.fasta",
-        helpText: "Select FASTQ files, metadata CSV and BARCODE files for IonTorrent analysis",
-        fileTypes: "FASTQ (.fastq, .fq, .fastq.gz), CSV (.csv)",
+        accept3: ".csv",
+        helpText: "Select FASTQ files, metadata CSV, and BARCODE FASTA files for IonTorrent analysis",
+        fileTypes: "FASTQ (.fastq, .fq, .fastq.gz, .fq.gz)",
         fileTypes2: "BARCODES - FASTA (.fa, .fasta)",
+        fileTypes3: "METADATA - CSV (.csv)",
         endpoint: ROUTES.UPLOAD_IONTORRENT || "/upload/iontorrent",
-        hasTwoZones: true,
-        metadataRequired: true
+        zones: 3,
+        metadataRequired: true,
+        metadataZone: 3,
+        barcodeZone: 2
       },
       its: {
-        accept1: ".fastq,.fq,.fastq.gz,.fa,.csv",
+        accept1: ".fastq,.fq,.fastq.gz,.fq.gz,.fa,.csv",
         accept2: "",
+        accept3: "",
         helpText: "Select FASTQ files and metadata CSV for ITS analysis",
-        fileTypes: "FASTQ (.fastq, .fq, .fastq.gz), FASTA (.fa), CSV (.csv)",
+        fileTypes: "FASTQ (.fastq, .fq, .fastq.gz, .fq.gz), FASTA (.fa), CSV (.csv)",
         fileTypes2: "",
+        fileTypes3: "",
         endpoint: ROUTES.UPLOAD_ITS || "/upload/its",
-        hasTwoZones: false,
-        metadataRequired: true
+        zones: 1,
+        metadataRequired: true,
+        metadataZone: 1,
+        barcodeZone: null
       }
     };
 
@@ -212,6 +228,7 @@ const UPLOAD_STATE_KEY = "uploadDraftState";
         warnings: [],
         invalidZone1: new Set(),
         invalidZone2: new Set(),
+        invalidZone3: new Set(),
         hasMetadata: false,
         hasBarcode: false,
         hasFiles: false
@@ -221,7 +238,11 @@ const UPLOAD_STATE_KEY = "uploadDraftState";
 
       const allowedZone1 = parseAcceptList(config.accept1);
       const allowedZone2 = parseAcceptList(config.accept2);
-      const hasAnyFiles = zone1Files.length > 0 || zone2Files.length > 0;
+      const allowedZone3 = parseAcceptList(config.accept3);
+      const zones = Number(config.zones || 1);
+      const metadataZone = Number(config.metadataZone || 1);
+      const barcodeZone = Number(config.barcodeZone || 0);
+      const hasAnyFiles = zone1Files.length > 0 || zone2Files.length > 0 || zone3Files.length > 0;
       if (!hasAnyFiles) return result;
 
       zone1Files.forEach(file => {
@@ -229,20 +250,34 @@ const UPLOAD_STATE_KEY = "uploadDraftState";
         if (!isAllowedFile(file.name, allowedZone1)) {
           result.invalidZone1.add(file.name);
         }
-        if (fileHasExtension(file.name, extensionGroups.metadata)) {
+        if (metadataZone === 1 && fileHasExtension(file.name, extensionGroups.metadata)) {
           result.hasMetadata = true;
         }
       });
 
-      zone2Files.forEach(file => {
-        result.hasFiles = true;
-        if (!isAllowedFile(file.name, allowedZone2)) {
-          result.invalidZone2.add(file.name);
-        }
-        if (fileHasExtension(file.name, extensionGroups.fasta)) {
-          result.hasBarcode = true;
-        }
-      });
+      if (zones >= 2) {
+        zone2Files.forEach(file => {
+          result.hasFiles = true;
+          if (!isAllowedFile(file.name, allowedZone2)) {
+            result.invalidZone2.add(file.name);
+          }
+          if (barcodeZone === 2 && fileHasExtension(file.name, extensionGroups.fasta)) {
+            result.hasBarcode = true;
+          }
+        });
+      }
+
+      if (zones >= 3) {
+        zone3Files.forEach(file => {
+          result.hasFiles = true;
+          if (!isAllowedFile(file.name, allowedZone3)) {
+            result.invalidZone3.add(file.name);
+          }
+          if (metadataZone === 3 && fileHasExtension(file.name, extensionGroups.metadata)) {
+            result.hasMetadata = true;
+          }
+        });
+      }
 
       if (result.invalidZone1.size) {
         result.errors.push(`Unsupported file type in main upload: ${summarizeList(result.invalidZone1)}.`);
@@ -250,16 +285,23 @@ const UPLOAD_STATE_KEY = "uploadDraftState";
       if (result.invalidZone2.size) {
         result.errors.push(`Unsupported file type in barcode area: ${summarizeList(result.invalidZone2)}.`);
       }
-
-      const hasNonMetadata = zone1Files.some(file => !fileHasExtension(file.name, extensionGroups.metadata)) || zone2Files.length > 0;
-      if (config.metadataRequired && hasNonMetadata && !result.hasMetadata) {
-        result.errors.push('Metadata CSV (.csv) is required. Please add a metadata file.');
+      if (result.invalidZone3.size) {
+        result.errors.push(`Unsupported file type in metadata area: ${summarizeList(result.invalidZone3)}.`);
       }
 
-      if (config.hasTwoZones && zone1Files.length > 0 && zone2Files.length === 0) {
-        result.errors.push('Barcode files are required for IonTorrent (.fa or .fasta) in the barcode area.');
-      } else if (config.hasTwoZones && zone2Files.length > 0 && !result.hasBarcode) {
-        result.errors.push('Barcode area must include .fa or .fasta files.');
+      if (config.metadataRequired && !result.hasMetadata) {
+        const metadataHint = metadataZone === 3
+          ? 'Metadata CSV (.csv) is required in the metadata area.'
+          : 'Metadata CSV (.csv) is required in the main upload area.';
+        result.errors.push(metadataHint);
+      }
+
+      if (barcodeZone === 2) {
+        if (zone2Files.length === 0) {
+          result.errors.push('Barcode files are required in the barcode area (.fa or .fasta).');
+        } else if (!result.hasBarcode) {
+          result.errors.push('Barcode area must include .fa or .fasta files.');
+        }
       }
 
       return result;
@@ -328,8 +370,10 @@ const UPLOAD_STATE_KEY = "uploadDraftState";
       // Update UI elements
       fileInput.accept = config.accept1;
       fileInput2.accept = config.accept2;
+      if (fileInput3) fileInput3.accept = config.accept3;
       acceptedFileTypes.textContent = config.fileTypes;
       acceptedFileTypes2.textContent = config.fileTypes2;
+      if (acceptedFileTypes3) acceptedFileTypes3.textContent = config.fileTypes3 || "";
       uploadHelpText.textContent = config.helpText;
       uploadBtn.innerHTML = `<span class="material-symbols-rounded">upload</span> Upload ${selectedPipeline.toUpperCase()}`;
       
@@ -338,10 +382,12 @@ const UPLOAD_STATE_KEY = "uploadDraftState";
       console.log(selectedPipeline);
       
       // Show/hide second drop zone based on pipeline
-      if (config.hasTwoZones) {
-        fileDropZone2.style.display = "flex";
-      } else {
-        fileDropZone2.style.display = "none";
+      const zones = Number(config.zones || 1);
+      if (fileDropZone2) {
+        fileDropZone2.style.display = zones >= 2 ? "flex" : "none";
+      }
+      if (fileDropZone3) {
+        fileDropZone3.style.display = zones >= 3 ? "flex" : "none";
       }
       
       // Reset form
@@ -352,8 +398,10 @@ const UPLOAD_STATE_KEY = "uploadDraftState";
       const { keepStatus = false, keepProgress = false } = options;
       fileInput.value = "";
       fileInput2.value = "";
+      if (fileInput3) fileInput3.value = "";
       zone1Files = [];
       zone2Files = [];
+      zone3Files = [];
       document.getElementById("selectedFiles").innerHTML = "";
       uploadBtn.disabled = true;
       if (!keepStatus) {
@@ -370,6 +418,9 @@ const UPLOAD_STATE_KEY = "uploadDraftState";
       ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         fileDropZone.addEventListener(eventName, preventDefaults, false);
         fileDropZone2.addEventListener(eventName, preventDefaults, false);
+        if (fileDropZone3) {
+          fileDropZone3.addEventListener(eventName, preventDefaults, false);
+        }
       });
 
       function preventDefaults(e) {
@@ -403,6 +454,21 @@ const UPLOAD_STATE_KEY = "uploadDraftState";
         }, false);
       });
 
+      // Zone 3 drag styling
+      if (fileDropZone3) {
+        ['dragenter', 'dragover'].forEach(eventName => {
+          fileDropZone3.addEventListener(eventName, () => {
+            fileDropZone3.classList.add('drag-active');
+          }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+          fileDropZone3.addEventListener(eventName, () => {
+            fileDropZone3.classList.remove('drag-active');
+          }, false);
+        });
+      }
+
       // Zone 1 drop and click handlers
       fileDropZone.addEventListener('drop', (e) => handleDrop(e, 1), false);
       fileDropZone.addEventListener('click', () => fileInput.click());
@@ -410,6 +476,12 @@ const UPLOAD_STATE_KEY = "uploadDraftState";
       // Zone 2 drop and click handlers
       fileDropZone2.addEventListener('drop', (e) => handleDrop(e, 2), false);
       fileDropZone2.addEventListener('click', () => fileInput2.click());
+
+      // Zone 3 drop and click handlers
+      if (fileDropZone3 && fileInput3) {
+        fileDropZone3.addEventListener('drop', (e) => handleDrop(e, 3), false);
+        fileDropZone3.addEventListener('click', () => fileInput3.click());
+      }
     }
 
     function handleDrop(e, zoneNumber) {
@@ -418,8 +490,10 @@ const UPLOAD_STATE_KEY = "uploadDraftState";
       
       if (zoneNumber === 1) {
         zone1Files = files;
-      } else {
+      } else if (zoneNumber === 2) {
         zone2Files = files;
+      } else if (zoneNumber === 3) {
+        zone3Files = files;
       }
       
       refreshSelectionUI();
@@ -428,8 +502,10 @@ const UPLOAD_STATE_KEY = "uploadDraftState";
     function handleFileSelection(zoneNumber) {
       if (zoneNumber === 1) {
         zone1Files = Array.from(fileInput.files);
-      } else {
+      } else if (zoneNumber === 2) {
         zone2Files = Array.from(fileInput2.files);
+      } else if (zoneNumber === 3 && fileInput3) {
+        zone3Files = Array.from(fileInput3.files);
       }
       
       refreshSelectionUI();
@@ -449,9 +525,12 @@ const UPLOAD_STATE_KEY = "uploadDraftState";
         return;
       }
 
-      const hasRequiredFiles = config.hasTwoZones
-        ? zone1Files.length > 0 && zone2Files.length > 0
-        : zone1Files.length > 0;
+      const zones = Number(config.zones || 1);
+      const hasRequiredFiles = zones === 3
+        ? zone1Files.length > 0 && zone2Files.length > 0 && zone3Files.length > 0
+        : zones === 2
+          ? zone1Files.length > 0 && zone2Files.length > 0
+          : zone1Files.length > 0;
       const hasMetadata = !config.metadataRequired || validation?.hasMetadata;
       const hasNoErrors = !validation || validation.errors.length === 0;
 
@@ -463,13 +542,14 @@ const UPLOAD_STATE_KEY = "uploadDraftState";
       const config = pipelineConfigs[currentUpload.selectedPipeline];
       const invalidZone1 = validation?.invalidZone1 || new Set();
       const invalidZone2 = validation?.invalidZone2 || new Set();
+      const invalidZone3 = validation?.invalidZone3 || new Set();
 
       if (!config) {
         selectedFilesDiv.innerHTML = '';
         return;
       }
       
-      if (zone1Files.length === 0 && zone2Files.length === 0) {
+      if (zone1Files.length === 0 && zone2Files.length === 0 && zone3Files.length === 0) {
         selectedFilesDiv.innerHTML = '';
         return;
       }
@@ -502,8 +582,8 @@ const UPLOAD_STATE_KEY = "uploadDraftState";
         html += '</ul></div>';
       }
       
-      // Zone 2 files (only for IonTorrent)
-      if (config.hasTwoZones && zone2Files.length > 0) {
+      // Zone 2 files (barcodes)
+      if (Number(config.zones || 1) >= 2 && zone2Files.length > 0) {
         const sortedZone2 = zone2Files.sort((a, b) => 
           a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
         );
@@ -527,6 +607,32 @@ const UPLOAD_STATE_KEY = "uploadDraftState";
         }
         html += '</ul></div>';
       }
+
+      // Zone 3 files (metadata)
+      if (Number(config.zones || 1) >= 3 && zone3Files.length > 0) {
+        const sortedZone3 = zone3Files.sort((a, b) =>
+          a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
+        );
+
+        html += `<div class="mb-3">
+          <strong><span class="material-symbols-rounded" style="vertical-align: middle;">table</span> ${config.fileTypes3}:</strong>
+          <ul class="list-group mt-2">`;
+
+        for (const file of sortedZone3) {
+          const size = formatFileSize(file.size);
+          const icon = getFileIcon(file.name);
+          const isInvalid = invalidZone3.has(file.name);
+          const itemClass = isInvalid ? 'list-group-item list-group-item-danger' : 'list-group-item';
+          const badges = isInvalid
+            ? `<span class="badge bg-danger me-2">Invalid type</span><span class="badge bg-secondary">${size}</span>`
+            : `<span class="badge bg-info text-dark">${size}</span>`;
+          html += `<li class="${itemClass} d-flex justify-content-between align-items-center">
+                     <span><span class="material-symbols-rounded file-icon">${icon}</span> ${file.name}</span>
+                     <span>${badges}</span>
+                   </li>`;
+        }
+        html += '</ul></div>';
+      }
       
       html += '</div>';
       selectedFilesDiv.innerHTML = html;
@@ -543,6 +649,8 @@ const UPLOAD_STATE_KEY = "uploadDraftState";
         case 'fa':
         case 'fasta':
           return 'code';
+        case 'csv':
+          return 'table_chart';
         default:
           return 'insert_drive_file';
       }
@@ -570,22 +678,26 @@ const UPLOAD_STATE_KEY = "uploadDraftState";
       }
 
       // Validate files based on pipeline type
-      if (config.hasTwoZones) {
+      const zones = Number(config.zones || 1);
+      if (zones === 3) {
+        if (zone1Files.length === 0 || zone2Files.length === 0 || zone3Files.length === 0) {
+          showStatus('Please select files for FASTQ, BARCODE, and METADATA areas', 'error');
+          return;
+        }
+      } else if (zones === 2) {
         if (zone1Files.length === 0 || zone2Files.length === 0) {
           showStatus('Please select files for both FASTQ and BARCODE areas', 'error');
           return;
         }
-      } else {
-        if (zone1Files.length === 0) {
-          showStatus('Please select at least one file', 'error');
-          return;
-        }
+      } else if (zone1Files.length === 0) {
+        showStatus('Please select at least one file', 'error');
+        return;
       }
 
       const formData = new FormData();
       
       // Combine all files from both zones
-      const allFiles = [...zone1Files, ...zone2Files];
+      const allFiles = [...zone1Files, ...zone2Files, ...zone3Files];
       
       // Sort all files by filename
       const sortedFiles = allFiles.sort((a, b) => {
@@ -822,6 +934,9 @@ const UPLOAD_STATE_KEY = "uploadDraftState";
     analysis_select.addEventListener("change", handlePipelineSelection);
     fileInput.addEventListener("change", () => handleFileSelection(1));
     fileInput2.addEventListener("change", () => handleFileSelection(2));
+    if (fileInput3) {
+      fileInput3.addEventListener("change", () => handleFileSelection(3));
+    }
     uploadForm.addEventListener("submit", handleUpload);
     
     // Initialize drag and drop

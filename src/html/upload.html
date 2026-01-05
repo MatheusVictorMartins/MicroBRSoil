@@ -72,7 +72,7 @@
             <select id="upload_select" class="form-select" aria-label="Default select example">
               <option selected disabled>Select an analysis...</option>
               <option value="illumina">Illumina - FASTQ(.fastq)</option>
-              <option value="iontorrent">Iontorrent - BARCODES(.fa) + FASTQ(.fastq)</option>
+              <option value="iontorrent">Iontorrent - FASTQ(.fastq/.gz) + METADATA(.csv) + BARCODES(.fa)</option>
               <option value="its">ITS - FASTQ(.fastq)</option>
             </select>
           </div>
@@ -100,6 +100,15 @@
                       <p class="file-types" id="acceptedFileTypes2">Accepted file types will be shown here</p>
                     </div>
                     <input class="form-control dropfile-input" type="file" name="files" id="fileInput2" multiple style="display: none;" />
+                  </div>
+                  <div class="file-drop-zone-3" id="file_drop_zone_3">
+                    <div class="drop-zone-content">
+                      <span class="material-symbols-rounded upload-icon">cloud_upload</span>
+                      <h4>Drag and drop files here</h4>
+                      <p>or click to browse files</p>
+                      <p class="file-types" id="acceptedFileTypes3">Accepted file types will be shown here</p>
+                    </div>
+                    <input class="form-control dropfile-input" type="file" name="files" id="fileInput3" multiple style="display: none;" />
                   </div>
                 </span>
                 <div class="form-text" id="uploadHelpText">Select files for analysis</div>
