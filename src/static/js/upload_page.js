@@ -414,68 +414,54 @@ const UPLOAD_STATE_KEY = "uploadDraftState";
 
     // Drag and drop functionality
     function initializeDragAndDrop() {
-      // Prevent defaults for both zones
-      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        fileDropZone.addEventListener(eventName, preventDefaults, false);
-        fileDropZone2.addEventListener(eventName, preventDefaults, false);
-        if (fileDropZone3) {
-          fileDropZone3.addEventListener(eventName, preventDefaults, false);
-        }
-      });
+      if (!fileDropZone) return;
+
+      const zones = [fileDropZone, fileDropZone2, fileDropZone3].filter(Boolean);
 
       function preventDefaults(e) {
         e.preventDefault();
         e.stopPropagation();
       }
 
-      // Zone 1 drag styling
-      ['dragenter', 'dragover'].forEach(eventName => {
-        fileDropZone.addEventListener(eventName, () => {
-          fileDropZone.classList.add('drag-active');
-        }, false);
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        zones.forEach(zone => zone.addEventListener(eventName, preventDefaults, false));
       });
 
-      ['dragleave', 'drop'].forEach(eventName => {
-        fileDropZone.addEventListener(eventName, () => {
-          fileDropZone.classList.remove('drag-active');
-        }, false);
+      ['dragenter', 'dragover', 'drop'].forEach(eventName => {
+        document.addEventListener(eventName, preventDefaults, false);
       });
 
-      // Zone 2 drag styling
-      ['dragenter', 'dragover'].forEach(eventName => {
-        fileDropZone2.addEventListener(eventName, () => {
-          fileDropZone2.classList.add('drag-active');
-        }, false);
-      });
-
-      ['dragleave', 'drop'].forEach(eventName => {
-        fileDropZone2.addEventListener(eventName, () => {
-          fileDropZone2.classList.remove('drag-active');
-        }, false);
-      });
-
-      // Zone 3 drag styling
-      if (fileDropZone3) {
+      function bindDragState(zone) {
+        if (!zone) return;
         ['dragenter', 'dragover'].forEach(eventName => {
-          fileDropZone3.addEventListener(eventName, () => {
-            fileDropZone3.classList.add('drag-active');
+          zone.addEventListener(eventName, (event) => {
+            if (event.dataTransfer) {
+              event.dataTransfer.dropEffect = 'copy';
+            }
+            zone.classList.add('drag-active');
           }, false);
         });
 
         ['dragleave', 'drop'].forEach(eventName => {
-          fileDropZone3.addEventListener(eventName, () => {
-            fileDropZone3.classList.remove('drag-active');
+          zone.addEventListener(eventName, () => {
+            zone.classList.remove('drag-active');
           }, false);
         });
       }
+
+      bindDragState(fileDropZone);
+      bindDragState(fileDropZone2);
+      bindDragState(fileDropZone3);
 
       // Zone 1 drop and click handlers
       fileDropZone.addEventListener('drop', (e) => handleDrop(e, 1), false);
       fileDropZone.addEventListener('click', () => fileInput.click());
 
       // Zone 2 drop and click handlers
-      fileDropZone2.addEventListener('drop', (e) => handleDrop(e, 2), false);
-      fileDropZone2.addEventListener('click', () => fileInput2.click());
+      if (fileDropZone2 && fileInput2) {
+        fileDropZone2.addEventListener('drop', (e) => handleDrop(e, 2), false);
+        fileDropZone2.addEventListener('click', () => fileInput2.click());
+      }
 
       // Zone 3 drop and click handlers
       if (fileDropZone3 && fileInput3) {

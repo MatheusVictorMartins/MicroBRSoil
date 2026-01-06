@@ -197,7 +197,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 app.get('/_health', (req, res) => res.json({ ok: true, pid: process.pid }));
 
 // Start the server (removed the require.main check since we're being required by startup.js)
-app.listen(PORT, HOST, () => {
+const server = app.listen(PORT, HOST, () => {
   apiLogger.info('Server started', {
     host: HOST,
     port: PORT,
@@ -206,5 +206,11 @@ app.listen(PORT, HOST, () => {
   });
   console.log(`Server listening on ${HOST}:${PORT}`);
 });
+// Allow long-running uploads without server timeouts.
+const uploadTimeoutMs = 6 * 60 * 60 * 1000;
+server.requestTimeout = uploadTimeoutMs;
+server.headersTimeout = uploadTimeoutMs;
+server.keepAliveTimeout = Math.min(uploadTimeoutMs, 5 * 60 * 1000);
+server.timeout = uploadTimeoutMs;
 
 module.exports = app;
