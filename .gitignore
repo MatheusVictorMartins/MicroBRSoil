@@ -148,5 +148,4 @@ vite.config.ts.timestamp-*
 results/
 uploads/
 pipeline-r/references/
-pipeline-r/pipeline/
 !results/.gitkeep
