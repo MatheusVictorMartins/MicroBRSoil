@@ -1,4 +1,5 @@
 const path = require("path");
+const fs = require("fs");
 const R = require("r-integration");
 const { exec } = require("child_process");
 const { promisify } = require("util");
@@ -36,9 +37,15 @@ async function runIonTorrentPipeline(fastqPath, outputDir = null, barcodesPath =
     console.log(`Input: ${fastqPath}`);
     console.log(`Output: ${outputDir || 'default'}`);
 
-    // Guard: ensure we are not passing a barcode fasta as the main input
-    if (!/\.fastq(\.gz)?$/i.test(fastqPath)) {
-      throw new Error(`IonTorrent expects a multiplexed FASTQ (.fastq/.fastq.gz). Received: ${fastqPath}`);
+    let inputStats;
+    try {
+      inputStats = fs.statSync(fastqPath);
+    } catch (err) {
+      throw new Error(`IonTorrent input not found: ${fastqPath}`);
+    }
+    const inputIsDir = inputStats.isDirectory();
+    if (!inputIsDir && !/\.f(ast)?q(\.gz)?$/i.test(fastqPath)) {
+      throw new Error(`IonTorrent expects FASTQ input (.fastq/.fq). Received: ${fastqPath}`);
     }
 
     // Check R packages before running pipeline
@@ -52,9 +59,9 @@ async function runIonTorrentPipeline(fastqPath, outputDir = null, barcodesPath =
     console.log(`📜 R Script: ${scriptPath}`);
 
     const defaultBarcodes = process.env.IONTORRENT_BARCODES_PATH || "/app/pipeline-r/barcodes/barcodes_16S.fa";
-    const resolvedBarcodes = barcodesPath || defaultBarcodes;
+    const resolvedBarcodes = barcodesPath || (!inputIsDir ? defaultBarcodes : null);
 
-    console.log(`Barcodes: ${resolvedBarcodes}`);
+    console.log(`Barcodes: ${resolvedBarcodes || 'none'}`);
 
     const result = await R.callMethod(
       scriptPath,

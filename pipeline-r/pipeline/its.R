@@ -67,6 +67,35 @@ write_status <- function(outdir, status_list) {
   }
 }
 
+collect_runtime_info <- function() {
+  r_ver <- R.version
+  pkg_list <- sessionInfo()$otherPkgs
+  pkg_names <- names(pkg_list)
+  packages <- lapply(pkg_names, function(pkg) {
+    version <- tryCatch(as.character(pkg_list[[pkg]]$Version), error = function(e) NA_character_)
+    list(name = pkg, version = version)
+  })
+  list(
+    r_version = paste0(r_ver$major, ".", r_ver$minor),
+    r_version_full = r_ver$version.string,
+    platform = r_ver$platform,
+    os = r_ver$os,
+    arch = r_ver$arch,
+    packages = packages
+  )
+}
+
+write_runtime_info <- function(outdir, runtime_info) {
+  if (is.null(outdir) || !nzchar(outdir)) return(invisible(NULL))
+  if (!requireNamespace("jsonlite", quietly = TRUE)) return(invisible(NULL))
+  try(jsonlite::write_json(
+    runtime_info,
+    file.path(outdir, "pipeline_runtime.json"),
+    auto_unbox = TRUE,
+    pretty = TRUE
+  ), silent = TRUE)
+}
+
 safe_unlink <- function(p) {
   try(unlink(p, recursive = TRUE, force = TRUE), silent = TRUE)
 }
@@ -359,11 +388,24 @@ run_pipeline_its <- function(path1, path2 = default_its_ref, outdir = NULL, type
     )
     write.csv(summary_stats, file.path(result_path, "pipeline_summary_stats.csv"), row.names = FALSE)
 
+    runtime_info <- collect_runtime_info()
+    write_runtime_info(result_path, runtime_info)
+
+    cat("Runtime info:\n")
+    cat("R:", runtime_info$r_version_full, "\n")
+    if (length(runtime_info$packages) > 0) {
+      cat("Packages:\n")
+      for (pkg in runtime_info$packages) {
+        cat(" -", pkg$name, pkg$version, "\n")
+      }
+    }
+
     status <- list(
       status = "success",
       message = "ITS pipeline completed successfully",
       pipeline_type = type,
       timestamp = as.character(Sys.time()),
+      runtime = runtime_info,
       files_created = c(
         "alpha_diversity_metrics.csv",
         "otu_table.csv",
@@ -372,6 +414,7 @@ run_pipeline_its <- function(path1, path2 = default_its_ref, outdir = NULL, type
         "phyloseq_object.rds",
         "taxa_barplot_genus.png",
         "beta_diversity_pcoa.png",
+        "pipeline_runtime.json",
         "pipeline_summary_stats.csv",
         "pipeline_progress.log",
         "pipeline_status.json"

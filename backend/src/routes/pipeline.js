@@ -363,7 +363,8 @@ module.exports = router;
 // Helpers
 const RESULTS_DIR = process.env.RESULTS_DIR || path.join(__dirname, '..', '..', 'results');
 function attachPipelineLogs(run) {
-  const logFile = path.join(RESULTS_DIR, run.run_id || run.id || '', 'pipeline_progress.log');
+  const runId = run.run_id || run.id || '';
+  const logFile = path.join(RESULTS_DIR, runId, 'pipeline_progress.log');
   let fileLogs = [];
   try {
     if (fs.existsSync(logFile)) {
@@ -383,7 +384,8 @@ function attachPipelineLogs(run) {
     mergedLogs.push(...fileLogs);
   }
 
-  return { ...run, logs: mergedLogs };
+  const runtimeInfo = readRuntimeInfo(runId);
+  return { ...run, logs: mergedLogs, runtime_info: runtimeInfo };
 }
 
 function canAccessRun(user, run) {
@@ -395,4 +397,17 @@ function canAccessRun(user, run) {
 
 function safeErrorMessage(err) {
   return isProduction ? 'Internal server error' : err.message;
+}
+
+function readRuntimeInfo(runId) {
+  if (!runId) return null;
+  const statusFile = path.join(RESULTS_DIR, runId, 'pipeline_status.json');
+  if (!fs.existsSync(statusFile)) return null;
+  try {
+    const content = fs.readFileSync(statusFile, 'utf8');
+    const data = JSON.parse(content);
+    return data?.runtime || data?.runtime_info || data?.runtimeInfo || null;
+  } catch (err) {
+    return null;
+  }
 }

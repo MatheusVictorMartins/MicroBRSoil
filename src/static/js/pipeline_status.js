@@ -53,6 +53,7 @@ const tracker = {
       const trackerBox = () => document.getElementById('pipelineTracker');
       const logsEl = () => document.getElementById('trackerLogs');
       const logsCountEl = () => document.getElementById('logsCount');
+      const runtimeEl = () => document.getElementById('trackerRuntime');
       const stepEl = () => document.getElementById('trackerStep');
       const runsBodyEl = () => document.getElementById('runsTableBody');
       const runsCountEl = () => document.getElementById('runsCount');
@@ -104,6 +105,56 @@ const tracker = {
           .replace(/>/g, '&gt;')
           .replace(/"/g, '&quot;')
           .replace(/'/g, '&#39;');
+      }
+
+      function normalizeRuntimeInfo(raw) {
+        if (!raw || typeof raw !== 'object') return null;
+        const packages = Array.isArray(raw.packages) ? raw.packages : [];
+        const normalizedPackages = packages
+          .map(pkg => ({
+            name: pkg?.name || pkg?.package || '',
+            version: pkg?.version || pkg?.ver || ''
+          }))
+          .filter(pkg => pkg.name || pkg.version);
+        return {
+          rVersion: raw.r_version_full || raw.r_version || raw.rVersion || raw.r_version_string || raw.r_version_text || '',
+          platform: raw.platform || raw.r_platform || raw.rPlatform || '',
+          os: raw.os || raw.r_os || raw.rOs || '',
+          arch: raw.arch || raw.r_arch || raw.rArch || '',
+          packages: normalizedPackages
+        };
+      }
+
+      function renderRuntimeInfo(runtime) {
+        const normalized = normalizeRuntimeInfo(runtime);
+        if (!normalized) return '';
+        const lines = [];
+        if (normalized.rVersion) {
+          lines.push(`<div><strong>R:</strong> ${escapeHtml(normalized.rVersion)}</div>`);
+        }
+        if (normalized.platform) {
+          lines.push(`<div><strong>Platform:</strong> ${escapeHtml(normalized.platform)}</div>`);
+        }
+        if (normalized.os || normalized.arch) {
+          const osParts = [normalized.os, normalized.arch].filter(Boolean).map(escapeHtml).join(' / ');
+          lines.push(`<div><strong>OS:</strong> ${osParts}</div>`);
+        }
+        const packageList = normalized.packages.length
+          ? `<ul class="list-unstyled mb-0">${normalized.packages.map(pkg => {
+              const name = escapeHtml(pkg.name);
+              const version = pkg.version ? ` <span class="text-muted">(${escapeHtml(pkg.version)})</span>` : '';
+              return `<li><span class="fw-semibold">${name}</span>${version}</li>`;
+            }).join('')}</ul>`
+          : '<div class="text-muted">No packages reported.</div>';
+        return `
+          <details>
+            <summary class="fw-semibold">Runtime info</summary>
+            <div class="small text-muted mt-2">
+              ${lines.join('')}
+              ${packageList}
+            </div>
+          </details>
+        `;
       }
 
       function cleanLogLine(value) {
@@ -666,6 +717,10 @@ const tracker = {
         if (stepEl()) stepEl().textContent = "";
         if (logsEl()) logsEl().innerHTML = "";
         if (logsCountEl()) logsCountEl().textContent = "";
+        if (runtimeEl()) {
+          runtimeEl().innerHTML = "";
+          runtimeEl().style.display = "none";
+        }
         highlightSelectedRun();
         fetchStatus();
       }
@@ -749,6 +804,11 @@ const tracker = {
           if (logsEl()) {
             logsEl().innerHTML = renderedLogs.html || "<div class=\"text-muted small py-2\">No logs yet.</div>";
           }
+          if (runtimeEl()) {
+            const runtimeHtml = renderRuntimeInfo(run.runtime_info || run.runtime || run.runtimeInfo || null);
+            runtimeEl().innerHTML = runtimeHtml;
+            runtimeEl().style.display = runtimeHtml ? 'block' : 'none';
+          }
           if (stepEl()) {
             const summary = formatStepSummary(parsedLogs, status);
             stepEl().textContent = summary;
@@ -799,6 +859,10 @@ const tracker = {
         if (stepEl()) stepEl().textContent = "";
         if (logsEl()) logsEl().innerHTML = "";
         if (logsCountEl()) logsCountEl().textContent = "";
+        if (runtimeEl()) {
+          runtimeEl().innerHTML = "";
+          runtimeEl().style.display = "none";
+        }
       }
 
       document.addEventListener("DOMContentLoaded", async () => {
@@ -917,7 +981,11 @@ const tracker = {
                 return;
               }
               const payload = await response.json().catch(() => ({}));
-              alert(`Uploads removed: ${payload.removed || 0}`);
+              const removedUploads = payload.removed || 0;
+              const removedRuns = payload.runsRemoved || 0;
+              alert(`Uploads removed: ${removedUploads}. Pipeline runs removed: ${removedRuns}.`);
+              runsState.page = 1;
+              await loadRuns();
             } catch (err) {
               alert('Failed to clear uploads.');
             } finally {

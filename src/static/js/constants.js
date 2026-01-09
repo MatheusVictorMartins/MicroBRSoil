@@ -10,6 +10,7 @@
     PIPELINE_HEALTH: "/pipeline/health",
     PIPELINE_RUNS: "/pipeline/runs",
     PIPELINE_STATUS: "/pipeline/status",
+    PIPELINE_STATUS_PAGE: "/pipeline-status",
     PIPELINE_CANCEL: "/pipeline/cancel",
     PIPELINE_STATS: "/api/table/stats",
     UPLOAD_ILLUMINA: "/upload/illumina",

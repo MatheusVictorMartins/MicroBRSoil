@@ -16,34 +16,6 @@ run_dada2_pipeline <- function(path1, path2 = default_silva_path, outdir = NULL,
     install.packages("jsonlite", repos = "https://cloud.r-project.org")
   }
   library(jsonlite)
-
-  collect_runtime_info <- function() {
-    r_ver <- R.version
-    pkg_list <- sessionInfo()$otherPkgs
-    pkg_names <- names(pkg_list)
-    packages <- lapply(pkg_names, function(pkg) {
-      version <- tryCatch(as.character(pkg_list[[pkg]]$Version), error = function(e) NA_character_)
-      list(name = pkg, version = version)
-    })
-    list(
-      r_version = paste0(r_ver$major, ".", r_ver$minor),
-      r_version_full = r_ver$version.string,
-      platform = r_ver$platform,
-      os = r_ver$os,
-      arch = r_ver$arch,
-      packages = packages
-    )
-  }
-
-  write_runtime_info <- function(outdir, runtime_info) {
-    if (is.null(outdir) || !nzchar(outdir)) return(invisible(NULL))
-    try(jsonlite::write_json(
-      runtime_info,
-      file.path(outdir, "pipeline_runtime.json"),
-      auto_unbox = TRUE,
-      pretty = TRUE
-    ), silent = TRUE)
-  }
   
   cat("\n========================================\n")
   cat("Illumina DADA2 pipeline\n")
@@ -105,7 +77,7 @@ run_dada2_pipeline <- function(path1, path2 = default_silva_path, outdir = NULL,
   # Step 1: Filter/trim
   cat("Step 1: Filter and trim\n")
   out <- filterAndTrim(fnFs, filtFs, fnRs, filtRs,
-                       truncLen = c(145, 135),
+                       truncLen = c(240, 200),
                        maxN = 0, maxEE = c(2, 3), truncQ = 2,
                        rm.phix = TRUE, compress = TRUE, multithread = TRUE)
   print(out)
@@ -186,91 +158,18 @@ run_dada2_pipeline <- function(path1, path2 = default_silva_path, outdir = NULL,
     goods = alpha_div$Goods
   )
   write.csv(alpha_export, file.path(result_path, "alpha_diversity_metrics.csv"), row.names = FALSE)
-
- # Step 8: Taxonomic barplot (Genus) — Top N + Others + legend bottom (FIXED)
-cat("Step 8: Taxonomic barplot\n")
-try({
-
-  # --- Settings (adjust if you want) ---
-  TOP_N <- 30                  # number of dominant genera to keep
-  OTHER_LABEL <- "Others"
-  OUT_W <- 14                  # inches
-  OUT_H <- 10                  # inches (increase height helps a lot)
-  OUT_DPI <- 300
-
-  # 1) Agglomerate at Genus
-  ps_genus <- tax_glom(ps, taxrank = "Genus", NArm = TRUE)
-
-  # 2) Relative abundance
-  ps_genus_rel <- transform_sample_counts(ps_genus, function(x) x / sum(x))
-
-  # 3) Compute mean abundance per TAXON robustly (taxa as rows no matter what)
-  otu_mat <- as(otu_table(ps_genus_rel), "matrix")
-  if (!taxa_are_rows(ps_genus_rel)) {
-    otu_mat <- t(otu_mat)  # ensure taxa are rows
-  }
-  mean_ab <- rowMeans(otu_mat)  # mean relative abundance per taxon
-
-  TOP_N <- min(TOP_N, length(mean_ab))
-  top_taxa <- names(sort(mean_ab, decreasing = TRUE))[seq_len(TOP_N)]
-  other_taxa <- setdiff(rownames(otu_mat), top_taxa)
-
-  # 4) Create "Genus2" taxonomy rank: keep top genera, collapse the rest to Others
-  tx <- as.data.frame(tax_table(ps_genus_rel))
-  tx$Genus2 <- as.character(tx$Genus)
-
-  # handle NA/empty genus
-  tx$Genus2[is.na(tx$Genus2) | tx$Genus2 == ""] <- "Unclassified"
-
-  # collapse everything not in top_taxa to Others (based on taxon IDs)
-  tx$Genus2[rownames(tx) %in% other_taxa] <- OTHER_LABEL
-  tax_table(ps_genus_rel) <- tax_table(as.matrix(tx))
-
-  # 5) Re-glom by Genus2 to actually SUM Others into one category
-  ps_genus_top <- tax_glom(ps_genus_rel, taxrank = "Genus2", NArm = FALSE)
-
-  # 6) Plot (force "Others" to be stacked together)
-  df <- psmelt(ps_genus_top)
-
-  # Guarantee factor order: top taxa first, Others last (on top of the stack)
-  df$Genus2 <- as.character(df$Genus2)
-  df$Genus2[df$Genus2 == "" | is.na(df$Genus2)] <- "Unclassified"
-
-  # Put Others last (top of stack). If you want it at the bottom, put it first.
-  taxa_levels <- setdiff(sort(unique(df$Genus2)), OTHER_LABEL)
-  df$Genus2 <- factor(df$Genus2, levels = c(taxa_levels, OTHER_LABEL))
-
-  g1 <- ggplot(df, aes(x = Sample, y = Abundance, fill = Genus2)) +
-    geom_bar(stat = "identity", position = "stack", width = 0.9) +
-    theme_minimal() +
-    theme(
-      axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
-      legend.position = "bottom",
-      legend.title = element_text(size = 9),
-      legend.text  = element_text(size = 7),
-      legend.key.size = unit(0.35, "cm"),
-      plot.margin = margin(10, 10, 10, 10)
-    ) +
-    guides(fill = guide_legend(ncol = 4)) +
-    labs(x = NULL, y = "Relative abundance", fill = "Genus")
-
-  # 7) Save PNG + PDF
-  ggsave(
-    filename = file.path(result_path, "taxa_barplot_genus.png"),
-    plot = g1,
-    width = OUT_W, height = OUT_H, units = "in", dpi = OUT_DPI,
-    limitsize = FALSE
-  )
-
-  ggsave(
-    filename = file.path(result_path, "taxa_barplot_genus.pdf"),
-    plot = g1,
-    width = OUT_W, height = OUT_H, units = "in",
-    limitsize = FALSE
-  )
-
-}, silent = TRUE)
-
+  
+  # Step 8: Taxonomic barplot
+  cat("Step 8: Taxonomic barplot\n")
+  try({
+    ps_genus <- tax_glom(ps, taxrank = "Genus")
+    ps_genus_rel <- transform_sample_counts(ps_genus, function(x) x / sum(x))
+    g1 <- plot_bar(ps_genus_rel, fill = "Genus") +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1))
+    ggsave(file.path(result_path, "taxa_barplot_genus.png"), g1, width = 10, height = 6)
+  }, silent = TRUE)
+  
   # Step 9: Beta diversity
   cat("Step 9: Beta diversity (PCoA Bray-Curtis)\n")
   try({
@@ -306,24 +205,11 @@ try({
   )
   write.csv(summary_stats, file.path(result_path, "pipeline_summary_stats.csv"), row.names = FALSE)
   
-  runtime_info <- collect_runtime_info()
-  write_runtime_info(result_path, runtime_info)
-
-  cat("Runtime info:\n")
-  cat("R:", runtime_info$r_version_full, "\n")
-  if (length(runtime_info$packages) > 0) {
-    cat("Packages:\n")
-    for (pkg in runtime_info$packages) {
-      cat(" -", pkg$name, pkg$version, "\n")
-    }
-  }
-
   status <- list(
     status = "success",
     message = "Pipeline completed successfully",
     pipeline_type = type,
     timestamp = Sys.time(),
-    runtime = runtime_info,
     files_created = c(
       "alpha_diversity_metrics.csv",
       "otu_table.csv",
@@ -332,7 +218,6 @@ try({
       "phyloseq_object.rds",
       "taxa_barplot_genus.png",
       "beta_diversity_pcoa.png",
-      "pipeline_runtime.json",
       "pipeline_summary_stats.csv"
     )
   )

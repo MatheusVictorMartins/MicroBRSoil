@@ -17,6 +17,7 @@ const PIPELINE_STATUS_ROUTE = ROUTES.PIPELINE_STATUS || "/pipeline/status";
 
     let pipelineRunsCache = [];
     const runLogsCache = new Map();
+    const runRuntimeCache = new Map();
     let currentResultsRunId = null;
     let currentOtuSummary = null;
     let currentTaxaSummary = null;
@@ -58,6 +59,68 @@ const PIPELINE_STATUS_ROUTE = ROUTES.PIPELINE_STATUS || "/pipeline/status";
       lazyObserver = null;
     }
 
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function normalizeRuntimeInfo(raw) {
+      if (!raw || typeof raw !== 'object') return null;
+      const packages = Array.isArray(raw.packages) ? raw.packages : [];
+      const normalizedPackages = packages
+        .map(pkg => ({
+          name: pkg?.name || pkg?.package || '',
+          version: pkg?.version || pkg?.ver || ''
+        }))
+        .filter(pkg => pkg.name || pkg.version);
+      return {
+        rVersion: raw.r_version_full || raw.r_version || raw.rVersion || raw.r_version_string || raw.r_version_text || '',
+        platform: raw.platform || raw.r_platform || raw.rPlatform || '',
+        os: raw.os || raw.r_os || raw.rOs || '',
+        arch: raw.arch || raw.r_arch || raw.rArch || '',
+        packages: normalizedPackages
+      };
+    }
+
+    function renderRuntimeInfo(runtime, options = {}) {
+      const { showEmpty = false } = options;
+      const normalized = normalizeRuntimeInfo(runtime);
+      if (!normalized) {
+        return showEmpty ? '<div class="muted">Runtime info not available.</div>' : '';
+      }
+      const lines = [];
+      if (normalized.rVersion) {
+        lines.push(`<div><strong>R:</strong> ${escapeHtml(normalized.rVersion)}</div>`);
+      }
+      if (normalized.platform) {
+        lines.push(`<div><strong>Platform:</strong> ${escapeHtml(normalized.platform)}</div>`);
+      }
+      if (normalized.os || normalized.arch) {
+        const osParts = [normalized.os, normalized.arch].filter(Boolean).map(escapeHtml).join(' / ');
+        lines.push(`<div><strong>OS:</strong> ${osParts}</div>`);
+      }
+      const packageList = normalized.packages.length
+        ? `<ul class="list-unstyled mb-0">${normalized.packages.map(pkg => {
+            const name = escapeHtml(pkg.name);
+            const version = pkg.version ? ` <span class="muted">(${escapeHtml(pkg.version)})</span>` : '';
+            return `<li><span class="fw-semibold">${name}</span>${version}</li>`;
+          }).join('')}</ul>`
+        : '<div class="muted">No packages reported.</div>';
+      return `
+        <details class="mt-2">
+          <summary class="fw-semibold">Runtime info</summary>
+          <div class="results-meta mt-2">
+            ${lines.join('')}
+            ${packageList}
+          </div>
+        </details>
+      `;
+    }
+
     function renderBasicInfo(soil) {
       document.getElementById('sample-title').textContent = soil.sample_name || `Soil #${soil.soil_id}`;
       document.getElementById('sample-meta').textContent = `${soil.location || soil.geo_loc_name || 'Unknown location'} - ${soil.collection_date || ''}`;
@@ -73,11 +136,15 @@ const PIPELINE_STATUS_ROUTE = ROUTES.PIPELINE_STATUS || "/pipeline/status";
         <p><strong>Soil type:</strong> ${soil.soil_type || 'N/A'}</p>
         ${soil.coordinates ? `<p><strong>Coordinates:</strong> ${soil.coordinates.latitude.toFixed(4)}, ${soil.coordinates.longitude.toFixed(4)}</p>` : ''}
       `;
-      document.getElementById('basic-info').innerHTML = info;
+      const basicInfoEl = document.getElementById('basic-info');
+      if (basicInfoEl) {
+        basicInfoEl.innerHTML = info;
+      }
     }
 
     function renderAlphaTests(alphaRecords) {
       const container = document.getElementById('alpha-tests');
+      if (!container) return;
       if (!alphaRecords || alphaRecords.length === 0) {
         container.innerHTML = '<p class="muted">No alpha diversity records found for this soil.</p>';
         return;
@@ -103,6 +170,7 @@ const PIPELINE_STATUS_ROUTE = ROUTES.PIPELINE_STATUS || "/pipeline/status";
 
     function addFileList(targetId, files, runId = null, isResults = false) {
       const ul = document.getElementById(targetId);
+      if (!ul) return;
       ul.innerHTML = '';
       if (!files || files.length === 0) {
         ul.innerHTML = '<li class="list-group-item muted">No files found</li>';
@@ -221,18 +289,22 @@ const PIPELINE_STATUS_ROUTE = ROUTES.PIPELINE_STATUS || "/pipeline/status";
         }
         const data = await res.json();
         const logs = Array.isArray(data?.run?.logs) ? data.run.logs : [];
+        const runtimeInfo = data?.run?.runtime_info || data?.run?.runtime || data?.run?.runtimeInfo || null;
         runLogsCache.set(runId, logs);
+        runRuntimeCache.set(runId, runtimeInfo);
         return logs;
       } catch (e) {
         runLogsCache.set(runId, []);
+        runRuntimeCache.set(runId, null);
         return [];
       }
     }
 
-    function renderRunLogs(container, logs) {
+    function renderRunLogs(container, logs, runtimeInfo) {
       if (!container) return;
+      const runtimeHtml = renderRuntimeInfo(runtimeInfo);
       if (!logs || logs.length === 0) {
-        container.innerHTML = '<small class="muted">No logs available</small>';
+        container.innerHTML = `<small class="muted">No logs available</small>${runtimeHtml}`;
         return;
       }
       const recent = logs.slice(-50);
@@ -240,6 +312,7 @@ const PIPELINE_STATUS_ROUTE = ROUTES.PIPELINE_STATUS || "/pipeline/status";
         <div class="mt-2 p-2" style="background: #f8f9fa; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.85em;">
           ${recent.map(log => `<div>${log}</div>`).join('')}
         </div>
+        ${runtimeHtml}
       `;
     }
 
@@ -259,19 +332,22 @@ const PIPELINE_STATUS_ROUTE = ROUTES.PIPELINE_STATUS || "/pipeline/status";
       container.style.display = 'block';
       if (runLogsCache.has(runId)) {
         const cachedLogs = runLogsCache.get(runId) || [];
-        renderRunLogs(container, cachedLogs);
+        const runtimeInfo = runRuntimeCache.get(runId) || null;
+        renderRunLogs(container, cachedLogs, runtimeInfo);
         if (button) button.textContent = cachedLogs.length ? `Hide logs (${cachedLogs.length})` : 'Hide logs';
         return;
       }
 
       container.innerHTML = '<small class="muted">Loading logs...</small>';
       const logs = await fetchRunLogs(runId);
-      renderRunLogs(container, logs);
+      const runtimeInfo = runRuntimeCache.get(runId) || null;
+      renderRunLogs(container, logs, runtimeInfo);
       if (button) button.textContent = logs.length ? `Hide logs (${logs.length})` : 'Hide logs';
     }
 
     function renderSamples(samples) {
       const container = document.getElementById('samples-list');
+      if (!container) return;
       if (!samples || samples.length === 0) {
         container.innerHTML = '<p class="muted">No samples found for this soil.</p>';
         return;
@@ -308,6 +384,7 @@ const PIPELINE_STATUS_ROUTE = ROUTES.PIPELINE_STATUS || "/pipeline/status";
 
       pipelineRunsCache = Array.isArray(runs) ? runs : [];
       runLogsCache.clear();
+      runRuntimeCache.clear();
       let html = '';
       runs.forEach(run => {
         const statusClass = run.status === 'completed' ? 'success' : 
@@ -405,6 +482,7 @@ const PIPELINE_STATUS_ROUTE = ROUTES.PIPELINE_STATUS || "/pipeline/status";
         { name: 'tax_table.csv', label: 'Taxonomy table', required: true },
         { name: 'sample_metadata.csv', label: 'Sample metadata', required: true },
         { name: 'pipeline_status.json', label: 'Pipeline status', required: false },
+        { name: 'pipeline_runtime.json', label: 'Runtime info', required: false },
         { name: 'taxa_barplot_genus.png', label: 'Taxa barplot (genus)', required: false },
         { name: 'taxa_barplot.png', label: 'Taxa barplot', required: false },
         { name: 'beta_diversity_pcoa.png', label: 'Beta diversity PCoA', required: false },
@@ -510,12 +588,35 @@ const PIPELINE_STATUS_ROUTE = ROUTES.PIPELINE_STATUS || "/pipeline/status";
       return `${RESULTS_DOWNLOAD_ROUTE}/${encodeURIComponent(runId)}/${encodeURIComponent(filename)}`;
     }
 
+    function buildUploadDownloadUrl(runId, filename) {
+      if (!runId || !filename) return '#';
+      return `${UPLOAD_DOWNLOAD_ROUTE}/${encodeURIComponent(runId)}/${encodeURIComponent(filename)}`;
+    }
+
     function normalizeDownloadUrl(url) {
       if (!url) return '';
       if (url.startsWith('/api/results/')) {
         return url.replace('/api/results/', '/results/');
       }
       return url;
+    }
+
+    function formatHeaderLabel(key) {
+      if (!key) return '';
+      const cleaned = String(key).replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+      if (!cleaned) return '';
+      return cleaned.split(' ').map(word => word ? word[0].toUpperCase() + word.slice(1) : '').join(' ');
+    }
+
+    function resolveSampleColumn(keys) {
+      if (!Array.isArray(keys)) return '';
+      const candidates = ['sample', 'sample_name', 'sampleid', 'sample_id', 'sample name', 'sample id'];
+      const lowerMap = new Map(keys.map(key => [key.toLowerCase(), key]));
+      for (const candidate of candidates) {
+        if (lowerMap.has(candidate)) return lowerMap.get(candidate);
+      }
+      const fallback = keys.find(key => key.toLowerCase().includes('sample'));
+      return fallback || keys[0] || '';
     }
 
     function parseCsv(text) {
@@ -671,23 +772,25 @@ const PIPELINE_STATUS_ROUTE = ROUTES.PIPELINE_STATUS || "/pipeline/status";
       const statusLine = statusData?.status ? `<div><strong>Status:</strong> ${statusData.status}</div>` : '';
       const messageLine = statusData?.message ? `<div><strong>Message:</strong> ${statusData.message}</div>` : '';
       const timestampLine = statusData?.timestamp ? `<div><strong>Pipeline time:</strong> ${statusData.timestamp}</div>` : '';
-      const fileLine = Number.isFinite(fileCount) ? `<div><strong>Files:</strong> ${fileCount}</div>` : '';
+        const fileLine = Number.isFinite(fileCount) ? `<div><strong>Files:</strong> ${fileCount}</div>` : '';
+        const runtimeBlock = renderRuntimeInfo(statusData?.runtime || statusData?.runtime_info || statusData?.runtimeInfo || null);
 
       return `
         <div${idAttr} class="results-card">
           <h6>Run overview</h6>
-          <div class="results-meta">
-            <div><strong>Run ID:</strong> ${String(runIdLabel).slice(0, 12)}</div>
-            ${run?.pipeline_type ? `<div><strong>Pipeline:</strong> ${run.pipeline_type}</div>` : ''}
-            ${run?.created_at ? `<div><strong>Created:</strong> ${new Date(run.created_at).toLocaleString()}</div>` : ''}
-            ${statusLine}
-            ${messageLine}
-            ${timestampLine}
-            ${fileLine}
+            <div class="results-meta">
+              <div><strong>Run ID:</strong> ${String(runIdLabel).slice(0, 12)}</div>
+              ${run?.pipeline_type ? `<div><strong>Pipeline:</strong> ${run.pipeline_type}</div>` : ''}
+              ${run?.created_at ? `<div><strong>Created:</strong> ${new Date(run.created_at).toLocaleString()}</div>` : ''}
+              ${statusLine}
+              ${messageLine}
+              ${timestampLine}
+              ${fileLine}
+            </div>
+            ${runtimeBlock}
           </div>
-        </div>
-      `;
-    }
+        `;
+      }
 
     function renderAlphaSection(alphaRows, sectionId) {
       const idAttr = sectionId ? ` id="${sectionId}"` : '';
@@ -731,7 +834,7 @@ const PIPELINE_STATUS_ROUTE = ROUTES.PIPELINE_STATUS || "/pipeline/status";
       `;
     }
 
-    function renderMetadataSection(metaRows, sectionId) {
+    function renderMetadataSection(metaRows, sectionId, sourceLabel = '') {
       const idAttr = sectionId ? ` id="${sectionId}"` : '';
       if (!metaRows || metaRows.length === 0) {
         return `
@@ -741,22 +844,25 @@ const PIPELINE_STATUS_ROUTE = ROUTES.PIPELINE_STATUS || "/pipeline/status";
           </div>
         `;
       }
-      const rows = metaRows.map(row => `
-        <tr>
-          <td>${getRowValue(row, 'sample') || '-'}</td>
-          <td>${getRowValue(row, 'sampleid') || '-'}</td>
-        </tr>
-      `).join('');
+      const keys = Object.keys(metaRows[0] || {});
+      const sampleKey = resolveSampleColumn(keys);
+      const columnKeys = [sampleKey, ...keys.filter(key => key !== sampleKey)];
+      const headerCells = columnKeys.map(key => {
+        const label = key === sampleKey ? 'Sample' : formatHeaderLabel(key);
+        return `<th>${label}</th>`;
+      }).join('');
+      const rows = metaRows.map(row => {
+        const cells = columnKeys.map(key => `<td>${getRowValue(row, key) || '-'}</td>`).join('');
+        return `<tr>${cells}</tr>`;
+      }).join('');
       return `
         <div${idAttr} class="results-card mt-3">
           <h6>Sample metadata</h6>
+          ${sourceLabel ? `<p class="muted">Source: ${sourceLabel}</p>` : ''}
           <div class="table-responsive">
             <table class="table table-sm results-table">
               <thead>
-                <tr>
-                  <th>Sample</th>
-                  <th>Sample ID</th>
-                </tr>
+                <tr>${headerCells}</tr>
               </thead>
               <tbody>${rows}</tbody>
             </table>
@@ -1011,6 +1117,44 @@ const PIPELINE_STATUS_ROUTE = ROUTES.PIPELINE_STATUS || "/pipeline/status";
       }
     }
 
+    async function fetchUploadFiles(runId) {
+      if (!runId) return [];
+      try {
+        const res = await fetch(`${UPLOAD_FILES_ROUTE}/${runId}`);
+        if (!res.ok) return [];
+        const data = await res.json();
+        return Array.isArray(data.files) ? data.files : [];
+      } catch (e) {
+        console.warn('Upload files fetch failed:', e);
+        return [];
+      }
+    }
+
+    function pickMetadataFile(files) {
+      if (!Array.isArray(files)) return null;
+      const csvFiles = files.filter(file => String(file?.name || file || '').toLowerCase().endsWith('.csv'));
+      if (!csvFiles.length) return null;
+      const metadataNamed = csvFiles.find(file => String(file?.name || file || '').toLowerCase().includes('metadata'));
+      if (metadataNamed) return metadataNamed;
+      return csvFiles[0];
+    }
+
+    async function fetchUploadMetadataRows(runId) {
+      const files = await fetchUploadFiles(runId);
+      const metadataFile = pickMetadataFile(files);
+      if (!metadataFile) return { rows: [], source: '' };
+      const filename = metadataFile.name || metadataFile;
+      try {
+        const res = await fetch(buildUploadDownloadUrl(runId, filename));
+        if (!res.ok) return { rows: [], source: '' };
+        const text = await res.text();
+        return { rows: parseCsv(text), source: filename };
+      } catch (e) {
+        console.warn('Upload metadata fetch failed:', e);
+        return { rows: [], source: '' };
+      }
+    }
+
     function fetchCsvCached(runId, filename) {
       const key = `${runId}:${filename}`;
       if (runCsvCache.has(key)) return runCsvCache.get(key);
@@ -1083,10 +1227,15 @@ const PIPELINE_STATUS_ROUTE = ROUTES.PIPELINE_STATUS || "/pipeline/status";
 
     async function loadMetadataSection(runId, fileMap) {
       await yieldToUi();
+      const uploadMeta = await fetchUploadMetadataRows(runId);
+      if (uploadMeta.rows.length) {
+        replaceSection('results-metadata', renderMetadataSection(uploadMeta.rows, 'results-metadata', uploadMeta.source));
+        return;
+      }
       const rows = fileMap.has('sample_metadata.csv')
         ? await fetchCsvCached(runId, 'sample_metadata.csv')
         : [];
-      replaceSection('results-metadata', renderMetadataSection(rows, 'results-metadata'));
+      replaceSection('results-metadata', renderMetadataSection(rows, 'results-metadata', rows.length ? 'pipeline sample list' : ''));
     }
 
     async function loadTaxaSection(runId, fileMap) {
@@ -1223,8 +1372,12 @@ const PIPELINE_STATUS_ROUTE = ROUTES.PIPELINE_STATUS || "/pipeline/status";
       if (!soilId) {
         document.getElementById('sample-title').textContent = 'Error';
         document.getElementById('sample-meta').textContent = '';
-        document.getElementById('basic-info').innerHTML = '<div class="alert alert-danger"><strong>Soil data not found</strong><br>No soil ID provided in URL. Please use <code>?soilId=123</code> or <code>?id=123</code>.</div>';
-        document.getElementById('alpha-tests').innerHTML = '';
+        const basicInfoEl = document.getElementById('basic-info');
+        if (basicInfoEl) {
+          basicInfoEl.innerHTML = '<div class="alert alert-danger"><strong>Soil data not found</strong><br>No soil ID provided in URL. Please use <code>?soilId=123</code> or <code>?id=123</code>.</div>';
+        }
+        const alphaTestsEl = document.getElementById('alpha-tests');
+        if (alphaTestsEl) alphaTestsEl.innerHTML = '';
         return;
       }
 
@@ -1237,28 +1390,40 @@ const PIPELINE_STATUS_ROUTE = ROUTES.PIPELINE_STATUS || "/pipeline/status";
       if (!soil) {
         document.getElementById('sample-title').textContent = 'Error';
         document.getElementById('sample-meta').textContent = '';
-        document.getElementById('basic-info').innerHTML = '<div class="alert alert-danger"><strong>Soil data not found</strong><br>No soil sample found with ID <code>' + soilId + '</code>.</div>';
-        document.getElementById('alpha-tests').innerHTML = '';
-        document.getElementById('samples-list').innerHTML = '';
-        document.getElementById('pipeline-runs').innerHTML = '';
+        const basicInfoEl = document.getElementById('basic-info');
+        if (basicInfoEl) {
+          basicInfoEl.innerHTML = '<div class="alert alert-danger"><strong>Soil data not found</strong><br>No soil sample found with ID <code>' + soilId + '</code>.</div>';
+        }
+        const alphaTestsEl = document.getElementById('alpha-tests');
+        if (alphaTestsEl) alphaTestsEl.innerHTML = '';
+        const samplesEl = document.getElementById('samples-list');
+        if (samplesEl) samplesEl.innerHTML = '';
+        const pipelineRunsEl = document.getElementById('pipeline-runs');
+        if (pipelineRunsEl) pipelineRunsEl.innerHTML = '';
         return;
       }
       renderBasicInfo(soil);
 
-      const alphas = await fetchAlphaBySoil(soilId);
-      if (alphas === null) {
-        renderUnauthorizedState();
-        return;
+      const alphaTestsEl = document.getElementById('alpha-tests');
+      if (alphaTestsEl) {
+        const alphas = await fetchAlphaBySoil(soilId);
+        if (alphas === null) {
+          renderUnauthorizedState();
+          return;
+        }
+        renderAlphaTests(alphas);
       }
-      renderAlphaTests(alphas);
 
-      // Fetch and render samples
-      const samples = await fetchSamplesBySoil(soilId);
-      if (samples === null) {
-        renderUnauthorizedState();
-        return;
+      // Fetch and render samples (optional)
+      const samplesEl = document.getElementById('samples-list');
+      if (samplesEl) {
+        const samples = await fetchSamplesBySoil(soilId);
+        if (samples === null) {
+          renderUnauthorizedState();
+          return;
+        }
+        renderSamples(samples);
       }
-      renderSamples(samples);
 
       // Fetch and render pipeline runs
       const pipelineRuns = await fetchPipelineRunsBySoil(soilId);
@@ -1277,23 +1442,32 @@ const PIPELINE_STATUS_ROUTE = ROUTES.PIPELINE_STATUS || "/pipeline/status";
       }
 
       const runId = preferredRun?.run_id || soil.run_id || soil.runId || null;
-      const files = await fetchFilesForRun(runId);
-      addFileList('upload-files', files.uploads, runId, false);
-      addFileList('result-files', files.results, runId, true);
+      const uploadFilesEl = document.getElementById('upload-files');
+      const resultFilesEl = document.getElementById('result-files');
+      if (uploadFilesEl || resultFilesEl) {
+        const files = await fetchFilesForRun(runId);
+        addFileList('upload-files', files.uploads, runId, false);
+        addFileList('result-files', files.results, runId, true);
+      }
     })();
 
     function renderUnauthorizedState() {
       document.getElementById('sample-title').textContent = 'Sample details';
       document.getElementById('sample-meta').textContent = '';
-      document.getElementById('basic-info').innerHTML = '';
-      document.getElementById('alpha-tests').innerHTML = '';
-      document.getElementById('samples-list').innerHTML = '';
-      document.getElementById('pipeline-runs').innerHTML = '';
+      const basicInfoEl = document.getElementById('basic-info');
+      if (basicInfoEl) basicInfoEl.innerHTML = '';
+      const alphaTestsEl = document.getElementById('alpha-tests');
+      if (alphaTestsEl) alphaTestsEl.innerHTML = '';
+      const samplesEl = document.getElementById('samples-list');
+      if (samplesEl) samplesEl.innerHTML = '';
+      const pipelineRunsEl = document.getElementById('pipeline-runs');
+      if (pipelineRunsEl) pipelineRunsEl.innerHTML = '';
       showResultsPanel(false);
       if (resultsContentEl()) resultsContentEl().innerHTML = '';
       if (resultsSubtitleEl()) resultsSubtitleEl().textContent = 'Select a pipeline run to view results.';
       addFileList('upload-files', []);
       addFileList('result-files', []);
       runLogsCache.clear();
+      runRuntimeCache.clear();
     }
 })();

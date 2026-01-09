@@ -4,8 +4,7 @@ default_silva_path <- Sys.getenv(
 )
 
 run_dada2_pipeline <- function(path1,
-                               barcodes_path = NULL,
-                               metadata_path = NULL,
+                               barcodes_path = "/app/pipeline-r/barcodes/barcodes_16S.fa",
                                path2 = default_silva_path,
                                outdir = NULL,
                                type = "iontorrent") {
@@ -38,34 +37,6 @@ run_dada2_pipeline <- function(path1,
   }
   library(jsonlite)
 
-  collect_runtime_info <- function() {
-    r_ver <- R.version
-    pkg_list <- sessionInfo()$otherPkgs
-    pkg_names <- names(pkg_list)
-    packages <- lapply(pkg_names, function(pkg) {
-      version <- tryCatch(as.character(pkg_list[[pkg]]$Version), error = function(e) NA_character_)
-      list(name = pkg, version = version)
-    })
-    list(
-      r_version = paste0(r_ver$major, ".", r_ver$minor),
-      r_version_full = r_ver$version.string,
-      platform = r_ver$platform,
-      os = r_ver$os,
-      arch = r_ver$arch,
-      packages = packages
-    )
-  }
-
-  write_runtime_info <- function(outdir, runtime_info) {
-    if (is.null(outdir) || !nzchar(outdir)) return(invisible(NULL))
-    try(jsonlite::write_json(
-      runtime_info,
-      file.path(outdir, "pipeline_runtime.json"),
-      auto_unbox = TRUE,
-      pretty = TRUE
-    ), silent = TRUE)
-  }
-
   cat("\n========================================\n")
   cat("IonTorrent DADA2 pipeline\n")
   cat("========================================\n")
@@ -80,29 +51,26 @@ run_dada2_pipeline <- function(path1,
     }, add = TRUE)
   }
 
-  if (!file.exists(path1) && !dir.exists(path1)) {
-    stop("Input not found (expected FASTQ file or directory): ", path1)
+  if (!file.exists(path1)) {
+    stop("Input FASTQ file not found: ", path1)
+  }
+  if (!file.exists(barcodes_path)) {
+    stop("Barcode reference not found: ", barcodes_path)
   }
 
   result_path <- if (!is.null(outdir)) outdir else file.path(getwd(), "resultados_iontorrent")
   dir.create(result_path, recursive = TRUE, showWarnings = FALSE)
 
-  input_is_dir <- dir.exists(path1)
-  input_dir <- if (input_is_dir) normalizePath(path1) else normalizePath(dirname(path1))
-  input_fastqs <- list.files(input_dir, pattern = "\\.(fastq|fq)(\\.gz)?$", full.names = TRUE)
-  has_multiple_fastqs <- length(input_fastqs) > 1
-  use_demultiplexed <- input_is_dir || has_multiple_fastqs
-
-  demux_path <- if (use_demultiplexed) input_dir else file.path(result_path, "demultiplexed")
+  demux_path <- file.path(result_path, "demultiplexed")
   filt_path  <- file.path(result_path, "filtered")
 
   # Safer single-thread mode
   use_multithread <- FALSE
 
-  # Clean previous runs (never delete user's input directory)
-  if (!use_demultiplexed && dir.exists(demux_path)) unlink(demux_path, recursive = TRUE, force = TRUE)
+  # Clean previous runs
+  if (dir.exists(demux_path)) unlink(demux_path, recursive = TRUE, force = TRUE)
   if (dir.exists(filt_path))  unlink(filt_path,  recursive = TRUE, force = TRUE)
-  if (!dir.exists(demux_path)) dir.create(demux_path, showWarnings = FALSE, recursive = TRUE)
+  dir.create(demux_path, showWarnings = FALSE, recursive = TRUE)
   dir.create(filt_path,  showWarnings = FALSE, recursive = TRUE)
 
   # ---------------------------
@@ -165,70 +133,57 @@ run_dada2_pipeline <- function(path1,
   }
 
   # --------------------------------------------------
-  # Step 0: Input FASTQs
-  #   - If we detect multiple FASTQs or a directory: treat as already demultiplexed
-  #   - Otherwise, demultiplex by barcode (requires barcodes_path)
+  # Step 0: Demultiplexing by barcode (STREAMING)
   # --------------------------------------------------
-  if (use_demultiplexed) {
-    if (!input_is_dir) {
-      cat("Step 0: Multiple FASTQs detected in upload directory; skipping demultiplexing\n")
-    } else {
-      cat("Step 0: Using already-demultiplexed FASTQ files from directory\n")
-    }
-  } else {
-    if (is.null(barcodes_path) || !nzchar(barcodes_path) || !file.exists(barcodes_path)) {
-      stop("Barcode reference not found or missing. Provide barcodes_path for multiplexed FASTQ input.")
-    }
-    cat("Step 0: Demultiplexing by barcode (streaming)\n")
+  cat("Step 0: Demultiplexing by barcode (streaming)\n")
 
-    barcodes <- readFasta(barcodes_path)
-    barcode_ids  <- as.character(id(barcodes))
-    barcode_seqs <- as.character(sread(barcodes))
+  barcodes <- readFasta(barcodes_path)
+  barcode_ids  <- as.character(id(barcodes))
+  barcode_seqs <- as.character(sread(barcodes))
 
-    # clear outputs
-    for (sid in barcode_ids) {
+  # clear outputs
+  for (sid in barcode_ids) {
+    out_fastq <- file.path(demux_path, paste0(sid, ".fastq.gz"))
+    if (file.exists(out_fastq)) file.remove(out_fastq)
+  }
+
+  chunk_n <- as.integer(Sys.getenv("IONT_STREAM_CHUNK", "50000"))
+  st_in <- ShortRead::FastqStreamer(path1, n = chunk_n)
+  on.exit(try(close(st_in), silent = TRUE), add = TRUE)
+
+  repeat {
+    fq_chunk <- yield(st_in)
+    if (length(fq_chunk) == 0) break
+
+    seqs <- as.character(sread(fq_chunk))
+
+    for (i in seq_along(barcode_seqs)) {
+      bc  <- barcode_seqs[i]
+      sid <- barcode_ids[i]
+      k   <- nchar(bc)
+
+      hit <- substr(seqs, 1, k) == bc
+      if (!any(hit)) next
+
+      sub <- fq_chunk[hit]
+      trimmed <- narrow(sread(sub), start = k + 1, end = width(sread(sub)))
+      qual <- narrow(quality(quality(sub)), start = k + 1, end = width(sread(sub)))
+      newfq <- ShortReadQ(sread = trimmed, quality = qual, id = id(sub))
+
       out_fastq <- file.path(demux_path, paste0(sid, ".fastq.gz"))
-      if (file.exists(out_fastq)) file.remove(out_fastq)
+      writeFastq(newfq, out_fastq, compress = TRUE, mode = "a")
     }
 
-    chunk_n <- as.integer(Sys.getenv("IONT_STREAM_CHUNK", "50000"))
-    st_in <- ShortRead::FastqStreamer(path1, n = chunk_n)
-    on.exit(try(close(st_in), silent = TRUE), add = TRUE)
-
-    repeat {
-      fq_chunk <- yield(st_in)
-      if (length(fq_chunk) == 0) break
-
-      seqs <- as.character(sread(fq_chunk))
-
-      for (i in seq_along(barcode_seqs)) {
-        bc  <- barcode_seqs[i]
-        sid <- barcode_ids[i]
-        k   <- nchar(bc)
-
-        hit <- substr(seqs, 1, k) == bc
-        if (!any(hit)) next
-
-        sub <- fq_chunk[hit]
-        trimmed <- narrow(sread(sub), start = k + 1, end = width(sread(sub)))
-        qual <- narrow(quality(quality(sub)), start = k + 1, end = width(sread(sub)))
-        newfq <- ShortReadQ(sread = trimmed, quality = qual, id = id(sub))
-
-        out_fastq <- file.path(demux_path, paste0(sid, ".fastq.gz"))
-        writeFastq(newfq, out_fastq, compress = TRUE, mode = "a")
-      }
-
-      rm(fq_chunk)
-      gc()
-    }
+    rm(fq_chunk)
+    gc()
   }
 
   # --------------------------------------------------
   # Step 0.1: List demultiplexed outputs (IMPORTANT)
   # --------------------------------------------------
   fnFs <- list.files(demux_path, pattern = "\\.fastq(\\.gz)?$", full.names = TRUE)
-  if (length(fnFs) == 0) stop("No FASTQ files found in: ", demux_path)
-  sample.names <- gsub("\\.(fastq|fq)(\\.gz)?$", "", basename(fnFs), ignore.case = TRUE)
+  if (length(fnFs) == 0) stop("No demultiplexed FASTQ files were generated in: ", demux_path)
+  sample.names <- tools::file_path_sans_ext(basename(fnFs))
 
   # --------------------------------------------------
   # Step 0.5: Depth screening (STREAMING COUNT)
@@ -280,7 +235,7 @@ filter_attempts <- list(
   list(
     name = "default",
     args = list(
-      trimLeft = as.integer(Sys.getenv("TRIM_LEFT", "22")),
+      trimLeft = 22,    
       truncLen = trunc_len_est,
       maxN = 0,
       maxEE = max_ee_est,
@@ -293,7 +248,7 @@ filter_attempts <- list(
   list(
     name = "relaxed_no_trunc",
     args = list(
-      trimLeft = as.integer(Sys.getenv("TRIM_LEFT", "22")),    # keep primer/adapter removal consistent
+      trimLeft = 22,    # keep primer/adapter removal consistent (do NOT drop this)
       truncLen = 0,
       maxN = 0,
       maxEE = 5,
@@ -431,35 +386,35 @@ parse_tax_to_matrix <- function(tax_strings) {
   out
 }
 
-#build_ref_from_trainset <- function(train_fa, ref_fa_out, tax_tsv_out) {
-#  in_con <- file(train_fa, "r")
-#  fa_con <- file(ref_fa_out, "w")
-#  tx_con <- file(tax_tsv_out, "w")
-#  on.exit({
-#    try(close(in_con), silent = TRUE)
-#    try(close(fa_con), silent = TRUE)
-#    try(close(tx_con), silent = TRUE)
-#  }, add = TRUE)
-#
-#  writeLines("FeatureID\tTaxon", tx_con)
-#
-#  i <- 0L
-#  repeat {
-#    l <- readLines(in_con, n = 1L)
-#    if (!length(l)) break
-#    if (startsWith(l, ">")) {
-#      i <- i + 1L
-#      id <- paste0("REF_", i)
-#      tax <- trimws(sub("^>", "", l))
-#      writeLines(paste0(">", id), fa_con)
-#      writeLines(paste(id, tax, sep = "\t"), tx_con)
-#    } else {
-#      writeLines(l, fa_con)
-#    }
-#  }
-#  if (i == 0) stop("Reference train_set FASTA appears empty: ", train_fa)
-#  i
-#}
+build_ref_from_trainset <- function(train_fa, ref_fa_out, tax_tsv_out) {
+  in_con <- file(train_fa, "r")
+  fa_con <- file(ref_fa_out, "w")
+  tx_con <- file(tax_tsv_out, "w")
+  on.exit({
+    try(close(in_con), silent = TRUE)
+    try(close(fa_con), silent = TRUE)
+    try(close(tx_con), silent = TRUE)
+  }, add = TRUE)
+
+  writeLines("FeatureID\tTaxon", tx_con)
+
+  i <- 0L
+  repeat {
+    l <- readLines(in_con, n = 1L)
+    if (!length(l)) break
+    if (startsWith(l, ">")) {
+      i <- i + 1L
+      id <- paste0("REF_", i)
+      tax <- trimws(sub("^>", "", l))
+      writeLines(paste0(">", id), fa_con)
+      writeLines(paste(id, tax, sep = "\t"), tx_con)
+    } else {
+      writeLines(l, fa_con)
+    }
+  }
+  if (i == 0) stop("Reference train_set FASTA appears empty: ", train_fa)
+  i
+}
 
 write_query_fasta <- function(asv_seqs, query_fa_out) {
   q_ids <- paste0("ASV_", seq_along(asv_seqs))
@@ -477,19 +432,16 @@ write_query_fasta <- function(asv_seqs, query_fa_out) {
 # --------------------------------------------------
 taxa <- tryCatch({
 
-  ref_fa   <- "/app/pipeline-r/references/silva-138-99-seqs-515-806_extracted_from_qza.fasta"
-  ref_tax  <- "/app/pipeline-r/references/silva-138-99-tax-515-806_extracted_from_qza.tsv"
+  ref_fa   <- file.path(result_path, "vsearch_ref.fasta")
+  ref_tax  <- file.path(result_path, "vsearch_tax.tsv")
   query_fa <- file.path(result_path, "vsearch_query.fasta")
   blast6   <- file.path(result_path, "vsearch_hits.blast6")
   vlog     <- file.path(result_path, "vsearch_run.log")
   out_tax_table_csv <- file.path(result_path, "tax_table.csv")
 
-# sanity checks (important)
-  stopifnot(file.exists(ref_fa))
-  stopifnot(file.exists(ref_tax))
-
-  cat("  Using vsearch reference:", ref_fa, "\n")
-  cat("  Using vsearch taxonomy :", ref_tax, "\n")
+  # Build ref (REF_1..N) + REF taxonomy table
+  n_ref <- build_ref_from_trainset(path2, ref_fa, ref_tax)
+  cat("  Reference sequences:", n_ref, "\n")
 
   # ASVs (DNA strings) from DADA2
   asv_seqs <- colnames(seqtab.nochim)
@@ -831,24 +783,11 @@ try({
   )
   write.csv(summary_stats, file.path(result_path, "pipeline_summary_stats.csv"), row.names = FALSE)
 
-  runtime_info <- collect_runtime_info()
-  write_runtime_info(result_path, runtime_info)
-
-  cat("Runtime info:\n")
-  cat("R:", runtime_info$r_version_full, "\n")
-  if (length(runtime_info$packages) > 0) {
-    cat("Packages:\n")
-    for (pkg in runtime_info$packages) {
-      cat(" -", pkg$name, pkg$version, "\n")
-    }
-  }
-
   status <- list(
     status = "success",
     message = "Pipeline completed successfully",
     pipeline_type = type,
     timestamp = Sys.time(),
-    runtime = runtime_info,
     files_created = c(
       "alpha_diversity_metrics.csv",
       "otu_table.csv",
@@ -859,7 +798,6 @@ try({
       "taxa_barplot_genus.png",
       "beta_diversity_pcoa.png",
       "beta_diversity.png",
-      "pipeline_runtime.json",
       "pipeline_summary_stats.csv"
     )
   )

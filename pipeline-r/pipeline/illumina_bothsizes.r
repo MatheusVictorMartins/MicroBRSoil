@@ -102,23 +102,74 @@ run_dada2_pipeline <- function(path1, path2 = default_silva_path, outdir = NULL,
   filtFs <- file.path(filt_path, paste0(sample.names, "_F_filt.fastq.gz"))
   filtRs <- file.path(filt_path, paste0(sample.names, "_R_filt.fastq.gz"))
   
-  # Step 1: Filter/trim
-  cat("Step 1: Filter and trim\n")
-  out <- filterAndTrim(fnFs, filtFs, fnRs, filtRs,
-                       truncLen = c(145, 135),
-                       maxN = 0, maxEE = c(2, 3), truncQ = 2,
-                       rm.phix = TRUE, compress = TRUE, multithread = TRUE)
-  print(out)
-  cat("\n")
-  
-  keep <- out[, "reads.out"] > 0
-  if (sum(keep) == 0) stop("All samples were filtered out.")
-  if (!all(keep)) {
-    cat("Removing", sum(!keep), "samples with zero reads after filtering\n")
-    filtFs <- filtFs[keep]
-    filtRs <- filtRs[keep]
-    sample.names <- sample.names[keep]
+ # --------------------------------------------------
+ # Step 1: Filter/trim (auto-detect 2x150 vs 2x250)
+ # --------------------------------------------------
+cat("Step 1: Filter and trim\n")
+
+detect_pe_mode <- function(fnFs, fnRs, n = 1000) {
+  # Reads only a small chunk to infer read length
+  fqF <- ShortRead::readFastq(fnFs[1], n = n)
+  fqR <- ShortRead::readFastq(fnRs[1], n = n)
+
+  lenF <- as.integer(width(ShortRead::sread(fqF)))
+  lenR <- as.integer(width(ShortRead::sread(fqR)))
+
+  medF <- stats::median(lenF, na.rm = TRUE)
+  medR <- stats::median(lenR, na.rm = TRUE)
+
+  mode <- if (medF >= 240 && medR >= 240) {
+    "2x250"
+  } else if (medF >= 140 && medR >= 140) {
+    "2x150"
+  } else {
+    "custom"
   }
+
+  list(mode = mode, medF = medF, medR = medR)
+}
+
+det <- detect_pe_mode(fnFs, fnRs, n = 1000)
+cat(sprintf("Detected mode: %s (median lengths F=%d, R=%d)\n",
+            det$mode, det$medF, det$medR))
+
+# Define presets (edit here if you want different defaults)
+truncLen_auto <- switch(
+  det$mode,
+  "2x250" = c(245, 220),
+  "2x150" = c(145, 135),
+  # fallback: conservative defaults, capped by observed medians
+  "custom" = c(min(145, det$medF), min(135, det$medR))
+)
+
+# Safety: never exceed observed median lengths
+truncLen_auto[1] <- min(truncLen_auto[1], det$medF)
+truncLen_auto[2] <- min(truncLen_auto[2], det$medR)
+
+cat(sprintf("Using truncLen = c(%d, %d)\n", truncLen_auto[1], truncLen_auto[2]))
+
+out <- dada2::filterAndTrim(
+  fnFs, filtFs, fnRs, filtRs,
+  truncLen = truncLen_auto,
+  maxN = 0,
+  maxEE = c(2, 2),
+  truncQ = 2,
+  rm.phix = TRUE,
+  compress = TRUE,
+  multithread = TRUE
+)
+
+print(out)
+cat("\n")
+
+keep <- out[, "reads.out"] > 0
+if (sum(keep) == 0) stop("All samples were filtered out.")
+if (!all(keep)) {
+  cat("Removing", sum(!keep), "samples with zero reads after filtering\n")
+  filtFs <- filtFs[keep]
+  filtRs <- filtRs[keep]
+  sample.names <- sample.names[keep]
+}
   
   # Step 2: Learn errors
   cat("Step 2: Learn errors\n")
@@ -186,7 +237,7 @@ run_dada2_pipeline <- function(path1, path2 = default_silva_path, outdir = NULL,
     goods = alpha_div$Goods
   )
   write.csv(alpha_export, file.path(result_path, "alpha_diversity_metrics.csv"), row.names = FALSE)
-
+  
  # Step 8: Taxonomic barplot (Genus) — Top N + Others + legend bottom (FIXED)
 cat("Step 8: Taxonomic barplot\n")
 try({
@@ -270,7 +321,7 @@ try({
   )
 
 }, silent = TRUE)
-
+  
   # Step 9: Beta diversity
   cat("Step 9: Beta diversity (PCoA Bray-Curtis)\n")
   try({

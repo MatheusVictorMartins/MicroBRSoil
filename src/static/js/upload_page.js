@@ -7,6 +7,7 @@ const LOGIN_REQUIRED_MESSAGE = MESSAGES.LOGIN_REQUIRED_UPLOAD || "Log in or crea
 const UPLOAD_SUCCESS_MESSAGE = MESSAGES.UPLOAD_SUCCESS || "Upload sent successfully.";
 const UPLOAD_ERROR_MESSAGE = MESSAGES.UPLOAD_ERROR || "Upload failed.";
 const UPLOAD_STATE_KEY = "uploadDraftState";
+const PIPELINE_STATUS_PAGE = ROUTES.PIPELINE_STATUS_PAGE || "/pipeline-status";
 
     const analysis_select = document.getElementById("upload_select");
     const uploadArea = document.getElementById("unified-upload-area");
@@ -164,9 +165,9 @@ const UPLOAD_STATE_KEY = "uploadDraftState";
         accept1: ".fastq,.fq,.fastq.gz,.fq.gz",
         accept2: ".fa,.fasta",
         accept3: ".csv",
-        helpText: "Select FASTQ files, metadata CSV, and BARCODE FASTA files for IonTorrent analysis",
+        helpText: "Upload one multiplexed FASTQ with barcode FASTA, or multiple demultiplexed FASTQs with metadata CSV.",
         fileTypes: "FASTQ (.fastq, .fq, .fastq.gz, .fq.gz)",
-        fileTypes2: "BARCODES - FASTA (.fa, .fasta)",
+        fileTypes2: "BARCODES - FASTA (.fa, .fasta) (required for single FASTQ)",
         fileTypes3: "METADATA - CSV (.csv)",
         endpoint: ROUTES.UPLOAD_IONTORRENT || "/upload/iontorrent",
         zones: 3,
@@ -243,6 +244,11 @@ const UPLOAD_STATE_KEY = "uploadDraftState";
       const metadataZone = Number(config.metadataZone || 1);
       const barcodeZone = Number(config.barcodeZone || 0);
       const hasAnyFiles = zone1Files.length > 0 || zone2Files.length > 0 || zone3Files.length > 0;
+      const isIontorrent = currentUpload.selectedPipeline === 'iontorrent';
+      const fastqCount = zone1Files.filter(file => fileHasExtension(file.name, extensionGroups.fastq)).length;
+      const isDemultiplexed = isIontorrent && fastqCount > 1;
+      result.fastqCount = fastqCount;
+      result.isDemultiplexed = isDemultiplexed;
       if (!hasAnyFiles) return result;
 
       zone1Files.forEach(file => {
@@ -297,9 +303,13 @@ const UPLOAD_STATE_KEY = "uploadDraftState";
       }
 
       if (barcodeZone === 2) {
-        if (zone2Files.length === 0) {
-          result.errors.push('Barcode files are required in the barcode area (.fa or .fasta).');
-        } else if (!result.hasBarcode) {
+        if (!isDemultiplexed) {
+          if (zone2Files.length === 0) {
+            result.errors.push('Barcode files are required in the barcode area (.fa or .fasta) for a single FASTQ upload.');
+          } else if (!result.hasBarcode) {
+            result.errors.push('Barcode area must include .fa or .fasta files.');
+          }
+        } else if (zone2Files.length > 0 && !result.hasBarcode) {
           result.errors.push('Barcode area must include .fa or .fasta files.');
         }
       }
@@ -512,8 +522,10 @@ const UPLOAD_STATE_KEY = "uploadDraftState";
       }
 
       const zones = Number(config.zones || 1);
+      const isDemultiplexed = Boolean(validation?.isDemultiplexed);
+      const requiresBarcode = !(currentUpload.selectedPipeline === 'iontorrent' && isDemultiplexed);
       const hasRequiredFiles = zones === 3
-        ? zone1Files.length > 0 && zone2Files.length > 0 && zone3Files.length > 0
+        ? zone1Files.length > 0 && zone3Files.length > 0 && (requiresBarcode ? zone2Files.length > 0 : true)
         : zones === 2
           ? zone1Files.length > 0 && zone2Files.length > 0
           : zone1Files.length > 0;
@@ -759,6 +771,9 @@ const UPLOAD_STATE_KEY = "uploadDraftState";
               progressPercent: 100,
               completedAt: Date.now()
             });
+            setTimeout(() => {
+              window.location.href = PIPELINE_STATUS_PAGE;
+            }, 1200);
             shouldResetForm = true;
             shouldHideProgress = true;
 

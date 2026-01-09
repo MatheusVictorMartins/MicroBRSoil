@@ -54,21 +54,25 @@ async function loadHeader() {
     const headerPlaceholder = document.getElementById("header-placeholder");
     if (!headerPlaceholder) return;
 
+    headerPlaceholder.style.visibility = "hidden";
+
     try {
+        const status = await getAuthStatus();
         const cached = readSessionCache(HEADER_CACHE_KEY);
         if (cached) {
             headerPlaceholder.innerHTML = cached;
-            const cachedStatus = await getAuthStatus();
-            await syncAuthButton(headerPlaceholder, cachedStatus);
+            await syncAuthButton(headerPlaceholder, status);
+            headerPlaceholder.style.visibility = "visible";
         }
 
         const response = await fetch("header.html", { cache: "no-store" });
         const html = await response.text();
         headerPlaceholder.innerHTML = html;
         writeSessionCache(HEADER_CACHE_KEY, html);
-        const status = await getAuthStatus();
         await syncAuthButton(headerPlaceholder, status);
+        headerPlaceholder.style.visibility = "visible";
     } catch (error) {
+        headerPlaceholder.style.visibility = "visible";
         console.error("Failed to load header:", error);
     }
 }
@@ -252,14 +256,42 @@ async function logoutUser() {
     }
 }
 
+function applyLeftMenuAuthState(leftMenuPlaceholder, status) {
+    const cookieAuth = document.cookie.includes("auth_status=1");
+    const isAuthenticated = Boolean(status.authenticated || cookieAuth);
+    const adminButtons = leftMenuPlaceholder.querySelectorAll('[data-admin-only="true"]');
+    adminButtons.forEach((button) => {
+        button.classList.toggle('d-none', !status.isAdmin);
+    });
+
+    if (!isAuthenticated) {
+        const restrictedButtons = [
+            '#btn_left_menu_upload',
+            '#btn_left_menu_pipeline_status',
+            '#btn_left_menu_taxon',
+            '#btn_left_menu_sequence',
+            '#btn_left_menu_geosearch'
+        ];
+        restrictedButtons.forEach((selector) => {
+            const button = leftMenuPlaceholder.querySelector(selector);
+            if (button) button.remove();
+        });
+    }
+}
+
 async function loadLeftMenu() {
     const leftMenuPlaceholder = document.getElementById("leftmenu-placeholder");
     if (!leftMenuPlaceholder) return;
 
+    leftMenuPlaceholder.style.visibility = "hidden";
+
     try {
+        const status = await getAuthStatus();
         const cached = readSessionCache(LEFT_MENU_CACHE_KEY);
         if (cached) {
             leftMenuPlaceholder.innerHTML = cached;
+            applyLeftMenuAuthState(leftMenuPlaceholder, status);
+            leftMenuPlaceholder.style.visibility = "visible";
         }
 
         let response = await fetch("left_menu.html", { cache: "no-store" });
@@ -272,28 +304,10 @@ async function loadLeftMenu() {
         const html = await response.text();
         leftMenuPlaceholder.innerHTML = html;
         writeSessionCache(LEFT_MENU_CACHE_KEY, html);
-        const status = await getAuthStatus();
-        const cookieAuth = document.cookie.includes("auth_status=1");
-        const isAuthenticated = Boolean(status.authenticated || cookieAuth);
-        const adminButtons = leftMenuPlaceholder.querySelectorAll('[data-admin-only="true"]');
-        adminButtons.forEach((button) => {
-            button.classList.toggle('d-none', !status.isAdmin);
-        });
-
-        if (!isAuthenticated) {
-            const restrictedButtons = [
-                '#btn_left_menu_upload',
-                '#btn_left_menu_pipeline_status',
-                '#btn_left_menu_taxon',
-                '#btn_left_menu_sequence',
-                '#btn_left_menu_geosearch'
-            ];
-            restrictedButtons.forEach((selector) => {
-                const button = leftMenuPlaceholder.querySelector(selector);
-                if (button) button.remove();
-            });
-        }
+        applyLeftMenuAuthState(leftMenuPlaceholder, status);
+        leftMenuPlaceholder.style.visibility = "visible";
     } catch (error) {
+        leftMenuPlaceholder.style.visibility = "visible";
         console.error("Failed to load side menu:", error);
     }
 }

@@ -16,34 +16,6 @@ run_dada2_pipeline <- function(path1, path2 = default_silva_path, outdir = NULL,
     install.packages("jsonlite", repos = "https://cloud.r-project.org")
   }
   library(jsonlite)
-
-  collect_runtime_info <- function() {
-    r_ver <- R.version
-    pkg_list <- sessionInfo()$otherPkgs
-    pkg_names <- names(pkg_list)
-    packages <- lapply(pkg_names, function(pkg) {
-      version <- tryCatch(as.character(pkg_list[[pkg]]$Version), error = function(e) NA_character_)
-      list(name = pkg, version = version)
-    })
-    list(
-      r_version = paste0(r_ver$major, ".", r_ver$minor),
-      r_version_full = r_ver$version.string,
-      platform = r_ver$platform,
-      os = r_ver$os,
-      arch = r_ver$arch,
-      packages = packages
-    )
-  }
-
-  write_runtime_info <- function(outdir, runtime_info) {
-    if (is.null(outdir) || !nzchar(outdir)) return(invisible(NULL))
-    try(jsonlite::write_json(
-      runtime_info,
-      file.path(outdir, "pipeline_runtime.json"),
-      auto_unbox = TRUE,
-      pretty = TRUE
-    ), silent = TRUE)
-  }
   
   cat("\n========================================\n")
   cat("Illumina DADA2 pipeline\n")
@@ -106,7 +78,7 @@ run_dada2_pipeline <- function(path1, path2 = default_silva_path, outdir = NULL,
   cat("Step 1: Filter and trim\n")
   out <- filterAndTrim(fnFs, filtFs, fnRs, filtRs,
                        truncLen = c(145, 135),
-                       maxN = 0, maxEE = c(2, 3), truncQ = 2,
+                       maxN = 0, maxEE = c(2, 2), truncQ = 2,
                        rm.phix = TRUE, compress = TRUE, multithread = TRUE)
   print(out)
   cat("\n")
@@ -186,7 +158,7 @@ run_dada2_pipeline <- function(path1, path2 = default_silva_path, outdir = NULL,
     goods = alpha_div$Goods
   )
   write.csv(alpha_export, file.path(result_path, "alpha_diversity_metrics.csv"), row.names = FALSE)
-
+  
  # Step 8: Taxonomic barplot (Genus) — Top N + Others + legend bottom (FIXED)
 cat("Step 8: Taxonomic barplot\n")
 try({
@@ -270,7 +242,7 @@ try({
   )
 
 }, silent = TRUE)
-
+  
   # Step 9: Beta diversity
   cat("Step 9: Beta diversity (PCoA Bray-Curtis)\n")
   try({
@@ -306,24 +278,11 @@ try({
   )
   write.csv(summary_stats, file.path(result_path, "pipeline_summary_stats.csv"), row.names = FALSE)
   
-  runtime_info <- collect_runtime_info()
-  write_runtime_info(result_path, runtime_info)
-
-  cat("Runtime info:\n")
-  cat("R:", runtime_info$r_version_full, "\n")
-  if (length(runtime_info$packages) > 0) {
-    cat("Packages:\n")
-    for (pkg in runtime_info$packages) {
-      cat(" -", pkg$name, pkg$version, "\n")
-    }
-  }
-
   status <- list(
     status = "success",
     message = "Pipeline completed successfully",
     pipeline_type = type,
     timestamp = Sys.time(),
-    runtime = runtime_info,
     files_created = c(
       "alpha_diversity_metrics.csv",
       "otu_table.csv",
@@ -332,7 +291,6 @@ try({
       "phyloseq_object.rds",
       "taxa_barplot_genus.png",
       "beta_diversity_pcoa.png",
-      "pipeline_runtime.json",
       "pipeline_summary_stats.csv"
     )
   )

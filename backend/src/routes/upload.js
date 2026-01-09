@@ -196,10 +196,10 @@ async function handleUpload(req, res, pipelineType) {
         ? path.dirname(altFastqFiles[0].path)
         : zipFiles[0].path;
     } else if (pipelineType === 'iontorrent') {
-      // IonTorrent expects a multiplexed FASTQ; ignore barcode fasta when choosing the main file
+      // IonTorrent: single multiplexed FASTQ + barcodes OR multiple demultiplexed FASTQs
       const fastqFiles = uploadedFiles
-        .filter(f => f.name.match(/[.]fastq(\.gz)?$/i))
-        .sort((a, b) => b.size - a.size); // pick the largest FASTQ
+        .filter(f => f.name.match(/[.](fastq|fq)(\.gz)?$/i))
+        .sort((a, b) => b.size - a.size);
       const barcodeFiles = uploadedFiles
         .filter(f => f.name.match(/[.]fa(sta)?$/i))
         .sort((a, b) => b.size - a.size);
@@ -214,28 +214,30 @@ async function handleUpload(req, res, pipelineType) {
           reason: 'No FASTQ found for IonTorrent'
         });
         return res.status(400).json({
-          error: 'No FASTQ found for IonTorrent. Please upload the multiplexed FASTQ (.fastq or .fastq.gz).',
+          error: 'No FASTQ found for IonTorrent. Please upload FASTQ (.fastq/.fq or .fastq.gz/.fq.gz).',
           filesReceived: uploadedFiles.map(f => f.name)
         });
       }
 
-      if (barcodeFiles.length === 0) {
+      const isDemultiplexed = fastqFiles.length > 1;
+
+      if (!isDemultiplexed && barcodeFiles.length === 0) {
         const uploadDir = path.dirname(files[0].path);
         fs.rmSync(uploadDir, { recursive: true, force: true });
         req.logger?.warn('Upload validation failed', {
           run_id: runId,
           user_id: userId,
           pipeline_type: pipelineType,
-          reason: 'No barcode FASTA found'
+          reason: 'No barcode FASTA found for multiplexed input'
         });
         return res.status(400).json({
-          error: 'IonTorrent requires a barcode FASTA (.fa or .fasta) file. Please upload it in the barcode area.',
+          error: 'Multiplexed IonTorrent requires a barcode FASTA (.fa or .fasta). Upload it in the barcode area.',
           filesReceived: uploadedFiles.map(f => f.name)
         });
       }
 
-      // Basic sanity: reject extremely small files that are likely not real reads
-      if (fastqFiles[0].size < 1024) {
+      // Basic sanity: reject extremely small single FASTQ that is likely not real reads
+      if (!isDemultiplexed && fastqFiles[0].size < 1024) {
         const uploadDir = path.dirname(files[0].path);
         fs.rmSync(uploadDir, { recursive: true, force: true });
         req.logger?.warn('Upload validation failed', {
@@ -250,8 +252,10 @@ async function handleUpload(req, res, pipelineType) {
         });
       }
 
-      mainFilePath = fastqFiles[0].path;
-      req.barcodesPath = barcodeFiles[0].path;
+      mainFilePath = isDemultiplexed
+        ? path.dirname(fastqFiles[0].path)
+        : fastqFiles[0].path;
+      req.barcodesPath = barcodeFiles.length > 0 ? barcodeFiles[0].path : null;
     } else if (pipelineType === 'its') {
       // ITS expects paired FASTQs; pick directory containing *_R1_001/_R2_001
       const fastqFiles = uploadedFiles.filter(f =>
@@ -510,7 +514,7 @@ router.get('/download/:runId/:filename', uploadReadLimiter, async (req, res) => 
 router.delete('/admin/cleanup', requireAdmin, uploadWriteLimiter, async (req, res) => {
   try {
     if (!fs.existsSync(UPLOADS_DIR)) {
-      return res.json({ success: true, removed: 0 });
+      return res.json({ success: true, removed: 0, runsRemoved: 0 });
     }
 
     const entries = fs.readdirSync(UPLOADS_DIR);
@@ -521,7 +525,26 @@ router.delete('/admin/cleanup', requireAdmin, uploadWriteLimiter, async (req, re
       removed += 1;
     });
 
-    return res.json({ success: true, removed });
+    let runsRemoved = 0;
+    try {
+      const pool = require(DB_PATH);
+      const statusesToPurge = [PIPELINE_STATUS.COMPLETED, PIPELINE_STATUS.FAILED];
+      const result = await pool.query(
+        'DELETE FROM microbrsoil_db.pipeline_runs WHERE status = ANY($1::text[]) RETURNING run_id',
+        [statusesToPurge]
+      );
+      const removedRunIds = result.rows.map(row => row.run_id);
+      removedRunIds.forEach((runId) => {
+        if (pipelines[runId]) {
+          delete pipelines[runId];
+        }
+      });
+      runsRemoved = removedRunIds.length;
+    } catch (cleanupError) {
+      console.error('Pipeline runs cleanup error:', cleanupError);
+    }
+
+    return res.json({ success: true, removed, runsRemoved });
   } catch (error) {
     console.error('Upload cleanup error:', error);
     return res.status(500).json({ error: safeErrorMessage(error) });
