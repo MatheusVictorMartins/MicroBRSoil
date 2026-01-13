@@ -148,17 +148,17 @@ const PIPELINE_STATUS_PAGE = ROUTES.PIPELINE_STATUS_PAGE || "/pipeline-status";
     // Pipeline configurations
     const pipelineConfigs = {
       illumina: {
-        accept1: ".fastq,.fq,.fastq.gz,.fq.gz,.fa,.csv",
-        accept2: "",
+        accept1: ".fastq,.fq,.fastq.gz,.fq.gz,.fa",
+        accept2: ".csv",
         accept3: "",
-        helpText: "Select FASTQ files and metadata CSV for Illumina sequencing analysis",
-        fileTypes: "FASTQ (.fastq, .fq, .fastq.gz, .fq.gz), FASTA (.fa), CSV (.csv)",
-        fileTypes2: "",
+        helpText: "Upload FASTQ files and a metadata CSV for Illumina sequencing analysis.",
+        fileTypes: "FASTQ (.fastq, .fq, .fastq.gz, .fq.gz), FASTA (.fa)",
+        fileTypes2: "METADATA - CSV (.csv)",
         fileTypes3: "",
         endpoint: ROUTES.UPLOAD_ILLUMINA || "/upload/illumina",
-        zones: 1,
+        zones: 2,
         metadataRequired: true,
-        metadataZone: 1,
+        metadataZone: 2,
         barcodeZone: null
       },
       iontorrent: {
@@ -176,17 +176,17 @@ const PIPELINE_STATUS_PAGE = ROUTES.PIPELINE_STATUS_PAGE || "/pipeline-status";
         barcodeZone: 2
       },
       its: {
-        accept1: ".fastq,.fq,.fastq.gz,.fq.gz,.fa,.csv",
-        accept2: "",
+        accept1: ".fastq,.fq,.fastq.gz,.fq.gz,.fa",
+        accept2: ".csv",
         accept3: "",
-        helpText: "Select FASTQ files and metadata CSV for ITS analysis",
-        fileTypes: "FASTQ (.fastq, .fq, .fastq.gz, .fq.gz), FASTA (.fa), CSV (.csv)",
-        fileTypes2: "",
+        helpText: "Upload FASTQ files and a metadata CSV for ITS analysis.",
+        fileTypes: "FASTQ (.fastq, .fq, .fastq.gz, .fq.gz), FASTA (.fa)",
+        fileTypes2: "METADATA - CSV (.csv)",
         fileTypes3: "",
         endpoint: ROUTES.UPLOAD_ITS || "/upload/its",
-        zones: 1,
+        zones: 2,
         metadataRequired: true,
-        metadataZone: 1,
+        metadataZone: 2,
         barcodeZone: null
       }
     };
@@ -220,6 +220,31 @@ const PIPELINE_STATUS_PAGE = ROUTES.PIPELINE_STATUS_PAGE || "/pipeline-status";
       const list = Array.from(items);
       if (list.length <= limit) return list.join(', ');
       return `${list.slice(0, limit).join(', ')} +${list.length - limit} more`;
+    }
+
+    function getZoneLabel(config, zoneNumber) {
+      if (!config) return 'upload area';
+      if (zoneNumber === 1) return 'main upload area';
+      if (zoneNumber === 2) {
+        if (config.barcodeZone === 2) return 'barcode area';
+        if (config.metadataZone === 2) return 'metadata area';
+        return 'secondary upload area';
+      }
+      if (zoneNumber === 3) {
+        if (config.metadataZone === 3) return 'metadata area';
+        return 'additional upload area';
+      }
+      return 'upload area';
+    }
+
+    function getZoneTypeName(config, zoneNumber) {
+      if (!config) return 'FILES';
+      if (zoneNumber === 2) {
+        if (config.barcodeZone === 2) return 'BARCODE';
+        if (config.metadataZone === 2) return 'METADATA';
+      }
+      if (zoneNumber === 3 && config.metadataZone === 3) return 'METADATA';
+      return 'FILES';
     }
 
     function validateSelection() {
@@ -270,6 +295,9 @@ const PIPELINE_STATUS_PAGE = ROUTES.PIPELINE_STATUS_PAGE || "/pipeline-status";
           if (barcodeZone === 2 && fileHasExtension(file.name, extensionGroups.fasta)) {
             result.hasBarcode = true;
           }
+          if (metadataZone === 2 && fileHasExtension(file.name, extensionGroups.metadata)) {
+            result.hasMetadata = true;
+          }
         });
       }
 
@@ -289,14 +317,14 @@ const PIPELINE_STATUS_PAGE = ROUTES.PIPELINE_STATUS_PAGE || "/pipeline-status";
         result.errors.push(`Unsupported file type in main upload: ${summarizeList(result.invalidZone1)}.`);
       }
       if (result.invalidZone2.size) {
-        result.errors.push(`Unsupported file type in barcode area: ${summarizeList(result.invalidZone2)}.`);
+        result.errors.push(`Unsupported file type in ${getZoneLabel(config, 2)}: ${summarizeList(result.invalidZone2)}.`);
       }
       if (result.invalidZone3.size) {
-        result.errors.push(`Unsupported file type in metadata area: ${summarizeList(result.invalidZone3)}.`);
+        result.errors.push(`Unsupported file type in ${getZoneLabel(config, 3)}: ${summarizeList(result.invalidZone3)}.`);
       }
 
       if (config.metadataRequired && !result.hasMetadata) {
-        const metadataHint = metadataZone === 3
+        const metadataHint = metadataZone === 3 || metadataZone === 2
           ? 'Metadata CSV (.csv) is required in the metadata area.'
           : 'Metadata CSV (.csv) is required in the main upload area.';
         result.errors.push(metadataHint);
@@ -678,13 +706,21 @@ const PIPELINE_STATUS_PAGE = ROUTES.PIPELINE_STATUS_PAGE || "/pipeline-status";
       // Validate files based on pipeline type
       const zones = Number(config.zones || 1);
       if (zones === 3) {
-        if (zone1Files.length === 0 || zone2Files.length === 0 || zone3Files.length === 0) {
-          showStatus('Please select files for FASTQ, BARCODE, and METADATA areas', 'error');
+        const isIontorrent = currentUpload.selectedPipeline === 'iontorrent';
+        const isDemultiplexed = Boolean(validation?.isDemultiplexed);
+        const needsBarcode = !(isIontorrent && isDemultiplexed);
+
+        if (zone1Files.length === 0 || zone3Files.length === 0 || (needsBarcode && zone2Files.length === 0)) {
+          const message = needsBarcode
+            ? 'Please select files for FASTQ, BARCODE, and METADATA areas'
+            : 'Please select files for FASTQ and METADATA areas';
+          showStatus(message, 'error');
           return;
         }
       } else if (zones === 2) {
         if (zone1Files.length === 0 || zone2Files.length === 0) {
-          showStatus('Please select files for both FASTQ and BARCODE areas', 'error');
+          const zone2Type = getZoneTypeName(config, 2);
+          showStatus(`Please select files for both FASTQ and ${zone2Type} areas`, 'error');
           return;
         }
       } else if (zone1Files.length === 0) {
