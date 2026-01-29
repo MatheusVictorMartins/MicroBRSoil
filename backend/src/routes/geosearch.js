@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { paths } = require('../utils/moduleResolver');
 const { getSoil } = require(paths.soilFunctions());
+const pool = require(paths.db());
 const { apiLogger } = require('../utils/logger');
 const { requireAuth } = require('../middleware/authenticate');
 const { createRateLimiter } = require('../middleware/rateLimit');
@@ -94,12 +95,38 @@ router.get('/', geosearchListCache, async (req, res) => {
             };
         });
 
+        // If pipeline results exist, keep only samples linked to those runs
+        let linkedSamples = mapData;
+        try {
+            const pipelineResults = await pool.query(
+                'SELECT run_id, soil_id FROM microbrsoil_db.pipeline_results'
+            );
+            if (pipelineResults.rows.length > 0) {
+                const runIds = pipelineResults.rows.map(row => String(row.run_id));
+                const summarySoilIds = new Set(
+                    pipelineResults.rows
+                        .map(row => row.soil_id)
+                        .filter(id => id !== null && id !== undefined)
+                );
+                linkedSamples = mapData.filter(sample => {
+                    if (summarySoilIds.has(sample.id)) return true;
+                    if (!sample.description) return false;
+                    return runIds.some(runId => sample.description.includes(runId));
+                });
+            } else {
+                linkedSamples = [];
+            }
+        } catch (linkError) {
+            apiLogger.warn('Geosearch: could not load pipeline results linkage', linkError);
+        }
+
         // Filter out samples without valid coordinates
-        const validSamples = mapData.filter(sample => 
+        const validSamples = linkedSamples.filter(sample => 
             sample.latitude !== null && 
             sample.longitude !== null && 
             !isNaN(sample.latitude) && 
-            !isNaN(sample.longitude)
+            !isNaN(sample.longitude) &&
+            !(Number(sample.latitude) === 0 && Number(sample.longitude) === 0)
         );
 
         apiLogger.info(`Geosearch: Retrieved ${validSamples.length} valid soil samples out of ${mapData.length} total samples`);

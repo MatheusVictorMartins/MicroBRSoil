@@ -1,4 +1,6 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const router = express.Router();
 const { paths } = require('../utils/moduleResolver');
 const pool = require(paths.db());
@@ -40,6 +42,44 @@ const soilDetailCache = createResponseCache({
   maxEntries: 200,
   keyPrefix: 'soil:detail'
 });
+
+const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(__dirname, '../../uploads');
+
+const findUploadedMetadataName = (runId) => {
+  if (!runId) return null;
+  const runDir = path.join(UPLOADS_DIR, String(runId));
+  if (!fs.existsSync(runDir)) return null;
+
+  let entries = [];
+  try {
+    entries = fs.readdirSync(runDir);
+  } catch (err) {
+    return null;
+  }
+
+  const csvFiles = entries.filter((name) => name.toLowerCase().endsWith('.csv'));
+  if (csvFiles.length === 0) return null;
+
+  const metadataNamed = csvFiles.find((name) => name.toLowerCase().includes('metadata'));
+  if (metadataNamed) return metadataNamed;
+
+  let best = null;
+  let bestSize = -1;
+  for (const name of csvFiles) {
+    const fullPath = path.join(runDir, name);
+    try {
+      const size = fs.statSync(fullPath).size;
+      if (size > bestSize) {
+        bestSize = size;
+        best = name;
+      }
+    } catch (err) {
+      // ignore stat failures
+    }
+  }
+
+  return best || csvFiles[0];
+};
 
 const usersListCache = createResponseCache({
   ttlMs: 30 * 1000,
@@ -123,66 +163,177 @@ async function hasPasswordViewColumn() {
 // Get soil data for index.html and upload.html
 router.get('/soil', requireAuth, tableReadLimiter, soilListCache, async (req, res) => {
   try {
-    const { page = 1, limit = 20, search = '', material = '', location = '' } = req.query;
+    const { page = 1, limit = 20, search = '', material = '', location = '', legacy = '' } = req.query;
     const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
     const limitNumber = Math.max(1, Math.min(parseInt(limit, 10) || 20, 100));
     const offset = (pageNumber - 1) * limitNumber;
     const isAdmin = isAdminRole(req.user?.role);
+    const useLegacy = ['1', 'true', 'yes'].includes(String(legacy).toLowerCase());
 
-    let whereConditions = [];
-    let queryParams = [];
-    let paramCount = 0;
+    const buildRunFilters = () => {
+      let whereConditions = [];
+      let queryParams = [];
+      let paramCount = 0;
 
-    // Add search filter
-    if (search) {
-      paramCount++;
-      whereConditions.push(`(
-        s.sample_name ILIKE $${paramCount} OR 
-        s.geo_loc_name ILIKE $${paramCount} OR 
-        s.env_medium ILIKE $${paramCount}
-      )`);
-      queryParams.push(`%${search}%`);
-    }
+      if (search) {
+        paramCount++;
+        whereConditions.push(`(
+          s.sample_name ILIKE $${paramCount} OR 
+          s.geo_loc_name ILIKE $${paramCount} OR 
+          s.env_medium ILIKE $${paramCount} OR
+          pr.run_id::text ILIKE $${paramCount}
+        )`);
+        queryParams.push(`%${search}%`);
+      }
 
-    // Add material filter
-    if (material) {
-      paramCount++;
-      whereConditions.push(`s.env_medium ILIKE $${paramCount}`);
-      queryParams.push(`%${material}%`);
-    }
+      if (material) {
+        paramCount++;
+        whereConditions.push(`s.env_medium ILIKE $${paramCount}`);
+        queryParams.push(`%${material}%`);
+      }
 
-    // Add location filter
-    if (location) {
-      paramCount++;
-      whereConditions.push(`s.geo_loc_name ILIKE $${paramCount}`);
-      queryParams.push(`%${location}%`);
-    }
+      if (location) {
+        paramCount++;
+        whereConditions.push(`s.geo_loc_name ILIKE $${paramCount}`);
+        queryParams.push(`%${location}%`);
+      }
 
-    if (!isAdmin) {
-      paramCount++;
-      whereConditions.push(`s.owner_id = $${paramCount}`);
-      queryParams.push(req.user.id);
-    }
+      if (!isAdmin) {
+        paramCount++;
+        whereConditions.push(`COALESCE(pr.user_id, s.owner_id) = $${paramCount}`);
+        queryParams.push(req.user.id);
+      }
 
-    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+      const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+      return { whereClause, queryParams, paramCount };
+    };
 
-    // Get total count for pagination
-    const countQuery = `
+    const buildSoilFilters = () => {
+      let whereConditions = [];
+      let queryParams = [];
+      let paramCount = 0;
+
+      if (search) {
+        paramCount++;
+        whereConditions.push(`(
+          s.sample_name ILIKE $${paramCount} OR 
+          s.geo_loc_name ILIKE $${paramCount} OR 
+          s.env_medium ILIKE $${paramCount}
+        )`);
+        queryParams.push(`%${search}%`);
+      }
+
+      if (material) {
+        paramCount++;
+        whereConditions.push(`s.env_medium ILIKE $${paramCount}`);
+        queryParams.push(`%${material}%`);
+      }
+
+      if (location) {
+        paramCount++;
+        whereConditions.push(`s.geo_loc_name ILIKE $${paramCount}`);
+        queryParams.push(`%${location}%`);
+      }
+
+      if (!isAdmin) {
+        paramCount++;
+        whereConditions.push(`s.owner_id = $${paramCount}`);
+        queryParams.push(req.user.id);
+      }
+
+      const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+      return { whereClause, queryParams, paramCount };
+    };
+
+    const runFilters = buildRunFilters();
+    const runCountQuery = `
       SELECT COUNT(*) as total
-      FROM microbrsoil_db.soil s
-      ${whereClause}
+      FROM microbrsoil_db.pipeline_results pres
+      JOIN microbrsoil_db.pipeline_runs pr ON pr.run_id = pres.run_id
+      JOIN microbrsoil_db.soil s ON s.soil_id = pres.soil_id
+      ${runFilters.whereClause}
     `;
 
-    const countResult = await pool.query(countQuery, queryParams);
-    const totalRecords = parseInt(countResult.rows[0].total, 10) || 0;
+    const runCountResult = await pool.query(runCountQuery, runFilters.queryParams);
+    const runTotalRecords = parseInt(runCountResult.rows[0].total, 10) || 0;
 
-    // Get paginated data
-    paramCount++;
-    queryParams.push(limitNumber);
-    paramCount++;
-    queryParams.push(offset);
+    if (runTotalRecords > 0) {
+      runFilters.paramCount++;
+      runFilters.queryParams.push(limitNumber);
+      runFilters.paramCount++;
+      runFilters.queryParams.push(offset);
 
-    const dataQuery = `
+      const dataQuery = `
+        SELECT 
+          s.soil_id as id,
+          s.env_medium as material,
+          s.sample_name as project_name,
+          s.geo_loc_name as location,
+          pr.created_at::date as creation_date,
+          u.user_email as owner,
+          pr.run_id as run_id
+        FROM microbrsoil_db.pipeline_results pres
+        JOIN microbrsoil_db.pipeline_runs pr ON pr.run_id = pres.run_id
+        JOIN microbrsoil_db.soil s ON s.soil_id = pres.soil_id
+        LEFT JOIN microbrsoil_db.users u ON u.user_id = COALESCE(pr.user_id, s.owner_id)
+        ${runFilters.whereClause}
+        ORDER BY pr.created_at DESC
+        LIMIT $${runFilters.paramCount - 1} OFFSET $${runFilters.paramCount}
+      `;
+
+      const dataResult = await pool.query(dataQuery, runFilters.queryParams);
+      const rows = dataResult.rows.map((row) => {
+        const metadataName = findUploadedMetadataName(row.run_id);
+        const fallbackName = row.project_name || `Run ${String(row.run_id).slice(0, 8)}`;
+        return {
+          ...row,
+          project_name: metadataName || fallbackName
+        };
+      });
+
+      res.json({
+        success: true,
+        data: rows,
+        pagination: {
+          currentPage: pageNumber,
+          totalPages: Math.ceil(runTotalRecords / limitNumber),
+          totalRecords: runTotalRecords,
+          limit: limitNumber
+        }
+      });
+      return;
+    }
+
+    if (!useLegacy) {
+      res.json({
+        success: true,
+        data: [],
+        pagination: {
+          currentPage: pageNumber,
+          totalPages: 0,
+          totalRecords: 0,
+          limit: limitNumber
+        }
+      });
+      return;
+    }
+
+    const soilFilters = buildSoilFilters();
+    const soilCountQuery = `
+      SELECT COUNT(*) as total
+      FROM microbrsoil_db.soil s
+      ${soilFilters.whereClause}
+    `;
+
+    const soilCountResult = await pool.query(soilCountQuery, soilFilters.queryParams);
+    const soilTotalRecords = parseInt(soilCountResult.rows[0].total, 10) || 0;
+
+    soilFilters.paramCount++;
+    soilFilters.queryParams.push(limitNumber);
+    soilFilters.paramCount++;
+    soilFilters.queryParams.push(offset);
+
+    const soilDataQuery = `
       SELECT 
         s.soil_id as id,
         s.env_medium as material,
@@ -192,20 +343,20 @@ router.get('/soil', requireAuth, tableReadLimiter, soilListCache, async (req, re
         u.user_email as owner
       FROM microbrsoil_db.soil s
       LEFT JOIN microbrsoil_db.users u ON s.owner_id = u.user_id
-      ${whereClause}
+      ${soilFilters.whereClause}
       ORDER BY s.created_at DESC
-      LIMIT $${paramCount - 1} OFFSET $${paramCount}
+      LIMIT $${soilFilters.paramCount - 1} OFFSET $${soilFilters.paramCount}
     `;
 
-    const dataResult = await pool.query(dataQuery, queryParams);
+    const soilDataResult = await pool.query(soilDataQuery, soilFilters.queryParams);
 
     res.json({
       success: true,
-      data: dataResult.rows,
+      data: soilDataResult.rows,
       pagination: {
         currentPage: pageNumber,
-        totalPages: Math.ceil(totalRecords / limitNumber),
-        totalRecords,
+        totalPages: Math.ceil(soilTotalRecords / limitNumber),
+        totalRecords: soilTotalRecords,
         limit: limitNumber
       }
     });
@@ -222,30 +373,70 @@ router.get('/soil', requireAuth, tableReadLimiter, soilListCache, async (req, re
 // Get unique values for filters
 router.get('/soil/filters', requireAuth, tableReadLimiter, soilFiltersCache, async (req, res) => {
   try {
+    const legacy = String(req.query.legacy || '').toLowerCase();
+    const useLegacy = ['1', 'true', 'yes'].includes(legacy);
     const isAdmin = isAdminRole(req.user?.role);
     const queryParams = [];
-    const whereClause = isAdmin ? '' : 'WHERE s.owner_id = $1';
+    const whereConditions = [];
     if (!isAdmin) {
+      whereConditions.push('COALESCE(pr.user_id, s.owner_id) = $1');
       queryParams.push(req.user.id);
     }
 
-    const filtersQuery = `
-      SELECT 
-        ARRAY_AGG(DISTINCT s.env_medium) FILTER (WHERE s.env_medium IS NOT NULL) as materials,
-        ARRAY_AGG(DISTINCT s.geo_loc_name) FILTER (WHERE s.geo_loc_name IS NOT NULL) as locations,
-        ARRAY_AGG(DISTINCT s.soil_type) FILTER (WHERE s.soil_type IS NOT NULL) as soil_types
-      FROM microbrsoil_db.soil s
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+
+    const runCountQuery = `
+      SELECT COUNT(*) as total
+      FROM microbrsoil_db.pipeline_results pres
+      JOIN microbrsoil_db.pipeline_runs pr ON pr.run_id = pres.run_id
+      JOIN microbrsoil_db.soil s ON s.soil_id = pres.soil_id
       ${whereClause}
     `;
 
-    const result = await pool.query(filtersQuery, queryParams);
+    const runCountResult = await pool.query(runCountQuery, queryParams);
+    const runTotal = parseInt(runCountResult.rows[0]?.total || 0, 10);
+
+    let result;
+    if (runTotal > 0) {
+      const filtersQuery = `
+        SELECT 
+          ARRAY_AGG(DISTINCT s.env_medium) FILTER (WHERE s.env_medium IS NOT NULL) as materials,
+          ARRAY_AGG(DISTINCT s.geo_loc_name) FILTER (WHERE s.geo_loc_name IS NOT NULL) as locations,
+          ARRAY_AGG(DISTINCT s.soil_type) FILTER (WHERE s.soil_type IS NOT NULL) as soil_types
+        FROM microbrsoil_db.pipeline_results pres
+        JOIN microbrsoil_db.pipeline_runs pr ON pr.run_id = pres.run_id
+        JOIN microbrsoil_db.soil s ON s.soil_id = pres.soil_id
+        ${whereClause}
+      `;
+      result = await pool.query(filtersQuery, queryParams);
+    } else if (useLegacy) {
+      const soilQueryParams = [];
+      const soilWhereConditions = [];
+      if (!isAdmin) {
+        soilWhereConditions.push('s.owner_id = $1');
+        soilQueryParams.push(req.user.id);
+      }
+      const soilWhereClause = soilWhereConditions.length > 0 ? `WHERE ${soilWhereConditions.join(' AND ')}` : '';
+      const filtersQuery = `
+        SELECT 
+          ARRAY_AGG(DISTINCT s.env_medium) FILTER (WHERE s.env_medium IS NOT NULL) as materials,
+          ARRAY_AGG(DISTINCT s.geo_loc_name) FILTER (WHERE s.geo_loc_name IS NOT NULL) as locations,
+          ARRAY_AGG(DISTINCT s.soil_type) FILTER (WHERE s.soil_type IS NOT NULL) as soil_types
+        FROM microbrsoil_db.soil s
+        ${soilWhereClause}
+      `;
+      result = await pool.query(filtersQuery, soilQueryParams);
+    } else {
+      result = { rows: [] };
+    }
     
+    const row = result?.rows?.[0] || {};
     res.json({
       success: true,
       filters: {
-        materials: result.rows[0].materials || [],
-        locations: result.rows[0].locations || [],
-        soilTypes: result.rows[0].soil_types || []
+        materials: row.materials || [],
+        locations: row.locations || [],
+        soilTypes: row.soil_types || []
       }
     });
 
@@ -354,16 +545,44 @@ router.delete('/soil/:id', requireAdmin, tableWriteLimiter, async (req, res) => 
       });
     }
 
-    const result = await pool.query(
-      'DELETE FROM microbrsoil_db.soil WHERE soil_id = $1 RETURNING soil_id',
+    const ownerRes = await pool.query(
+      'SELECT owner_id FROM microbrsoil_db.soil WHERE soil_id = $1',
       [soilId]
     );
-
-    if (result.rowCount === 0) {
+    if (ownerRes.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Soil sample not found' });
     }
 
-    return res.json({ success: true, deleted: result.rows[0] });
+    const ownerId = ownerRes.rows[0].owner_id;
+    const runRes = await pool.query(
+      'SELECT run_id FROM microbrsoil_db.pipeline_results WHERE soil_id = $1',
+      [soilId]
+    );
+    const runId = runRes.rows[0]?.run_id || null;
+
+    let deleted = [];
+    if (runId) {
+      const deleteResult = await pool.query(
+        `DELETE FROM microbrsoil_db.soil
+         WHERE owner_id = $1
+           AND (soil_id = $2 OR metadata_description ILIKE $3)
+         RETURNING soil_id`,
+        [ownerId, soilId, `%${runId}%`]
+      );
+      deleted = deleteResult.rows;
+    } else {
+      const deleteResult = await pool.query(
+        'DELETE FROM microbrsoil_db.soil WHERE soil_id = $1 RETURNING soil_id',
+        [soilId]
+      );
+      deleted = deleteResult.rows;
+    }
+
+    if (!deleted.length) {
+      return res.status(404).json({ success: false, error: 'Soil sample not found' });
+    }
+
+    return res.json({ success: true, deleted, count: deleted.length });
   } catch (error) {
     req.logger?.error('Error deleting soil', {
       error: error.message,

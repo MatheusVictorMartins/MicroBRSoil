@@ -17,7 +17,79 @@ run_dada2_pipeline <- function(path1,
     library(vegan)
     library(dplyr)
     library(ShortRead)
+    library(parallel)
   })
+  
+  # Ensure vsearch binary path inside worker runtime (do not rely on PATH)
+  if (!nzchar(Sys.getenv("VSEARCH_BIN", "")) && file.exists("/app/pipeline-r/vsearch")) {
+    Sys.setenv(VSEARCH_BIN = "/app/pipeline-r/vsearch")
+  }
+  cat("VSEARCH_BIN:", Sys.getenv("VSEARCH_BIN", ""), "\n")
+  
+  # ==================================================
+  # Step 0 — Robust input detection (Ion Torrent)
+  # Accepts multiplexed OR demultiplexed FASTQs
+  # ==================================================
+
+  cat("Step 0: Detecting input type (multiplexed vs demultiplexed)\n")
+
+  if (is.null(outdir)) {
+    outdir <- getwd()
+  }
+  outdir <- normalizePath(outdir, mustWork = FALSE)
+
+  # Detect whether path1 is file or directory
+  input_is_dir <- dir.exists(path1)
+
+  if (input_is_dir) {
+    input_dir <- normalizePath(path1)
+  } else {
+    input_dir <- normalizePath(dirname(path1))
+  }
+
+  # List FASTQs safely
+  input_fastqs <- list.files(
+    input_dir,
+    pattern = "\\.(fastq|fq)(\\.gz)?$",
+    full.names = TRUE,
+    ignore.case = TRUE
+  )
+
+  if (length(input_fastqs) == 0) {
+    stop("No FASTQ files found in input path: ", input_dir)
+  }
+
+  # Decide demultiplexed vs multiplexed
+  use_demultiplexed <- FALSE
+
+  if (input_is_dir && length(input_fastqs) >= 1) {
+    use_demultiplexed <- TRUE
+    cat("  → Input directory with FASTQs detected (demultiplexed data)\n")
+  } else if (!input_is_dir && length(input_fastqs) > 1) {
+    use_demultiplexed <- TRUE
+    cat("  → Multiple FASTQs detected in upload directory (demultiplexed data)\n")
+  } else {
+    use_demultiplexed <- FALSE
+    cat("  → Single FASTQ detected (assumed multiplexed data)\n")
+  }
+
+  # Define internal paths
+  demux_path <- if (use_demultiplexed) input_dir else file.path(outdir, "demultiplexed")
+  filt_path  <- file.path(outdir, "filtered")
+
+  dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
+  dir.create(filt_path, recursive = TRUE, showWarnings = FALSE)
+
+  # Safety check for multiplexed data
+  if (!use_demultiplexed) {
+    dir.create(demux_path, recursive = TRUE, showWarnings = FALSE)
+
+    if (is.null(barcodes_path) || !nzchar(barcodes_path) || !file.exists(barcodes_path)) {
+      stop(
+        "Multiplexed FASTQ detected, but barcodes_path was not provided or does not exist."
+      )
+    }
+  }
 
   # Ensure vsearch binary path inside worker runtime (do not rely on PATH)
   if (!nzchar(Sys.getenv("VSEARCH_BIN", "")) && file.exists("/app/pipeline-r/vsearch")) {
@@ -361,25 +433,81 @@ if (!filter_success) {
 cat("Step 2: Learn errors\n")
 errF <- learnErrors(filtFs, multithread = use_multithread, nbases = 5e7)
 
-  # --------------------------------------------------
-  # Step 3: Denoise (PER SAMPLE) — PARALLEL
-  # --------------------------------------------------
-  cat("Step 3: Denoise (per-sample)\n")
+# --------------------------------------------------
+# Step 3: Denoising with DADA2 (Ion Torrent ROBUST)
+# --------------------------------------------------
+cat("Step 3: Denoising with DADA2 (Ion Torrent ROBUST)\n")
 
-# set cores (use your pipeline variable if you have one)
-n_cores <- min(length(filtFs), max(1, parallel::detectCores() - 2))
+# -----------------------------
+# Dereplication
+# -----------------------------
+derepFs <- derepFastq(filtFs, verbose = TRUE)
+names(derepFs) <- sample.names
 
-cat("  Using", n_cores, "cores\n")
+cat("  Dereplication completed for", length(derepFs), "samples\n")
 
-# run per-sample in parallel
-dadaFs <- parallel::mclapply(seq_along(filtFs), function(i) {
-  cat("  -", i, "/", length(filtFs), ":", basename(filtFs[i]), "\n")
-  derep <- derepFastq(filtFs[i], verbose = TRUE)
-  out <- dada(derep, err = errF, multithread = FALSE) # FALSE to avoid nested threading
-  return(out)
-}, mc.cores = n_cores)
+# -----------------------------
+# DADA denoising (STRICTLY SEQUENTIAL)
+# -----------------------------
+dadaFs <- list()
 
-names(dadaFs) <- sample.names
+for (i in seq_along(derepFs)) {
+  sname <- names(derepFs)[i]
+  cat("  Denoising sample:", sname, "\n")
+
+  dd <- tryCatch(
+    dada(
+      derepFs[[i]],
+      err = errF,
+      selfConsist = TRUE,
+      multithread = FALSE
+    ),
+    error = function(e) {
+      warning("DADA failed for sample ", sname, ": ", e$message)
+      NULL
+    }
+  )
+
+  # HARD validation (Ion Torrent safe)
+  if (
+    !is.null(dd) &&
+    inherits(dd, "dada") &&
+    !is.null(dd$denoised) &&
+    length(dd$denoised) > 0
+  ) {
+    dadaFs[[sname]] <- dd
+  } else {
+    warning("Sample ", sname, " removed: invalid DADA result")
+  }
+}
+
+# -----------------------------
+# Post-denoising validation
+# -----------------------------
+if (length(dadaFs) < 2) {
+  stop(
+    "Less than 2 samples survived denoising.\n",
+    "Ion Torrent error model may be too strict or read depth too low.\n",
+    "Consider increasing maxEE, reducing truncLen, or skipping truncation."
+  )
+}
+
+cat("  Samples retained after denoising:", length(dadaFs), "\n")
+
+sample.names <- names(dadaFs)
+
+# -----------------------------
+# Build sequence table (SAFE)
+# -----------------------------
+seqtab <- makeSequenceTable(dadaFs)
+
+cat(
+  "  Sequence table constructed:",
+  nrow(seqtab),
+  "samples x",
+  ncol(seqtab),
+  "ASVs\n"
+)
 
   # --------------------------------------------------
   # Step 4: Sequence table and chimera removal
@@ -477,8 +605,8 @@ write_query_fasta <- function(asv_seqs, query_fa_out) {
 # --------------------------------------------------
 taxa <- tryCatch({
 
-  ref_fa   <- "/app/pipeline-r/references/silva-138-99-seqs-515-806_extracted_from_qza.fasta"
-  ref_tax  <- "/app/pipeline-r/references/silva-138-99-tax-515-806_extracted_from_qza.tsv"
+  ref_fa   <- "/app/pipeline-r/references/silva_v138_vsearch.fa"
+  ref_tax  <- "/app/pipeline-r/references/silva_v138_vsearch.tsv"
   query_fa <- file.path(result_path, "vsearch_query.fasta")
   blast6   <- file.path(result_path, "vsearch_hits.blast6")
   vlog     <- file.path(result_path, "vsearch_run.log")
@@ -510,12 +638,14 @@ taxa <- tryCatch({
     "--usearch_global", query_fa,
     "--db", ref_fa,
     "--strand", "both",
-    "--iddef", "2",
-    "--query_cov", "0.80",
-    "--id", "0.90",
+    "--iddef", "2",          # identity based on alignment (Ion Torrent safe)
+    "--id", "0.90",          # relaxed identity (handles indels)
+    "--query_cov", "0.78",   # tolerant to trimmed reads
+    "--mincols", "128",      # avoids short spurious hits
     "--top_hits_only",
     "--maxaccepts", "1",
     "--maxrejects", "64",
+    "--maxhits", "1",
     "--blast6out", blast6,
     "--threads", as.character(n_cores_tax)
   )
@@ -539,14 +669,28 @@ taxa <- tryCatch({
   # Read ref taxonomy map (REF -> Taxon string)
   ref_tab <- utils::read.table(ref_tax, sep = "\t", header = TRUE, stringsAsFactors = FALSE,
                                quote = "", comment.char = "")
+  
+  # Normalize reference IDs (QIIME2 SILVA fix)
+  ref_tab$FeatureID <- gsub("^silva_\\d+_", "", ref_tab$FeatureID)
   tax_map <- setNames(ref_tab$Taxon, ref_tab$FeatureID)
+
+  # Normalize subject IDs from vsearch
+  hits$sid <- gsub("^silva_\\d+_", "", hits$sid)
 
   # Map ASV_# -> REF_# -> tax string (keep order of ASVs)
   sid_by_qid <- setNames(hits$sid, hits$qid)
   best_sid <- unname(sid_by_qid[q_ids])
   tax_str <- unname(tax_map[best_sid])
 
-  cat(sprintf("  ASVs mapped to taxonomy: %.1f%%\n", 100 * mean(!is.na(tax_str))))
+  cat(sprintf("  ASVs mapped to taxonomy: %.1f%%\n",
+              100 * mean(!is.na(tax_str))))
+
+  # --------------------------------------------------
+  # FAIL-SAFE: stop if taxonomy completely failed
+  # --------------------------------------------------
+  if (all(is.na(tax_str))) {
+    stop("All ASVs failed taxonomy mapping (check SILVA ID normalization and vsearch params).")
+  }
 
   # Build taxa matrix with rownames = DNA sequences (phyloseq expects taxa names = OTU/ASV names)
   taxa_mat <- matrix(NA_character_, nrow = length(asv_seqs), ncol = length(TAX_RANKS),

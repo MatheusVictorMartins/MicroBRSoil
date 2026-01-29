@@ -30,6 +30,11 @@ Option A (edit .env):
 ```powershell
 notepad .env
 ```
+macOS (TextEdit):
+```bash
+open -e .env
+```
+Linux (terminal editor):
 ```bash
 nano .env
 ```
