@@ -1,4 +1,4 @@
-@media(max-width: 1920px) and (min-width: 1701px) {
+@media(min-width: 1701px) {
     #left-menu{
         padding: 3.125rem 0;
         width: 15vw;
@@ -155,7 +155,7 @@
 }
 
 @media (max-width: 600px){
-    #btn-left-menu-data-download::before,#btn-left-menu-help::before{
+    #btn-left-menu-data-download::before,#btn-left-menu-help::before, .btn-left-menu{
         display: none;
     }
 }
